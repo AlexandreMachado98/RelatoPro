@@ -22,7 +22,8 @@ import com.relatopro.app.ui.theme.TextPrimary
 @Composable
 fun DashboardScreen(
     onNavigateToTemplateBuilder: () -> Unit,
-    onNavigateToFieldMode: () -> Unit
+    onNavigateToFieldMode: () -> Unit,
+    onNavigateToMyReports: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -87,7 +88,9 @@ fun DashboardScreen(
                         ListItem(
                             headlineContent = { Text("Meus Relatórios") },
                             supportingContent = { Text("Visualizar e exportar relatórios anteriores") },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigateToMyReports() }
                         )
                         HorizontalDivider()
                         ListItem(

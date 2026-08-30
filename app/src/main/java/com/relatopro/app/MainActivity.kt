@@ -17,6 +17,9 @@ import com.relatopro.app.ui.screens.templatebuilder.TemplateBuilderScreen
 import com.relatopro.app.ui.theme.RelatoProTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+import com.relatopro.app.ui.screens.myreports.MyReportsScreen
+import com.relatopro.app.ui.screens.myreports.MyReportsViewModel
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,7 +36,8 @@ class MainActivity : ComponentActivity() {
                         composable("dashboard") {
                             DashboardScreen(
                                 onNavigateToTemplateBuilder = { navController.navigate("template_builder") },
-                                onNavigateToFieldMode = { navController.navigate("field_mode") }
+                                onNavigateToFieldMode = { navController.navigate("field_mode") },
+                                onNavigateToMyReports = { navController.navigate("my_reports") }
                             )
                         }
                         composable("template_builder") {
@@ -45,6 +49,15 @@ class MainActivity : ComponentActivity() {
                         composable("field_mode") {
                             FieldModeScreen(
                                 onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable("my_reports") {
+                            MyReportsScreen(
+                                viewModel = hiltViewModel(),
+                                onNavigateBack = { navController.popBackStack() },
+                                onOpenPdf = { pdfPath ->
+                                    // Logic to open PDF intent can be added here
+                                }
                             )
                         }
                     }

@@ -94,9 +94,12 @@ class FieldModeViewModel @Inject constructor(
             val photosList: List<com.relatopro.app.data.local.entity.PhotoEntity> = reportRepository.getReportPhotos(report.id).first()
             val signature = reportRepository.getSignature(report.id)
             
-            val photosMap = photosList.groupBy { it.templateFieldId }.mapValues { entry ->
-                entry.value.map { it.localPath }
-            }.toMutableMap()
+            val photosMap = photosList
+                .filter { it.templateFieldId != null }
+                .groupBy { it.templateFieldId!! }
+                .mapValues { entry ->
+                    entry.value.map { it.localPath }
+                }.toMutableMap()
             
             if (signature != null) {
                 photosMap[-1L] = listOf(signature.localPath)

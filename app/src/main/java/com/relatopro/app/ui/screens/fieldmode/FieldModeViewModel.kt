@@ -138,7 +138,8 @@ class FieldModeViewModel @Inject constructor(
         bitmap: android.graphics.Bitmap,
         context: android.content.Context,
         name: String,
-        role: String = "RESPONSAVEL_RELATORIO"
+        role: String = "RESPONSAVEL_RELATORIO",
+        roleTitle: String = "Inspetor Técnico"
     ) {
         val reportId = _currentReport.value?.id ?: return
         viewModelScope.launch {
@@ -150,7 +151,7 @@ class FieldModeViewModel @Inject constructor(
             val sigEntity = SignatureEntity(
                 reportId = reportId,
                 name = name.ifEmpty { if (role == "RESPONSAVEL_RELATORIO") (_currentReport.value?.responsible ?: "João da Silva") else "Acompanhante" },
-                role = role,
+                role = roleTitle.ifEmpty { if (role == "RESPONSAVEL_RELATORIO") "Inspetor Técnico" else "Supervisor / Acompanhante" },
                 localPath = file.absolutePath,
                 timestamp = System.currentTimeMillis()
             )

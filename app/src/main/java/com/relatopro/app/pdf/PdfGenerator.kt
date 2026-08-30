@@ -559,8 +559,20 @@ class PdfGenerator(private val context: Context) {
         val sigWidth = (usableWidth - 16f) / 2f
 
         // Get the 2 signatures
-        val sigRespRelatorio = signatures.find { it.role == "RESPONSAVEL_RELATORIO" } ?: signatures.firstOrNull()
-        val sigPresenteOp = signatures.find { it.role == "PRESENTE_OPERACAO" } ?: signatures.getOrNull(1)
+        val sigRespRelatorio = signatures.firstOrNull { 
+            it.role.contains("RESPONSAVEL", ignoreCase = true) || 
+            it.role.contains("Inspetor", ignoreCase = true) ||
+            it.role.contains("Técnico", ignoreCase = true)
+        } ?: signatures.firstOrNull()
+
+        val sigPresenteOp = signatures.firstOrNull { 
+            (it.role.contains("PRESENTE", ignoreCase = true) || 
+             it.role.contains("OPERACAO", ignoreCase = true) || 
+             it.role.contains("Acompanhante", ignoreCase = true) || 
+             it.role.contains("Supervisor", ignoreCase = true) || 
+             it.role.contains("Gerente", ignoreCase = true) ||
+             it.role.contains("Cliente", ignoreCase = true)) && it.id != (sigRespRelatorio?.id ?: -1L)
+        } ?: signatures.firstOrNull { it.id != (sigRespRelatorio?.id ?: -1L) }
 
         fun drawSignatureBox(
             x: Float,
@@ -579,7 +591,8 @@ class PdfGenerator(private val context: Context) {
             canvas.drawLine(x + 10f, y + 22f, x + sigWidth - 10f, y + 22f, linePaint)
 
             // Draw Signature Bitmap if present
-            if (sig != null) {
+            var drawn = false
+            if (sig != null && !sig.localPath.isNullOrBlank()) {
                 val file = File(sig.localPath)
                 if (file.exists()) {
                     try {
@@ -594,12 +607,14 @@ class PdfGenerator(private val context: Context) {
 
                             val dest = RectF(sigRect.left + offsetX, sigRect.top + offsetY, sigRect.left + offsetX + scaledW, sigRect.top + offsetY + scaledH)
                             canvas.drawBitmap(sigBmp, null, dest, null)
+                            drawn = true
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
-            } else {
+            }
+            if (!drawn) {
                 canvas.drawText("[ Assinatura Digital Pendente ]", x + 20f, y + 54f, bodyMutedPaint)
             }
 
@@ -607,9 +622,14 @@ class PdfGenerator(private val context: Context) {
             canvas.drawLine(x + 10f, y + 78f, x + sigWidth - 10f, y + 78f, linePaint)
 
             val name = sig?.name?.ifEmpty { defaultName } ?: defaultName
-            val role = sig?.role?.ifEmpty { defaultRole } ?: defaultRole
+            val rawRole = sig?.role?.ifEmpty { defaultRole } ?: defaultRole
+            val displayRole = when (rawRole) {
+                "RESPONSAVEL_RELATORIO" -> "Inspetor Técnico"
+                "PRESENTE_OPERACAO" -> defaultRole
+                else -> rawRole
+            }
             canvas.drawText("Nome: $name", x + 10f, y + 92f, bodyPaint)
-            canvas.drawText("Cargo: $role  •  Data: $dateOnlyStr", x + 10f, y + 104f, bodyMutedPaint)
+            canvas.drawText("Cargo: $displayRole  •  Data: $dateOnlyStr", x + 10f, y + 104f, bodyMutedPaint)
         }
 
         drawSignatureBox(

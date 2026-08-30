@@ -1044,23 +1044,16 @@ fun SignatureStepContent(
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text("Desenhe a assinatura abaixo:", fontSize = 12.sp, color = TextSecondary)
+                    Text("Desenhe a assinatura no quadro abaixo:", fontSize = 12.sp, color = TextSecondary)
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(160.dp)
-                            .border(1.dp, BorderColor, RoundedCornerShape(8.dp))
-                    ) {
-                        SignaturePad(
-                            modifier = Modifier.fillMaxSize(),
-                            onSignatureCaptured = { bitmap ->
-                                viewModel.saveSignature(bitmap, context, inspectorName, "RESPONSAVEL_RELATORIO")
-                            },
-                            onClear = {}
-                        )
-                    }
+                    SignaturePad(
+                        modifier = Modifier.fillMaxWidth(),
+                        onSignatureCaptured = { bitmap ->
+                            viewModel.saveSignature(bitmap, context, inspectorName, "RESPONSAVEL_RELATORIO")
+                        },
+                        onClear = {}
+                    )
                 }
             }
         }
@@ -1130,23 +1123,16 @@ fun SignatureStepContent(
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text("Desenhe a assinatura abaixo:", fontSize = 12.sp, color = TextSecondary)
+                    Text("Desenhe a assinatura no quadro abaixo:", fontSize = 12.sp, color = TextSecondary)
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(160.dp)
-                            .border(1.dp, BorderColor, RoundedCornerShape(8.dp))
-                    ) {
-                        SignaturePad(
-                            modifier = Modifier.fillMaxSize(),
-                            onSignatureCaptured = { bitmap ->
-                                viewModel.saveSignature(bitmap, context, operationName.ifEmpty { "Acompanhante" }, "PRESENTE_OPERACAO")
-                            },
-                            onClear = {}
-                        )
-                    }
+                    SignaturePad(
+                        modifier = Modifier.fillMaxWidth(),
+                        onSignatureCaptured = { bitmap ->
+                            viewModel.saveSignature(bitmap, context, operationName.ifEmpty { "Acompanhante" }, "PRESENTE_OPERACAO")
+                        },
+                        onClear = {}
+                    )
                 }
             }
         }

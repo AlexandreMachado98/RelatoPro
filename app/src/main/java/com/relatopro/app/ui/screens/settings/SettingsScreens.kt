@@ -68,7 +68,6 @@ fun ProfileScreen(onNavigateBack: () -> Unit) {
         }
     }
 }
-}
 
 @Composable
 fun SettingsScreen(onNavigateBack: () -> Unit) {
@@ -116,7 +115,6 @@ fun SettingsScreen(onNavigateBack: () -> Unit) {
             }
         }
     }
-}
 }
 
 @Composable
@@ -181,5 +179,3 @@ private fun GenericSettingsScreen(title: String, onNavigateBack: () -> Unit, con
         }
     }
 }
-
-

@@ -4,9 +4,11 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -33,6 +35,7 @@ import java.util.*
 @Composable
 fun MyReportsScreen(
     viewModel: MyReportsViewModel,
+    initialFilter: String = "Todos",
     onNavigateBack: () -> Unit
 ) {
     val reports by viewModel.reports.collectAsState()
@@ -55,7 +58,7 @@ fun MyReportsScreen(
         }
     }
 
-        val sharePdf = { localPath: String, reportId: Long ->
+    val sharePdf = { localPath: String, reportId: Long ->
         val file = File(localPath)
         if (file.exists()) {
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
@@ -67,21 +70,13 @@ fun MyReportsScreen(
             context.startActivity(Intent.createChooser(intent, "Compartilhar Relatório"))
             viewModel.markAsSent(reportId)
         }
-    }.fileprovider", file)
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/pdf"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            }
-            context.startActivity(Intent.createChooser(intent, "Compartilhar Relatório"))
-        }
     }
 
     val filteredReports = reports.filter {
         val matchesQuery = it.title.contains(searchQuery, ignoreCase = true) ||
                            it.location.contains(searchQuery, ignoreCase = true) ||
                            it.id.toString().contains(searchQuery)
-                val matchesStatus = when (selectedStatus) {
+        val matchesStatus = when (selectedStatus) {
             "Todos" -> true
             "Concluídos" -> it.status == "FINALIZED"
             "Rascunhos" -> it.status == "DRAFT"
@@ -107,17 +102,6 @@ fun MyReportsScreen(
                     Text("Meus Relatórios", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Text("Gerencie e compartilhe suas inspeções.", fontSize = 14.sp, color = TextSecondary)
                 }
-                if (isDesktop) {
-                    Button(
-                        onClick = { /* TODO Navigate to Template Builder or Dashboard to create */ },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Novo Relatório")
-                    }
-                }
             }
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -125,6 +109,7 @@ fun MyReportsScreen(
             // Filtros / Toolbar
             val draftsCount = reports.count { it.status == "DRAFT" }
             val completedCount = reports.count { it.status == "FINALIZED" }
+            val sentCount = reports.count { it.status == "SENT" }
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -171,12 +156,13 @@ fun MyReportsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             // Row of Filter Chips
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChipItem("Todos", reports.size, selectedStatus == "Todos") { selectedStatus = "Todos" }
                 FilterChipItem("Rascunhos", draftsCount, selectedStatus == "Rascunhos") { selectedStatus = "Rascunhos" }
                 FilterChipItem("Concluídos", completedCount, selectedStatus == "Concluídos") { selectedStatus = "Concluídos" }
+                FilterChipItem("Enviados", sentCount, selectedStatus == "Enviados") { selectedStatus = "Enviados" }
             }
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -233,7 +219,7 @@ fun FilterChipItem(title: String, count: Int, isSelected: Boolean, onClick: () -
 fun DesktopReportsTable(
     reports: List<ReportEntity>,
     onOpenPdf: (String) -> Unit,
-    onSharePdf: (String) -> Unit,
+    onSharePdf: (String, Long) -> Unit,
     onDeleteReport: (ReportEntity) -> Unit
 ) {
     Card(
@@ -266,7 +252,6 @@ fun DesktopReportsTable(
                 items(reports) { report ->
                     var expanded by remember { mutableStateOf(false) }
                     val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(report.date))
-                    val isFinal = report.status == "FINALIZED"
                     
                     Row(
                         modifier = Modifier
@@ -281,7 +266,7 @@ fun DesktopReportsTable(
                         Text(dateStr, modifier = Modifier.weight(1f), color = TextSecondary, fontSize = 14.sp)
                         
                         Box(modifier = Modifier.weight(1f)) {
-                            StatusBadge(isFinal)
+                            StatusBadge(report.status)
                         }
 
                         // Menu Contextual
@@ -320,14 +305,13 @@ fun DesktopReportsTable(
 fun MobileReportsList(
     reports: List<ReportEntity>,
     onOpenPdf: (String) -> Unit,
-    onSharePdf: (String) -> Unit,
+    onSharePdf: (String, Long) -> Unit,
     onDeleteReport: (ReportEntity) -> Unit
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(reports) { report ->
             var expanded by remember { mutableStateOf(false) }
             val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.date))
-            val isFinal = report.status == "FINALIZED"
             
             Card(
                 modifier = Modifier
@@ -372,7 +356,7 @@ fun MobileReportsList(
                     Spacer(Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(dateStr, color = TextSecondary, fontSize = 12.sp)
-                        StatusBadge(isFinal)
+                        StatusBadge(report.status)
                     }
                 }
             }
@@ -381,9 +365,18 @@ fun MobileReportsList(
 }
 
 @Composable
-fun StatusBadge(isFinal: Boolean) {
-    val color = if (isFinal) StatusConforme else StatusWarning
-    val text = if (isFinal) "Concluído" else "Rascunho"
+fun StatusBadge(status: String) {
+    val color = when(status) {
+        "FINALIZED", "SENT" -> StatusConforme
+        "DRAFT" -> PrimaryBlue
+        else -> StatusWarning
+    }
+    val text = when(status) {
+        "FINALIZED" -> "Concluído"
+        "SENT" -> "Enviado"
+        "DRAFT" -> "Rascunho"
+        else -> status
+    }
     
     Box(
         modifier = Modifier
@@ -397,6 +390,3 @@ fun StatusBadge(isFinal: Boolean) {
         }
     }
 }
-
-
-

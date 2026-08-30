@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -17,11 +18,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.relatopro.app.ui.theme.*
 import com.relatopro.app.ui.components.signature.SignaturePad
-
-import androidx.compose.runtime.LaunchedEffect
-import com.relatopro.app.ui.screens.fieldmode.FieldModeViewModel
+import com.relatopro.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

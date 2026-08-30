@@ -142,6 +142,8 @@ class FieldModeViewModel @Inject constructor(
             reportRepository.saveSignature(
                 com.relatopro.app.data.local.entity.SignatureEntity(
                     reportId = reportId,
+                    name = _currentReport.value?.responsible ?: "Responsável",
+                    role = "Inspetor",
                     localPath = file.absolutePath,
                     timestamp = System.currentTimeMillis()
                 )

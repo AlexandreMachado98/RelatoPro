@@ -1,6 +1,7 @@
 package com.relatopro.app.ui.screens.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -19,7 +20,10 @@ import com.relatopro.app.ui.theme.TextPrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen() {
+fun DashboardScreen(
+    onNavigateToTemplateBuilder: () -> Unit,
+    onNavigateToFieldMode: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -37,7 +41,7 @@ fun DashboardScreen() {
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { /* TODO */ },
+                onClick = onNavigateToFieldMode,
                 icon = { Icon(Icons.Default.Add, "Novo Relatório") },
                 text = { Text("Novo Relatório") },
                 containerColor = PrimaryBlue,
@@ -89,7 +93,9 @@ fun DashboardScreen() {
                         ListItem(
                             headlineContent = { Text("Meus Checklists") },
                             supportingContent = { Text("Criar e gerenciar modelos de formulários") },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigateToTemplateBuilder() }
                         )
                     }
                 }

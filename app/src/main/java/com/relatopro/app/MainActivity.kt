@@ -10,7 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.relatopro.app.ui.screens.dashboard.DashboardScreen
+import com.relatopro.app.ui.screens.fieldmode.FieldModeScreen
+import com.relatopro.app.ui.screens.templatebuilder.TemplateBuilderScreen
 import com.relatopro.app.ui.theme.RelatoProTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -28,7 +31,21 @@ class MainActivity : ComponentActivity() {
                     
                     NavHost(navController = navController, startDestination = "dashboard") {
                         composable("dashboard") {
-                            DashboardScreen()
+                            DashboardScreen(
+                                onNavigateToTemplateBuilder = { navController.navigate("template_builder") },
+                                onNavigateToFieldMode = { navController.navigate("field_mode") }
+                            )
+                        }
+                        composable("template_builder") {
+                            TemplateBuilderScreen(
+                                viewModel = hiltViewModel(),
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable("field_mode") {
+                            FieldModeScreen(
+                                onNavigateBack = { navController.popBackStack() }
+                            )
                         }
                     }
                 }

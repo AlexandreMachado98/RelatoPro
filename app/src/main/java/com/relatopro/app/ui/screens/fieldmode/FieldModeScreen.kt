@@ -21,7 +21,9 @@ import com.relatopro.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FieldModeScreen() {
+fun FieldModeScreen(
+    onNavigateBack: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -42,7 +44,7 @@ fun FieldModeScreen() {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = { /* TODO */ }) {
+                    TextButton(onClick = onNavigateBack) {
                         Text("Voltar")
                     }
                     Button(onClick = { /* TODO */ }) {

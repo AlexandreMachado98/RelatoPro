@@ -97,6 +97,8 @@ class PdfGenerator(private val context: Context) {
         val dateStr = df.format(Date(report.date))
         val dateOnlyStr = dateOnlyDf.format(Date(report.date))
 
+        var currentY = margin + 110f
+
         fun drawHeaderAndFooter(isCover: Boolean = false) {
             if (!isCover) {
                 // Top header line
@@ -148,7 +150,7 @@ class PdfGenerator(private val context: Context) {
             isAntiAlias = true
         }
         val whiteSub = TextPaint().apply {
-            color = Color.WHITE.apply { }
+            color = Color.WHITE
             alpha = 220
             textSize = 11f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
@@ -161,7 +163,7 @@ class PdfGenerator(private val context: Context) {
         canvas.drawText(report.title.ifEmpty { "RELATÓRIO DE INSPEÇÃO TÉCNICA" }.uppercase(Locale.getDefault()), margin + 18f, margin + 55f, whiteTitle)
         canvas.drawText("Documento Oficial de Vistoria e Conformidade • Nº ${report.reportNumber.ifEmpty { "#${report.id}" }}", margin + 18f, margin + 78f, whiteSub)
 
-        var currentY = margin + 110f
+        currentY = margin + 110f
 
         // Informações Gerais Card
         val infoCardHeight = 75f
@@ -400,13 +402,14 @@ class PdfGenerator(private val context: Context) {
         for (pe in photoEntities) {
             val field = fields.find { it.id == pe.templateFieldId }
             val answer = if (field != null) answers.find { it.templateFieldId == field.id } else null
+            val desc = if (!pe.description.isNullOrBlank()) pe.description else answer?.observation
             photoItems.add(
                 PhotoItem(
                     localPath = pe.localPath,
                     itemNumber = field?.let { "Item ${String.format(Locale.getDefault(), "%02d", it.orderIndex + 1)}" },
                     itemLabel = field?.label,
                     status = normalizeAnswer(answer?.answerValue),
-                    description = pe.description.ifEmpty { answer?.observation }
+                    description = desc
                 )
             )
         }
@@ -427,10 +430,6 @@ class PdfGenerator(private val context: Context) {
                         )
                     )
                 }
-            }
-            // General photos
-            photos[null]?.forEach { path ->
-                photoItems.add(PhotoItem(path, null, "Registro Geral", null, null))
             }
         }
 

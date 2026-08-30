@@ -179,8 +179,10 @@ class PdfGenerator(private val context: Context) {
             val orderStr = String.format(Locale.getDefault(), "%02d", field.orderIndex)
 
             // Measure texts
+            @Suppress("DEPRECATION")
             val questionLayout = StaticLayout(field.label, normalPaint, 300, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false)
-            val obsLayout = StaticLayout(if (obsText.isEmpty()) "-" else obsText, normalGrayPaint, usableWidth - 470, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false)
+            @Suppress("DEPRECATION")
+            val obsLayout = StaticLayout(if (obsText.isEmpty()) "-" else obsText, normalGrayPaint, (usableWidth - 470).toInt(), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false)
             
             val rowHeight = maxOf(questionLayout.height, obsLayout.height) + 20f
 

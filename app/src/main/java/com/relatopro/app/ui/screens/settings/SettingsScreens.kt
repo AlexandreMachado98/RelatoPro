@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -167,7 +169,7 @@ fun ProfileScreen(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusNaoConforme),
                     border = androidx.compose.foundation.BorderStroke(1.dp, StatusNaoConforme.copy(alpha = 0.5f))
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Sair da Conta (Logout)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
@@ -312,7 +314,7 @@ fun SettingsScreen(
                         )
                         HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
                         SettingsClickableRow(
-                            icon = Icons.AutoMirrored.Outlined.Logout,
+                            icon = Icons.AutoMirrored.Outlined.ExitToApp,
                             title = "Sair da Conta",
                             subtitle = "Encerrar sessão no Relato Pro",
                             titleColor = StatusNaoConforme,
@@ -488,6 +490,7 @@ fun SettingsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpScreen(onNavigateBack: () -> Unit) {
     Scaffold(
@@ -631,7 +634,7 @@ private fun LogoutConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Uni
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = StatusNaoConforme)
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = StatusNaoConforme)
                 Spacer(Modifier.width(8.dp))
                 Text("Sair do Relato Pro?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
             }

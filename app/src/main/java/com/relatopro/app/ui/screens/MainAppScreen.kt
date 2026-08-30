@@ -66,7 +66,7 @@ fun MainAppScreen(
         NewReportDialog(
             templates = templates,
             onDismiss = { showNewReportDialog = false },
-            onTemplateSelected = { templateId ->
+            onTemplateSelected = { templateId: Long ->
                 showNewReportDialog = false
                 navController.navigate("field_mode/$templateId")
             }
@@ -78,7 +78,7 @@ fun MainAppScreen(
             onDismissRequest = { showLogoutDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = StatusNaoConforme)
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = StatusNaoConforme)
                     Spacer(Modifier.width(8.dp))
                     Text("Sair do Relato Pro?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
                 }
@@ -327,7 +327,7 @@ private fun PermanentSidebar(
             } }
 
             item { Spacer(modifier = Modifier.height(8.dp)) }
-            item { SidebarItem(Icons.AutoMirrored.Filled.Logout, "Sair", false) { onLogoutClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.ExitToApp, "Sair", false) { onLogoutClick() } }
         }
         
         // Footer User Profile
@@ -481,7 +481,7 @@ private fun NewReportDialog(
                                     Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
-                                        Text(template.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                                        Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                                         Text(template.description, fontSize = 11.sp, color = TextSecondary)
                                     }
                                 }

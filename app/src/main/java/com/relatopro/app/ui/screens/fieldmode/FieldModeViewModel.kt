@@ -138,28 +138,47 @@ class FieldModeViewModel @Inject constructor(
         bitmap: android.graphics.Bitmap,
         context: android.content.Context,
         name: String,
-        role: String = "RESPONSAVEL_RELATORIO",
+        roleTag: String = "RESPONSAVEL_RELATORIO",
         roleTitle: String = "Inspetor Técnico"
     ) {
         val reportId = _currentReport.value?.id ?: return
         viewModelScope.launch {
-            val file = File(context.filesDir, "signatures/sig_${role}_${reportId}_${System.currentTimeMillis()}.png")
+            val file = File(context.filesDir, "signatures/sig_${roleTag}_${reportId}_${System.currentTimeMillis()}.png")
             file.parentFile?.mkdirs()
             FileOutputStream(file).use { out ->
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
             }
+            val finalName = name.ifBlank {
+                if (roleTag == "RESPONSAVEL_RELATORIO") (_currentReport.value?.responsible?.ifBlank { "Inspetor Técnico" } ?: "Inspetor Técnico")
+                else "Responsável no Local"
+            }
+            val finalRoleTitle = roleTitle.ifBlank {
+                if (roleTag == "RESPONSAVEL_RELATORIO") "Inspetor Técnico" else "Acompanhante / Supervisor"
+            }
             val sigEntity = SignatureEntity(
                 reportId = reportId,
-                name = name.ifEmpty { if (role == "RESPONSAVEL_RELATORIO") (_currentReport.value?.responsible ?: "João da Silva") else "Acompanhante" },
-                role = roleTitle.ifEmpty { if (role == "RESPONSAVEL_RELATORIO") "Inspetor Técnico" else "Supervisor / Acompanhante" },
+                name = finalName,
+                role = "${roleTag}#${finalRoleTitle}",
                 localPath = file.absolutePath,
                 timestamp = System.currentTimeMillis()
             )
             reportRepository.saveSignature(sigEntity)
-            if (role == "RESPONSAVEL_RELATORIO") {
+            if (roleTag == "RESPONSAVEL_RELATORIO") {
                 _inspectorSignature.value = sigEntity
             } else {
                 _operationSignature.value = sigEntity
+            }
+        }
+    }
+
+    fun clearSignature(roleTag: String) {
+        val reportId = _currentReport.value?.id ?: return
+        viewModelScope.launch {
+            reportRepository.deleteSignatureByRole(reportId, roleTag)
+            if (roleTag == "RESPONSAVEL_RELATORIO") {
+                _inspectorSignature.value = null
+            } else {
+                _operationSignature.value = null
             }
         }
     }

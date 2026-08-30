@@ -966,11 +966,19 @@ fun SignatureStepContent(
     viewModel: FieldModeViewModel
 ) {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
+    val profileName = prefs.getString("user_name", "") ?: ""
+    val profileRole = prefs.getString("user_role", "") ?: ""
+
     val inspectorSig by viewModel.inspectorSignature.collectAsState()
     val operationSig by viewModel.operationSignature.collectAsState()
 
-    var inspectorName by remember(report?.responsible) { mutableStateOf(report?.responsible ?: "Alexandre Machado") }
-    var inspectorRole by remember { mutableStateOf("Inspetor Técnico") }
+    var inspectorName by remember(report?.responsible, profileName) { 
+        mutableStateOf(report?.responsible?.ifBlank { profileName } ?: profileName) 
+    }
+    var inspectorRole by remember(profileRole) { 
+        mutableStateOf(profileRole.ifBlank { "Inspetor Técnico" }) 
+    }
     var operationName by remember { mutableStateOf("") }
     var operationRole by remember { mutableStateOf("Supervisor no Local") }
 
@@ -983,6 +991,43 @@ fun SignatureStepContent(
             Text("Revisão & Assinaturas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
             Spacer(modifier = Modifier.height(4.dp))
             Text("Confira os dados e colete as assinaturas digitais antes de gerar o laudo.", fontSize = 13.sp, color = TextSecondary)
+        }
+
+        // Profile Missing Warnings
+        if (profileName.isBlank()) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B))
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text("Complete seus dados", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF92400E))
+                            Text("Para finalizar o relatório, informe seu nome e sua função.", fontSize = 11.sp, color = Color(0xFFB45309))
+                        }
+                    }
+                }
+            }
+        } else if (profileRole.isBlank()) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B))
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text("Função não informada", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF92400E))
+                            Text("Informe sua função para continuar.", fontSize = 11.sp, color = Color(0xFFB45309))
+                        }
+                    }
+                }
+            }
         }
 
         // Resumo do Relatório Card
@@ -998,7 +1043,7 @@ fun SignatureStepContent(
                     
                     SummaryRow("Título", report?.title ?: "Inspeção Técnica")
                     SummaryRow("Local", report?.location ?: "Local da Inspeção")
-                    SummaryRow("Responsável", report?.responsible ?: "Inspetor Técnico")
+                    SummaryRow("Responsável", inspectorName.ifBlank { report?.responsible ?: "Inspetor Técnico" })
                     SummaryRow("Itens Respondidos", "$answersCount de $fieldsCount")
                     SummaryRow("Fotos Anexadas", "$photosCount fotos")
                 }
@@ -1039,7 +1084,10 @@ fun SignatureStepContent(
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = inspectorName,
-                        onValueChange = { inspectorName = it },
+                        onValueChange = { 
+                            inspectorName = it
+                            viewModel.updateReportInfo(report?.title ?: "", report?.location ?: "", it)
+                        },
                         placeholder = { Text("Nome completo do responsável", fontSize = 14.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
@@ -1080,7 +1128,9 @@ fun SignatureStepContent(
                         onSignatureCaptured = { bitmap ->
                             viewModel.saveSignature(bitmap, context, inspectorName, "RESPONSAVEL_RELATORIO", inspectorRole)
                         },
-                        onClear = {}
+                        onClear = {
+                            viewModel.clearSignature("RESPONSAVEL_RELATORIO")
+                        }
                     )
                 }
             }
@@ -1159,9 +1209,11 @@ fun SignatureStepContent(
                     SignaturePad(
                         modifier = Modifier.fillMaxWidth(),
                         onSignatureCaptured = { bitmap ->
-                            viewModel.saveSignature(bitmap, context, operationName.ifEmpty { "Acompanhante" }, "PRESENTE_OPERACAO", operationRole)
+                            viewModel.saveSignature(bitmap, context, operationName.ifBlank { "Responsável no Local" }, "PRESENTE_OPERACAO", operationRole.ifBlank { "Acompanhante / Supervisor" })
                         },
-                        onClear = {}
+                        onClear = {
+                            viewModel.clearSignature("PRESENTE_OPERACAO")
+                        }
                     )
                 }
             }

@@ -49,7 +49,7 @@ interface ReportDao {
     @Query("SELECT * FROM signatures WHERE reportId = :reportId ORDER BY id ASC")
     suspend fun getSignatures(reportId: Long): List<SignatureEntity>
 
-    @Query("DELETE FROM signatures WHERE reportId = :reportId AND role = :role")
+    @Query("DELETE FROM signatures WHERE reportId = :reportId AND (role LIKE :role || '%' OR role = :role)")
     suspend fun deleteSignatureByRole(reportId: Long, role: String)
 
     @androidx.room.Delete

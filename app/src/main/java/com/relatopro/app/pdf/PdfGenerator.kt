@@ -552,20 +552,19 @@ class PdfGenerator(private val context: Context) {
 
         val sigWidth = (usableWidth - 16f) / 2f
 
-        // Get the 2 signatures
+        // Get the 2 signatures with robust matching
         val sigRespRelatorio = signatures.firstOrNull { 
+            it.role.startsWith("RESPONSAVEL_RELATORIO") ||
             it.role.contains("RESPONSAVEL", ignoreCase = true) || 
-            it.role.contains("Inspetor", ignoreCase = true) ||
-            it.role.contains("Técnico", ignoreCase = true)
+            it.role.contains("Inspetor", ignoreCase = true)
         } ?: signatures.firstOrNull()
 
         val sigPresenteOp = signatures.firstOrNull { 
-            (it.role.contains("PRESENTE", ignoreCase = true) || 
+            (it.role.startsWith("PRESENTE_OPERACAO") ||
+             it.role.contains("PRESENTE", ignoreCase = true) || 
              it.role.contains("OPERACAO", ignoreCase = true) || 
              it.role.contains("Acompanhante", ignoreCase = true) || 
-             it.role.contains("Supervisor", ignoreCase = true) || 
-             it.role.contains("Gerente", ignoreCase = true) ||
-             it.role.contains("Cliente", ignoreCase = true)) && it.id != (sigRespRelatorio?.id ?: -1L)
+             it.role.contains("Supervisor", ignoreCase = true)) && it.id != (sigRespRelatorio?.id ?: -1L)
         } ?: signatures.firstOrNull { it.id != (sigRespRelatorio?.id ?: -1L) }
 
         fun drawSignatureBox(
@@ -615,11 +614,12 @@ class PdfGenerator(private val context: Context) {
             // Divider before name
             canvas.drawLine(x + 10f, y + 78f, x + sigWidth - 10f, y + 78f, linePaint)
 
-            val name = sig?.name?.ifEmpty { defaultName } ?: defaultName
-            val rawRole = sig?.role?.ifEmpty { defaultRole } ?: defaultRole
-            val displayRole = when (rawRole) {
-                "RESPONSAVEL_RELATORIO" -> "Inspetor Técnico"
-                "PRESENTE_OPERACAO" -> defaultRole
+            val name = sig?.name?.ifBlank { defaultName } ?: defaultName
+            val rawRole = sig?.role?.ifBlank { defaultRole } ?: defaultRole
+            val displayRole = when {
+                rawRole.contains("#") -> rawRole.substringAfter("#").ifBlank { defaultRole }
+                rawRole == "RESPONSAVEL_RELATORIO" -> "Inspetor Técnico"
+                rawRole == "PRESENTE_OPERACAO" -> defaultRole
                 else -> rawRole
             }
             canvas.drawText("Nome: $name", x + 10f, y + 92f, bodyPaint)
@@ -631,7 +631,7 @@ class PdfGenerator(private val context: Context) {
             y = currentY,
             title = "RESPONSÁVEL PELO RELATÓRIO",
             sig = sigRespRelatorio,
-            defaultName = report.responsible.ifEmpty { "João da Silva" },
+            defaultName = report.responsible.ifBlank { "Inspetor Técnico" },
             defaultRole = "Inspetor Técnico"
         )
 

@@ -11,8 +11,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -346,7 +346,7 @@ fun ChecklistStepContent(viewModel: FieldModeViewModel, launchCamera: (Long) -> 
                                 selectedFieldId = field.id
                                 showBottomSheet = true
                             }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Comentário", tint = if (answer?.observation.isNullOrBlank()) TextSecondary else PrimaryBlue, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Comentário", tint = if (answer?.observation.isNullOrBlank()) TextSecondary else PrimaryBlue, modifier = Modifier.size(20.dp))
                             }
                             IconButton(onClick = { 
                                 selectedFieldId = field.id

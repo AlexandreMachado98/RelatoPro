@@ -64,33 +64,39 @@ fun FieldModeScreen(
             }
         }
     ) { paddingValues ->
+        val fields by viewModel.fields.collectAsState()
+        val answers by viewModel.answers.collectAsState()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(BackgroundLight)
                 .padding(paddingValues)
         ) {
-            ProgressHeader()
+            ProgressHeader(
+                total = fields.size,
+                completed = answers.values.count { it.answerValue != null }
+            )
             
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item {
+                items(fields) { field ->
+                    val answer = answers[field.id]
                     ChecklistItemCard(
-                        number = "08",
-                        title = "Extintor de incêndio acessível e sinalizado?",
-                        initialAnswer = "NC",
-                        initialObservation = "Extintor sem identificação adequada."
-                    )
-                }
-                item {
-                    ChecklistItemCard(
-                        number = "09",
-                        title = "Equipamentos de Proteção Individual (EPI) em uso?",
-                        initialAnswer = "C",
-                        initialObservation = ""
+                        number = String.format("%02d", field.orderIndex),
+                        title = field.label,
+                        initialAnswer = answer?.answerValue,
+                        initialObservation = answer?.observation ?: "",
+                        onAnswerChange = { newAns, newObs ->
+                            viewModel.updateAnswer(field.id, newAns, newObs)
+                        },
+                        onAddPhoto = {
+                            // Dummy path for now, in a real app would be the Camera intent URI
+                            viewModel.savePhoto(field.id, "/dummy/path/foto.webp")
+                        }
                     )
                 }
 
@@ -117,7 +123,7 @@ fun FieldModeScreen(
 }
 
 @Composable
-fun ProgressHeader() {
+fun ProgressHeader(total: Int, completed: Int) {
     Surface(
         color = Color.White,
         shadowElevation = 4.dp,
@@ -130,19 +136,14 @@ fun ProgressHeader() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "12/35 itens concluídos",
+                    text = "$completed/$total itens concluídos",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatusBadge("C: 8", StatusConforme)
-                    StatusBadge("NC: 3", StatusNaoConforme)
-                    StatusBadge("NA: 1", StatusNaoAplicavel)
-                }
             }
             Spacer(modifier = Modifier.height(12.dp))
             LinearProgressIndicator(
-                progress = { 12f / 35f },
+                progress = { if (total > 0) completed.toFloat() / total.toFloat() else 0f },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
@@ -172,10 +173,11 @@ fun ChecklistItemCard(
     number: String,
     title: String,
     initialAnswer: String?,
-    initialObservation: String
+    initialObservation: String,
+    onAnswerChange: (String?, String) -> Unit,
+    onAddPhoto: () -> Unit
 ) {
-    var selectedAnswer by remember { mutableStateOf(initialAnswer) }
-    var observation by remember { mutableStateOf(initialObservation) }
+    var observation by remember(initialObservation) { mutableStateOf(initialObservation) }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -199,30 +201,33 @@ fun ChecklistItemCard(
                 AnswerButton(
                     text = "C",
                     color = StatusConforme,
-                    isSelected = selectedAnswer == "C",
+                    isSelected = initialAnswer == "C",
                     modifier = Modifier.weight(1f)
-                ) { selectedAnswer = "C" }
+                ) { onAnswerChange("C", observation) }
                 
                 AnswerButton(
                     text = "NC",
                     color = StatusNaoConforme,
-                    isSelected = selectedAnswer == "NC",
+                    isSelected = initialAnswer == "NC",
                     modifier = Modifier.weight(1f)
-                ) { selectedAnswer = "NC" }
+                ) { onAnswerChange("NC", observation) }
                 
                 AnswerButton(
                     text = "NA",
                     color = StatusNaoAplicavel,
-                    isSelected = selectedAnswer == "NA",
+                    isSelected = initialAnswer == "NA",
                     modifier = Modifier.weight(1f)
-                ) { selectedAnswer = "NA" }
+                ) { onAnswerChange("NA", observation) }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = observation,
-                onValueChange = { observation = it },
+                onValueChange = { 
+                    observation = it
+                    onAnswerChange(initialAnswer, it) 
+                },
                 label = { Text("Observação") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2
@@ -239,18 +244,8 @@ fun ChecklistItemCard(
                     modifier = Modifier
                         .size(60.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Foto 1", fontSize = 10.sp)
-                }
-                
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
                         .border(1.dp, PrimaryBlue, RoundedCornerShape(8.dp))
-                        .clickable { /* TODO: Abrir câmera */ },
+                        .clickable { onAddPhoto() },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

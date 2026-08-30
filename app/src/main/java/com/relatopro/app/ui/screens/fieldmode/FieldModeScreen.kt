@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.ui.theme.*
+import com.relatopro.app.ui.components.signature.SignaturePad
+import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.runtime.LaunchedEffect
 import com.relatopro.app.ui.screens.fieldmode.FieldModeViewModel
@@ -90,6 +92,24 @@ fun FieldModeScreen(
                         initialAnswer = "C",
                         initialObservation = ""
                     )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Assinatura do Responsável",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SignaturePad(
+                        onSignatureCaptured = { bitmap ->
+                            // Here we could store the bitmap to pass to PDF
+                        },
+                        onClear = {}
+                    )
+                    Spacer(modifier = Modifier.height(60.dp)) // Extra padding for bottom bar
                 }
             }
         }

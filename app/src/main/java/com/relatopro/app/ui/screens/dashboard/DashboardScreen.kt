@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -49,9 +48,10 @@ fun DashboardScreen(
     val pendingReports = reports.count { it.syncStatus == "PENDING" && it.status != "DRAFT" }
 
     // Usar Layout responsivo em grade
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
-        val isDesktop = maxWidth >= 600.dp
-        
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isDesktop = configuration.screenWidthDp >= 600
+
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)

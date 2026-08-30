@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.relatopro.app.ui.theme.*
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,9 +38,10 @@ fun MainAppScreen(
     val isMainRoute = currentRoute in listOf("dashboard", "my_reports", "template_builder")
 
     if (isMainRoute) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isDesktop = maxWidth >= 600.dp
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val isDesktop = configuration.screenWidthDp >= 600
 
+        Box(modifier = Modifier.fillMaxSize()) {
             if (isDesktop) {
                 // DESKTOP / TABLET LAYOUT: Permanent Sidebar + Content
                 Row(modifier = Modifier.fillMaxSize()) {

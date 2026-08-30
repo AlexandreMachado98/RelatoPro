@@ -269,11 +269,11 @@ fun SaaSTextField(label: String, value: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun ChecklistStepContent(viewModel: FieldModeViewModel, launchCamera: (Long) -> Unit) {
-    val template by viewModel.template.collectAsState()
+    val currentReport by viewModel.currentReport.collectAsState()
     val fields by viewModel.fields.collectAsState()
     val answers by viewModel.answers.collectAsState()
     
-    if (template == null) {
+    if (currentReport == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = PrimaryBlue)
         }
@@ -387,11 +387,7 @@ fun SignatureStepContent(viewModel: FieldModeViewModel) {
             SignaturePad(
                 modifier = Modifier.fillMaxSize(),
                 onSignatureCaptured = { bitmap ->
-                    val file = File(context.filesDir, "signature_${System.currentTimeMillis()}.png")
-                    file.outputStream().use { out ->
-                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-                    }
-                    viewModel.saveSignature(file.absolutePath)
+                    viewModel.saveSignature(bitmap, context)
                 },
                 onClear = {
                     // Nothing extra to do yet

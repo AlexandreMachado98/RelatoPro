@@ -227,14 +227,26 @@ private fun PermanentSidebar(
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item { SidebarCategory("EVIDÊNCIAS") }
-            item { SidebarItem(Icons.Default.CameraAlt, "Fotos e Anexos", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.CameraAlt, "Fotos e Anexos", currentRoute == "evidence_gallery") { 
+                navController.navigate("evidence_gallery") { popUpTo("dashboard") }
+                onItemClick() 
+            } }
             
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CONFIGURAÇÕES") }
-            item { SidebarItem(Icons.Default.Settings, "Configurações", false) { onItemClick() } }
-            item { SidebarItem(Icons.Default.Person, "Perfil", false) { onItemClick() } }
-            item { SidebarItem(Icons.AutoMirrored.Filled.HelpOutline, "Ajuda e Suporte", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.Settings, "Configurações", currentRoute == "settings") { 
+                navController.navigate("settings") { popUpTo("dashboard") }
+                onItemClick() 
+            } }
+            item { SidebarItem(Icons.Default.Person, "Perfil", currentRoute == "profile") { 
+                navController.navigate("profile") { popUpTo("dashboard") }
+                onItemClick() 
+            } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.HelpOutline, "Ajuda e Suporte", currentRoute == "help") { 
+                navController.navigate("help") { popUpTo("dashboard") }
+                onItemClick() 
+            } }
         }
         
         // Footer User Profile

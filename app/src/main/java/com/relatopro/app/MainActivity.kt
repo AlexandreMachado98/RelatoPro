@@ -101,6 +101,10 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }
+                            composable("profile") { com.relatopro.app.ui.screens.settings.ProfileScreen { navController.popBackStack() } }
+                            composable("settings") { com.relatopro.app.ui.screens.settings.SettingsScreen { navController.popBackStack() } }
+                            composable("help") { com.relatopro.app.ui.screens.settings.HelpScreen { navController.popBackStack() } }
+                            composable("evidence_gallery") { com.relatopro.app.ui.screens.settings.EvidenceGalleryScreen { navController.popBackStack() } }
                         }
                     }
                 }

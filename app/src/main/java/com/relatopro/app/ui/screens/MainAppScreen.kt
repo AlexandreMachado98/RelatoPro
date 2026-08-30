@@ -16,6 +16,10 @@ import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Person
+import com.relatopro.app.ui.theme.TextPrimary
+import com.relatopro.app.ui.theme.TextSecondary
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -118,15 +122,15 @@ fun MainAppScreen(
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color.White,
-                            titleContentColor = com.relatopro.app.ui.theme.TextPrimary,
-                            navigationIconContentColor = com.relatopro.app.ui.theme.TextPrimary
+                            titleContentColor = TextPrimary,
+                            navigationIconContentColor = TextPrimary
                         ),
                         actions = {
                             IconButton(onClick = { /* TODO */ }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.Settings, contentDescription = "Configurações", tint = com.relatopro.app.ui.theme.TextSecondary)
+                                Icon(Icons.Default.Settings, contentDescription = "Configurações", tint = TextSecondary)
                             }
                             IconButton(onClick = { /* TODO */ }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.Person, contentDescription = "Perfil", tint = com.relatopro.app.ui.theme.TextSecondary)
+                                Icon(Icons.Default.Person, contentDescription = "Perfil", tint = TextSecondary)
                             }
                         }
                     )
@@ -199,8 +203,8 @@ private fun DrawerItem(
             selectedContainerColor = PrimaryBlue.copy(alpha = 0.1f),
             selectedIconColor = PrimaryBlue,
             selectedTextColor = PrimaryBlue,
-            unselectedIconColor = com.relatopro.app.ui.theme.TextSecondary,
-            unselectedTextColor = com.relatopro.app.ui.theme.TextPrimary
+            unselectedIconColor = TextSecondary,
+            unselectedTextColor = TextPrimary
         )
     )
 }

@@ -1,24 +1,23 @@
 package com.relatopro.app.ui.screens.templatebuilder
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.TextSnippet
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -131,7 +130,7 @@ fun TemplateBuilderScreen(
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     itemsIndexed(fields) { index, field ->
                         val icon = when (field.type) {
-                            "TEXT" -> Icons.Default.TextSnippet
+                            "TEXT" -> Icons.AutoMirrored.Filled.TextSnippet
                             "PHOTO" -> Icons.Default.CameraAlt
                             else -> Icons.Default.Checklist
                         }
@@ -198,7 +197,7 @@ fun AddFieldDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
     
     val types = listOf(
         Triple("C_NC_NA", "Conforme / Não Conforme", Icons.Default.Checklist),
-        Triple("TEXT", "Texto Livre", Icons.Default.TextSnippet),
+        Triple("TEXT", "Texto Livre", Icons.AutoMirrored.Filled.TextSnippet),
         Triple("PHOTO", "Apenas Foto", Icons.Default.CameraAlt)
     )
 

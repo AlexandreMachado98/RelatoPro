@@ -54,10 +54,7 @@ class MainActivity : ComponentActivity() {
                         composable("my_reports") {
                             MyReportsScreen(
                                 viewModel = hiltViewModel(),
-                                onNavigateBack = { navController.popBackStack() },
-                                onOpenPdf = { pdfPath ->
-                                    // Logic to open PDF intent can be added here
-                                }
+                                onNavigateBack = { navController.popBackStack() }
                             )
                         }
                     }

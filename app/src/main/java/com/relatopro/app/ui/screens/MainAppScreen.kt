@@ -235,7 +235,7 @@ private fun PermanentSidebar(
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CHECKLISTS") }
-            item { SidebarItem(Icons.AutoMirrored.Filled.FactCheck, "Checklists", false) { onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.FactCheck, "Checklists", false) { navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") }; onItemClick() } }
             item { SidebarItem(Icons.AutoMirrored.Filled.Assignment, "Modelos de Checklist", currentRoute == "template_builder") { navController.navigate("template_builder") { popUpTo("dashboard") }; onItemClick() } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -372,5 +372,6 @@ private fun BottomNavIcon(icon: ImageVector, label: String, selected: Boolean, o
         Text(label, color = color, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
+
 
 

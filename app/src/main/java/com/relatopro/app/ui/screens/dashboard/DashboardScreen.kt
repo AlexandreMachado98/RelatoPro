@@ -110,66 +110,15 @@ fun DashboardScreen(
             contentPadding = PaddingValues(bottom = 100.dp) // Bottom padding for Mobile Nav Bar
         ) {
             item {
-                if (isDesktop) {
-                    Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)) {
-                        Text("Olá, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text("Aqui está o resumo das suas atividades.", fontSize = 14.sp, color = TextSecondary)
-                    }
-                } else {
-                    // Mobile Custom Header (White)
-                    Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Image(painterResource(id = com.relatopro.app.R.drawable.logo), contentDescription = "Logo", modifier = Modifier.size(24.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Relato Pro", color = PrimaryBlue, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Icon(Icons.Default.Notifications, contentDescription = "Notificações", tint = TextPrimary)
-                        }
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Text("Olá, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text("Aqui está o resumo das suas atividades.", fontSize = 14.sp, color = TextSecondary)
-                    }
-                }
-            }
-            
-            // 4 SUMMARY CARDS
-            item {
-                val paddingH = 24.dp
-                if (isDesktop) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        SummaryCard(Modifier.weight(1f), "Relatórios", totalReports, "Total de relatórios", Icons.Default.Description, PrimaryBlue)
-                        SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Neste período", Icons.Default.CheckCircle, StatusConforme)
-                        SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, StatusWarning) // Used Edit as mock
-                        SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, StatusNaoConforme)
-                    }
-                } else {
-                    Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            SummaryCard(Modifier.weight(1f), "Relatórios", totalReports, "Total", Icons.Default.Description, PrimaryBlue)
-                            SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Neste período", Icons.Default.CheckCircle, StatusConforme)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, StatusWarning)
-                            SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, StatusNaoConforme)
-                        }
-                    }
-                }
-            }
-
-            // CHARTS AND RECENT ACTIVITY
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-                val paddingH = 24.dp
-                if (isDesktop) {
+                                if (isDesktop) {
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         DonutChartCard(Modifier.weight(1f))
-                        RecentActivityCard(Modifier.weight(1.2f))
+                        RecentActivityCard(Modifier.weight(1.2f), reportsList)
                     }
                 } else {
                     Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                         DonutChartCard(Modifier.fillMaxWidth())
-                        RecentActivityCard(Modifier.fillMaxWidth())
+                        RecentActivityCard(Modifier.fillMaxWidth(), reportsList)
                     }
                 }
             }
@@ -307,7 +256,7 @@ fun LegendItem(label: String, value: String, color: Color) {
 }
 
 @Composable
-fun RecentActivityCard(modifier: Modifier) {
+fun RecentActivityCard(modifier: Modifier, reports: List<com.relatopro.app.data.local.entity.ReportEntity>) {
     Card(
         modifier = modifier.height(280.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
@@ -317,20 +266,38 @@ fun RecentActivityCard(modifier: Modifier) {
         Column(modifier = Modifier.padding(20.dp).fillMaxSize()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Atividade Recente", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-                Box(modifier = Modifier.border(1.dp, BorderColor, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
-                    Text("Ver todos", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
             }
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Mocking the exact rows from the image
-            RecentRow("Relatório #1024", "Inspeção de Segurança - Indústria ABC", "Concluído", StatusConforme, "Hoje, 09:30")
-            HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
-            RecentRow("Checklist Manutenção", "Setor Produção", "Rascunho", PrimaryBlue, "Ontem, 15:45")
-            HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
-            RecentRow("Inspeção Operacional", "Área de Logística", "Pendente", StatusWarning, "28/08/2026")
-            HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
-            RecentRow("Relatório #1023", "Visita Técnica - Cliente XYZ", "Concluído", StatusConforme, "28/08/2026")
+            if (reports.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Nenhuma atividade registrada.", color = TextSecondary)
+                }
+            } else {
+                LazyColumn {
+                    items(reports.sortedByDescending { it.date }.take(4)) { report ->
+                        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                        val dateStr = sdf.format(Date(report.date))
+                        
+                        val statusText = when(report.status) {
+                            "DRAFT" -> "Rascunho"
+                            "FINALIZED" -> "Concluído"
+                            "SENT" -> "Enviado"
+                            else -> report.status
+                        }
+                        
+                        val statusColor = when(report.status) {
+                            "DRAFT" -> PrimaryBlue
+                            "FINALIZED" -> StatusConforme
+                            "SENT" -> StatusConforme
+                            else -> StatusWarning
+                        }
+                        
+                        RecentRow(report.title, report.location, statusText, statusColor, dateStr)
+                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                    }
+                }
+            }
         }
     }
 }
@@ -403,6 +370,8 @@ fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Text(label, color = TextPrimary, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
+
+
 
 
 

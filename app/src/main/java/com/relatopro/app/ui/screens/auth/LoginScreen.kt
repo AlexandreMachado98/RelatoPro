@@ -49,7 +49,6 @@ fun LoginScreen(
         onNavigateToDashboard()
     }
 
-    // Official Google Sign-In options
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
@@ -58,36 +57,65 @@ fun LoginScreen(
     }
 
     val googleSignInClient = remember {
-        GoogleSignIn.getClient(context as Activity, gso)
+        GoogleSignIn.getClient(context, gso)
     }
 
     // Google Sign-In Activity Result Launcher
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(ApiException::class.java)
-                val displayName = account?.displayName ?: account?.givenName ?: "Alexandre Machado"
-                val email = account?.email ?: "usuario.relatopro@gmail.com"
-                val photoUrl = account?.photoUrl?.toString()
+        android.util.Log.d("RelatoProAuth", "Google Sign-In ActivityResult: resultCode=${result.resultCode}, data=${result.data}")
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            if (account != null) {
+                val displayName = account.displayName ?: account.givenName ?: "Usuário Google"
+                val email = account.email ?: "usuario@gmail.com"
+                val photoUrl = account.photoUrl?.toString()
+                android.util.Log.d("RelatoProAuth", "Google Sign-In SUCCESS: $displayName, $email, photo=$photoUrl")
                 completeGoogleLogin(displayName, email, photoUrl)
-            } catch (e: ApiException) {
-                // Fallback to last signed-in or default account if API exception occurred in dev environment
-                val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
-                if (lastAccount != null) {
-                    completeGoogleLogin(
-                        lastAccount.displayName ?: "Alexandre Machado",
-                        lastAccount.email ?: "usuario.relatopro@gmail.com",
-                        lastAccount.photoUrl?.toString()
-                    )
-                } else {
-                    completeGoogleLogin("Alexandre Machado", "usuario.relatopro@gmail.com", null)
+            } else {
+                isLoading = false
+                android.widget.Toast.makeText(context, "Não foi possível obter dados da conta Google.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: ApiException) {
+            isLoading = false
+            android.util.Log.e("RelatoProAuth", "Google Sign-In ApiException: code=${e.statusCode}, message=${e.message}", e)
+            when (e.statusCode) {
+                12501, 12502 -> {
+                    android.widget.Toast.makeText(context, "Login cancelado.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                7 -> {
+                    android.widget.Toast.makeText(context, "Sem conexão com a internet. Verifique sua rede.", android.widget.Toast.LENGTH_LONG).show()
+                }
+                10 -> { // DEVELOPER_ERROR
+                    val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
+                    if (lastAccount != null) {
+                        val displayName = lastAccount.displayName ?: lastAccount.givenName ?: "Usuário Google"
+                        val email = lastAccount.email ?: "usuario@gmail.com"
+                        val photoUrl = lastAccount.photoUrl?.toString()
+                        completeGoogleLogin(displayName, email, photoUrl)
+                    } else {
+                        android.widget.Toast.makeText(context, "Google Sign-In: conta não configurada no dispositivo ou serviço Google indisponível.", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+                else -> {
+                    val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
+                    if (lastAccount != null) {
+                        completeGoogleLogin(
+                            lastAccount.displayName ?: "Usuário Google",
+                            lastAccount.email ?: "usuario@gmail.com",
+                            lastAccount.photoUrl?.toString()
+                        )
+                    } else {
+                        android.widget.Toast.makeText(context, "Não foi possível conectar ao Google (${e.statusCode}). Tente novamente.", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
-        } else {
+        } catch (e: Exception) {
             isLoading = false
+            android.util.Log.e("RelatoProAuth", "Google Sign-In unexpected error", e)
+            android.widget.Toast.makeText(context, "Erro ao iniciar o login com Google.", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -135,13 +163,16 @@ fun LoginScreen(
             // Real Google Sign-In Button
             Button(
                 onClick = {
+                    if (isLoading) return@Button
                     isLoading = true
+                    android.util.Log.d("RelatoProAuth", "Tapped 'Continuar com o Google'. Launching Google Sign-In...")
                     try {
-                        googleSignInClient.signOut().addOnCompleteListener {
-                            googleSignInLauncher.launch(googleSignInClient.signInIntent)
-                        }
+                        val signInIntent = googleSignInClient.signInIntent
+                        googleSignInLauncher.launch(signInIntent)
                     } catch (e: Exception) {
-                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                        isLoading = false
+                        android.util.Log.e("RelatoProAuth", "Error launching Google Sign-In intent", e)
+                        android.widget.Toast.makeText(context, "Não foi possível abrir o Google Sign-In: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
                     }
                 },
                 enabled = !isLoading,
@@ -157,7 +188,19 @@ fun LoginScreen(
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 4.dp)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = PrimaryBlue)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = PrimaryBlue)
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = "Conectando ao Google...",
+                            color = TextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 } else {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

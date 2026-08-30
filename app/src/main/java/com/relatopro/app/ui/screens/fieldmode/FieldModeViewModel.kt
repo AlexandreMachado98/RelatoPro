@@ -177,9 +177,10 @@ class FieldModeViewModel @Inject constructor(
                     entry.value.map { it.localPath }
                 }.toMutableMap()
 
+            val reportToGenerate = report.copy(status = "FINALIZED")
             val pdfFile = try {
                 pdfGenerator.generateReportPdf(
-                    report = report,
+                    report = reportToGenerate,
                     fields = _fields.value,
                     answers = _answers.value.values.toList(),
                     photos = photosMap,
@@ -191,8 +192,7 @@ class FieldModeViewModel @Inject constructor(
                 null
             }
 
-            val finalized = report.copy(
-                status = "FINALIZED",
+            val finalized = reportToGenerate.copy(
                 pdfLocalPath = pdfFile?.absolutePath
             )
             reportRepository.updateReport(finalized)

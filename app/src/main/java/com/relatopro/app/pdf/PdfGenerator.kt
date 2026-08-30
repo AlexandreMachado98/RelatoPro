@@ -179,16 +179,10 @@ class PdfGenerator(private val context: Context) {
             canvas.drawText(value, x, y + 12f, headerPaint)
         }
 
-        drawMetaItem(colA, currentY + 20f, "EMPRESA / LOCAL:", report.location.ifEmpty { "Indústria ABC Lda." })
-        drawMetaItem(colA, currentY + 50f, "RESPONSÁVEL TÉCNICO:", report.responsible.ifEmpty { "João da Silva" })
+        drawMetaItem(colA, currentY + 20f, "EMPRESA / LOCAL:", report.location.ifEmpty { "Local da Inspeção" })
+        drawMetaItem(colA, currentY + 50f, "RESPONSÁVEL TÉCNICO:", report.responsible.ifEmpty { "Inspetor Técnico" })
         drawMetaItem(colB, currentY + 20f, "DATA E HORA DA VISTORIA:", dateStr)
-        val statusDisplay = when (report.status) {
-            "FINALIZED" -> "CONCLUÍDO"
-            "SENT" -> "ENVIADO"
-            "DRAFT" -> "RASCUNHO"
-            else -> report.status.uppercase(Locale.getDefault())
-        }
-        drawMetaItem(colB, currentY + 50f, "STATUS DO LAUDO:", statusDisplay)
+        drawMetaItem(colB, currentY + 50f, "STATUS DO LAUDO:", "EMITIDO")
 
         currentY += infoCardHeight + 20f
 

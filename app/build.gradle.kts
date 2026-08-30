@@ -9,7 +9,6 @@ plugins {
 android {
     namespace = "com.relatopro.app"
     compileSdk = 34
-    buildToolsVersion = "34.0.0"
 
     defaultConfig {
         applicationId = "com.relatopro.app"

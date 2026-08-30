@@ -4,17 +4,29 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,7 +42,6 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -57,7 +68,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.ui.theme.BackgroundLight
 import com.relatopro.app.ui.theme.BorderColor
@@ -106,7 +119,7 @@ fun DashboardScreen(
                     Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Security, contentDescription = "Logo", tint = PrimaryBlue, modifier = Modifier.size(24.dp))
+                                Image(painterResource(id = com.relatopro.app.R.drawable.logo), contentDescription = "Logo", modifier = Modifier.size(24.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Relato Pro", color = PrimaryBlue, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             }
@@ -389,5 +402,6 @@ fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Text(label, color = TextPrimary, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
+
 
 

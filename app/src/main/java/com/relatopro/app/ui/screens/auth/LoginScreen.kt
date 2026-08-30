@@ -3,11 +3,11 @@ package com.relatopro.app.ui.screens.auth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -20,7 +20,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.ui.theme.*
 
@@ -46,7 +48,7 @@ fun LoginScreen(
         
         // Logo
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Security, contentDescription = "Logo", tint = PrimaryBlue, modifier = Modifier.size(32.dp))
+            Image(painterResource(id = com.relatopro.app.R.drawable.logo), contentDescription = "Logo", modifier = Modifier.size(32.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Relato Pro", color = PrimaryBlue, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
@@ -184,3 +186,4 @@ fun LoginScreen(
         }
     }
 }
+

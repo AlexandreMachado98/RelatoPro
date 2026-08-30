@@ -1,5 +1,6 @@
 package com.relatopro.app.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -173,7 +175,7 @@ private fun PermanentSidebar(
             modifier = Modifier.padding(24.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Security, contentDescription = "Logo", tint = Color.White, modifier = Modifier.size(28.dp))
+            Image(painterResource(id = com.relatopro.app.R.drawable.logo), contentDescription = "Logo", modifier = Modifier.size(28.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Text("Relato Pro", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }

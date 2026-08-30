@@ -38,7 +38,7 @@ fun MyReportsScreen(
     val reports by viewModel.reports.collectAsState()
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
-    var selectedStatus by remember { mutableStateOf("Todos") }
+    var selectedStatus by remember { mutableStateOf(initialFilter) }
 
     val configuration = LocalConfiguration.current
     val isDesktop = configuration.screenWidthDp >= 600
@@ -55,10 +55,19 @@ fun MyReportsScreen(
         }
     }
 
-    val sharePdf = { localPath: String ->
+        val sharePdf = { localPath: String, reportId: Long ->
         val file = File(localPath)
         if (file.exists()) {
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+            context.startActivity(Intent.createChooser(intent, "Compartilhar Relatório"))
+            viewModel.markAsSent(reportId)
+        }
+    }.fileprovider", file)
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/pdf"
                 putExtra(Intent.EXTRA_STREAM, uri)
@@ -72,10 +81,11 @@ fun MyReportsScreen(
         val matchesQuery = it.title.contains(searchQuery, ignoreCase = true) ||
                            it.location.contains(searchQuery, ignoreCase = true) ||
                            it.id.toString().contains(searchQuery)
-        val matchesStatus = when (selectedStatus) {
+                val matchesStatus = when (selectedStatus) {
             "Todos" -> true
             "Concluídos" -> it.status == "FINALIZED"
             "Rascunhos" -> it.status == "DRAFT"
+            "Enviados" -> it.status == "SENT"
             else -> true
         }
         matchesQuery && matchesStatus
@@ -287,7 +297,7 @@ fun DesktopReportsTable(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Compartilhar") },
-                                    onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it) } },
+                                    onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it, report.id) } },
                                     leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
                                 )
                                 HorizontalDivider()
@@ -347,7 +357,7 @@ fun MobileReportsList(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Compartilhar") },
-                                    onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it) } },
+                                    onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it, report.id) } },
                                     leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
                                 )
                                 HorizontalDivider()
@@ -387,5 +397,6 @@ fun StatusBadge(isFinal: Boolean) {
         }
     }
 }
+
 
 

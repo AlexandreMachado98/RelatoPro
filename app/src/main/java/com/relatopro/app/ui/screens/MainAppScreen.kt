@@ -32,15 +32,30 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainAppScreen(
     navController: NavHostController,
+    dashboardViewModel: com.relatopro.app.ui.screens.dashboard.DashboardViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     content: @Composable () -> Unit
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val isMainRoute = currentRoute in listOf("dashboard", "my_reports", "template_builder")
-    val configuration = LocalConfiguration.current
-    val isDesktop = configuration.screenWidthDp >= 800 // Adjusted to 800 for a better tablet/desktop breakpoint
+    val isMainRoute = currentRoute?.startsWith("dashboard") == true || currentRoute?.startsWith("my_reports") == true || currentRoute?.startsWith("template_builder") == true || currentRoute?.startsWith("evidence_gallery") == true || currentRoute?.startsWith("settings") == true || currentRoute?.startsWith("profile") == true || currentRoute?.startsWith("help") == true
 
+    val configuration = LocalConfiguration.current
+    val isDesktop = configuration.screenWidthDp >= 800
+
+    var showNewReportDialog by remember { mutableStateOf(false) }
+    val templates by dashboardViewModel.templates.collectAsState()
+
+    if (showNewReportDialog) {
+        NewReportDialog(
+            templates = templates,
+            onDismiss = { showNewReportDialog = false },
+            onTemplateSelected = { templateId ->
+                showNewReportDialog = false
+                navController.navigate("field_mode/$templateId")
+            }
+        )
+    }
     if (isMainRoute) {
         if (isDesktop) {
             // DESKTOP / TABLET LAYOUT: Permanent Sidebar + Content
@@ -207,24 +222,21 @@ private fun PermanentSidebar(
         // Menu Items
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             item { SidebarCategory("RELATÓRIOS") }
-            item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) { onNewReportClick(); onItemClick() } }
             item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute == "my_reports") { 
-                navController.navigate("my_reports") { popUpTo("dashboard") } 
+                navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") } 
                 onItemClick()
             } }
-            item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { onItemClick() } }
-            item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { navController.navigate("my_reports?filter=Rascunhos") { popUpTo("dashboard") }; onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) { navController.navigate("my_reports?filter=Enviados") { popUpTo("dashboard") }; onItemClick() } }
             item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) { onItemClick() } }
-            item { SidebarItem(Icons.Default.Checklist, "Modelos", currentRoute == "template_builder") { 
-                navController.navigate("template_builder") { popUpTo("dashboard") } 
-                onItemClick()
-            } }
+            
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CHECKLISTS") }
             item { SidebarItem(Icons.AutoMirrored.Filled.FactCheck, "Checklists", false) { onItemClick() } }
-            item { SidebarItem(Icons.AutoMirrored.Filled.Assignment, "Modelos de Checklist", false) { onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.Assignment, "Modelos de Checklist", currentRoute == "template_builder") { navController.navigate("template_builder") { popUpTo("dashboard") }; onItemClick() } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
@@ -307,7 +319,7 @@ private fun SidebarItem(icon: ImageVector, title: String, selected: Boolean, onC
 }
 
 @Composable
-private fun MobileBottomBar(currentRoute: String?, navController: NavHostController, onMenuClick: () -> Unit = {}) {
+private fun MobileBottomBar(currentRoute: String?, navController: NavHostController, onMenuClick: () -> Unit = {}, onNewReportClick: () -> Unit = {}) {
     Box(
         modifier = Modifier.fillMaxWidth().height(80.dp),
         contentAlignment = Alignment.BottomCenter
@@ -322,7 +334,7 @@ private fun MobileBottomBar(currentRoute: String?, navController: NavHostControl
                 navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } }
             }
             BottomNavIcon(Icons.AutoMirrored.Filled.ListAlt, "Relatórios", currentRoute == "my_reports") {
-                navController.navigate("my_reports") { popUpTo("dashboard") }
+                navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") }
             }
             // Space for central FAB
             Spacer(modifier = Modifier.width(48.dp))
@@ -334,13 +346,13 @@ private fun MobileBottomBar(currentRoute: String?, navController: NavHostControl
         }
         
         // Floating Center Button
-        Box(
+                Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .size(56.dp)
                 .clip(CircleShape)
                 .background(PrimaryBlue)
-                .clickable { /* Abre modal de novo relatorio */ },
+                .clickable { onNewReportClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.Add, contentDescription = "Novo", tint = Color.White, modifier = Modifier.size(28.dp))
@@ -360,3 +372,5 @@ private fun BottomNavIcon(icon: ImageVector, label: String, selected: Boolean, o
         Text(label, color = color, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
+
+

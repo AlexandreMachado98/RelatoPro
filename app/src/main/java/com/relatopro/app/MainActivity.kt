@@ -95,9 +95,14 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }
-                            composable("my_reports") {
+                                                        composable(
+                                route = "my_reports?filter={filter}",
+                                arguments = listOf(navArgument("filter") { type = NavType.StringType; defaultValue = "Todos" })
+                            ) { backStackEntry ->
+                                val filter = backStackEntry.arguments?.getString("filter") ?: "Todos"
                                 MyReportsScreen(
                                     viewModel = hiltViewModel(),
+                                    initialFilter = filter,
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }
@@ -112,3 +117,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+

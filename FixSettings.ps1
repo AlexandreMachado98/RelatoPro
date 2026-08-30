@@ -1,3 +1,4 @@
+$settings = @"
 package com.relatopro.app.ui.screens.settings
 
 import androidx.compose.foundation.background
@@ -99,3 +100,7 @@ private fun GenericSettingsScreen(title: String, onNavigateBack: () -> Unit, con
         }
     }
 }
+"@
+
+Set-Content app/src/main/java/com/relatopro/app/ui/screens/settings/SettingsScreens.kt $settings
+Write-Host "Fixed SettingsScreens imports and syntax"

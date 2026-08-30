@@ -14,6 +14,7 @@ interface ReportRepository {
     fun getReportAnswers(reportId: Long): Flow<List<ReportAnswerEntity>>
     suspend fun savePhoto(photo: PhotoEntity): Long
     fun getReportPhotos(reportId: Long): Flow<List<PhotoEntity>>
+    fun getAllPhotos(): Flow<List<PhotoEntity>>
     suspend fun saveSignature(signature: SignatureEntity): Long
     suspend fun getSignature(reportId: Long): SignatureEntity?
     suspend fun deleteReport(report: ReportEntity)

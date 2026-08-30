@@ -34,6 +34,9 @@ interface ReportDao {
     @Query("SELECT * FROM photos WHERE reportId = :reportId")
     fun getReportPhotos(reportId: Long): Flow<List<PhotoEntity>>
 
+    @Query("SELECT * FROM photos ORDER BY timestamp DESC")
+    fun getAllPhotos(): Flow<List<PhotoEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSignature(signature: SignatureEntity): Long
 

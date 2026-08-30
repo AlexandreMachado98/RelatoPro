@@ -36,4 +36,14 @@ class MyReportsViewModel @Inject constructor(
             reportRepository.deleteReport(report)
         }
     }
+    fun markAsSent(reportId: Long) {
+        viewModelScope.launch {
+            val report = _reports.value.find { it.id == reportId }
+            if (report != null && report.status != "SENT") {
+                val updated = report.copy(status = "SENT")
+                reportRepository.updateReport(updated)
+                // The flow from repository will automatically update _reports
+            }
+        }
+    }
 }

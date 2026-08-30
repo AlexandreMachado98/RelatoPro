@@ -80,7 +80,8 @@ fun FieldModeScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(fields) { field ->
+                items(count = fields.size) { index ->
+                    val field = fields[index]
                     val answer = answers[field.id]
                     ChecklistItemCard(
                         number = String.format(java.util.Locale.getDefault(), "%02d", field.orderIndex),

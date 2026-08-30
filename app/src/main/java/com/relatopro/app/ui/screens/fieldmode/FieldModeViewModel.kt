@@ -16,6 +16,8 @@ import javax.inject.Inject
 
 import com.relatopro.app.pdf.PdfGenerator
 
+import kotlinx.coroutines.flow.first
+
 @HiltViewModel
 class FieldModeViewModel @Inject constructor(
     private val reportRepository: ReportRepository,
@@ -43,22 +45,26 @@ class FieldModeViewModel @Inject constructor(
                     id = templateId,
                     name = "Inspeção Veicular (Mock)",
                     description = "Gerado automaticamente para testes",
+                    category = "Geral",
                     version = 1,
-                    createdAt = System.currentTimeMillis()
+                    createdAt = System.currentTimeMillis(),
+                    updatedAt = System.currentTimeMillis(),
+                    status = "ACTIVE",
+                    visualConfig = "{}"
                 )
                 val mockFields = listOf(
                     com.relatopro.app.data.local.entity.TemplateFieldEntity(
-                        templateId = templateId, orderIndex = 1, label = "Pneus dianteiros", fieldType = "C_NC_NA", isRequired = true
+                        templateId = templateId, orderIndex = 1, label = "Pneus dianteiros", type = "C_NC_NA", category = "Exterior", isRequired = true
                     ),
                     com.relatopro.app.data.local.entity.TemplateFieldEntity(
-                        templateId = templateId, orderIndex = 2, label = "Pneus traseiros", fieldType = "C_NC_NA", isRequired = true
+                        templateId = templateId, orderIndex = 2, label = "Pneus traseiros", type = "C_NC_NA", category = "Exterior", isRequired = true
                     )
                 )
                 templateRepository.createTemplate(mockTemplate, mockFields)
             }
 
             // O uso do 'first()' evita que o collect rode infinitamente recriando relatórios
-            val templateFields = kotlinx.coroutines.flow.first(templateRepository.getTemplateFields(templateId))
+            val templateFields = templateRepository.getTemplateFields(templateId).first()
             _fields.value = templateFields
             
             val newReport = ReportEntity(

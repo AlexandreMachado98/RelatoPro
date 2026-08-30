@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -157,7 +158,7 @@ private fun PermanentSidebar(
                 navController.navigate("my_reports") { popUpTo("dashboard") }
             } }
             item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) {} }
-            item { SidebarItem(Icons.Default.Send, "Enviados", false) {} }
+            item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) {} }
             item { SidebarItem(Icons.Default.Check, "Concluídos", false) {} }
             item { SidebarItem(Icons.Default.Build, "Modelos", currentRoute == "template_builder") {
                 navController.navigate("template_builder") { popUpTo("dashboard") }

@@ -10,11 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.PendingActions
-import androidx.compose.material.icons.filled.Task
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
@@ -39,7 +35,7 @@ import com.relatopro.app.ui.theme.*
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
-    onNavigateToTemplateBuilder: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onNavigateToTemplateBuilder: () -> Unit,
     onNavigateToFieldMode: (Long) -> Unit,
     onNavigateToMyReports: () -> Unit
 ) {
@@ -195,8 +191,6 @@ fun DonutChartCard(modifier: Modifier, total: Int, completed: Int, drafts: Int, 
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.size(120.dp)) {
                     Canvas(modifier = Modifier.size(120.dp)) {
                         val strokeWidth = 24f
-                        val radius = (size.minDimension - strokeWidth) / 2
-                        val center = Offset(size.width / 2, size.height / 2)
                         
                         if (total == 0) {
                             drawArc(color = BorderColor, startAngle = 0f, sweepAngle = 360f, useCenter = false, style = Stroke(strokeWidth))
@@ -314,8 +308,8 @@ fun QuickActionsCard(modifier: Modifier, onNewReport: () -> Unit, onMyReports: (
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 QuickActionItem(Icons.Default.Add, "Novo\nRelatório", onNewReport)
-                QuickActionItem(Icons.Default.Create, "Novo\nChecklist", { })
-                QuickActionItem(Icons.Default.Add, "Adicionar\nFoto", { })
+                QuickActionItem(Icons.Default.Create, "Novo\nChecklist") { }
+                QuickActionItem(Icons.Default.Add, "Adicionar\nFoto") { }
                 QuickActionItem(Icons.AutoMirrored.Filled.ListAlt, "Ver\nRelatórios", onMyReports)
             }
         }

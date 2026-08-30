@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório de Inspeção</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 15mm;
+        }
+        
+        body {
+            font-family: 'Roboto', 'Inter', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #0f172a;
+            background-color: #fff;
+        }
+
+        /* --- CAPA --- */
+        .cover-page {
+            display: table;
+            width: 100%;
+            height: 100vh;
+            page-break-after: always;
+        }
+        
+        .cover-banner {
+            background-color: #1E3A8A; /* Azul Corporativo */
+            color: #fff;
+            padding: 50px;
+            text-align: left;
+            border-bottom: 8px solid #3B82F6;
+        }
+        
+        .cover-banner h1 {
+            font-size: 42px;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .cover-banner .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 60px;
+            color: #93C5FD;
+        }
+        
+        .cover-details {
+            padding: 50px;
+        }
+        
+        .cover-details table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .cover-details td {
+            padding: 18px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 20px;
+        }
+        
+        .cover-details td strong {
+            color: #1E3A8A;
+            display: inline-block;
+            width: 250px;
+        }
+
+        /* --- CABEÇALHO REPETITIVO --- */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            border-bottom: 2px solid #1E3A8A;
+            display: table;
+            width: 100%;
+            font-size: 14px;
+            color: #64748B;
+            background: #fff;
+        }
+        
+        .header-title {
+            display: table-cell;
+            text-align: left;
+            font-weight: bold;
+            color: #1E3A8A;
+        }
+        
+        .header-meta {
+            display: table-cell;
+            text-align: right;
+        }
+
+        /* Afastar o conteúdo para não colar no header */
+        .content-page {
+            padding-top: 40px; 
+        }
+
+        /* --- CHECKLIST TABELA --- */
+        .section-title {
+            color: #1E3A8A;
+            font-size: 22px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+            margin-top: 30px;
+        }
+
+        .checklist-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .checklist-table th, .checklist-table td {
+            border: 1px solid #cbd5e1;
+            padding: 12px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .checklist-table th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+
+        /* Evita quebrar a linha da tabela na impressão */
+        .checklist-table tr {
+            page-break-inside: avoid;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            color: #fff;
+            display: inline-block;
+        }
+        .badge-c { background-color: #10B981; } /* Conforme */
+        .badge-nc { background-color: #EF4444; } /* Não Conforme */
+        .badge-na { background-color: #94A3B8; } /* Não Aplicável */
+
+        /* --- EVIDÊNCIAS FOTOGRÁFICAS --- */
+        .photo-grid {
+            width: 100%;
+            display: table;
+            border-spacing: 15px;
+            table-layout: fixed;
+        }
+        
+        /* Evita quebrar a linha inteira de fotos ao meio */
+        .photo-row {
+            display: table-row;
+            page-break-inside: avoid;
+        }
+
+        .photo-card {
+            display: table-cell;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: center;
+            vertical-align: top;
+            width: 33.333%;
+        }
+
+        .photo-card img {
+            width: 100%;
+            max-height: 250px;
+            object-fit: cover;
+            border: 1px solid #cbd5e1;
+            background-color: #fff;
+        }
+
+        .photo-caption {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #475569;
+            text-align: left;
+            line-height: 1.4;
+        }
+        
+        .photo-caption strong {
+            display: block;
+            color: #1E3A8A;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- CAPA DO RELATÓRIO -->
+    <div class="cover-page">
+        <div class="cover-banner">
+            <div class="logo">RELATO PRO</div>
+            <h1>Relatório de Inspeção Técnica</h1>
+            <p style="font-size: 18px; opacity: 0.9;">Documento Oficial de Vistoria e Conformidade</p>
+        </div>
+        <div class="cover-details">
+            <table>
+                <tr>
+                    <td><strong>Local / Obra / Fazenda:</strong></td>
+                    <td>{{LOCAL_NAME}} <span style="color:#64748B">(Fazenda Vale Verde)</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Inspetor Responsável:</strong></td>
+                    <td>{{RESPONSIBLE_NAME}} <span style="color:#64748B">(Carlos Silva)</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Data e Hora:</strong></td>
+                    <td>{{DATE_TIME}} <span style="color:#64748B">(30/08/2026 às 14:30)</span></td>
+                </tr>
+                <tr>
+                    <td><strong>ID do Relatório:</strong></td>
+                    <td>#{{REPORT_ID}} <span style="color:#64748B">(1024)</span></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- CABEÇALHO REPETITIVO -->
+    <header>
+        <div class="header-title">Relatório de Inspeção Técnica - #{{REPORT_ID}}</div>
+        <div class="header-meta">Data: {{DATE_ONLY}}</div>
+    </header>
+
+    <!-- CONTEÚDO (Páginas seguintes) -->
+    <div class="content-page">
+        <h2 class="section-title">Resultados do Checklist</h2>
+        <table class="checklist-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 35%;">Item / Descrição</th>
+                    <th style="width: 15%; text-align: center;">Conformidade</th>
+                    <th style="width: 45%;">Observações Apontadas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Teste Linha 1 -->
+                <tr>
+                    <td>01</td>
+                    <td>O extintor de incêndio está dentro da validade e devidamente sinalizado?</td>
+                    <td style="text-align: center;"><span class="badge badge-c">CONFORME</span></td>
+                    <td>Equipamento verificado no setor A, selo do Inmetro intacto.</td>
+                </tr>
+                <!-- Teste Linha 2 -->
+                <tr>
+                    <td>02</td>
+                    <td>Sinalização de saída de emergência totalmente visível e desobstruída?</td>
+                    <td style="text-align: center;"><span class="badge badge-nc">NÃO CONFORME</span></td>
+                    <td>Placa de saída obstruída por caixas empilhadas. Risco altíssimo. Solicitei limpeza imediata ao gerente de turno.</td>
+                </tr>
+                <!-- Teste Linha 3 -->
+                <tr>
+                    <td>03</td>
+                    <td>EPIs específicos (protetor auricular, luvas anticorte) estão em bom estado?</td>
+                    <td style="text-align: center;"><span class="badge badge-na">N/A</span></td>
+                    <td>Setor administrativo vistoriado, não há obrigatoriedade deste tipo de EPI.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 class="section-title">Evidências Fotográficas e Anexos</h2>
+        
+        <div class="photo-grid">
+            <!-- Linha 1 -->
+            <div class="photo-row">
+                <!-- Card 1 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1626242502693-018698bf4fc7?w=600&h=400&fit=crop" alt="Extintor">
+                    <div class="photo-caption">
+                        <strong>Item 01</strong>
+                        Extintor de incêndio vistoriado, pressão do manômetro ideal.
+                    </div>
+                </div>
+                <!-- Card 2 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1582298538104-fe2e74cb3ba8?w=600&h=400&fit=crop" alt="Caixas">
+                    <div class="photo-caption">
+                        <strong>Item 02 (ALERTA)</strong>
+                        Caixas de papelão bloqueando rota de fuga no corredor principal.
+                    </div>
+                </div>
+                <!-- Card 3 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1541888081682-1d5b128527a5?w=600&h=400&fit=crop" alt="Visão Geral">
+                    <div class="photo-caption">
+                        <strong>Visão Geral</strong>
+                        Entrada do refeitório, iluminação de emergência checada.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Linha 2 -->
+            <div class="photo-row">
+                <!-- Assinatura -->
+                <div class="photo-card" style="vertical-align: middle;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fb/John_Hancock_signature.svg" style="max-height: 120px; border: none; object-fit: contain;" alt="Assinatura">
+                    <div class="photo-caption" style="text-align: center; border-top: 1px solid #cbd5e1; padding-top: 8px;">
+                        <strong>Carlos Silva (Inspetor Técnico)</strong>
+                        Assinado digitalmente em 30/08/2026.
+                    </div>
+                </div>
+                <!-- Celulas vazias (necessário para Grid em Table Layout) -->
+                <div class="photo-card" style="border: none; background: transparent;"></div>
+                <div class="photo-card" style="border: none; background: transparent;"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

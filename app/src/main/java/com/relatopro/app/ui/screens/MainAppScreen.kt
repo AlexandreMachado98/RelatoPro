@@ -120,7 +120,15 @@ fun MainAppScreen(
                             containerColor = Color.White,
                             titleContentColor = com.relatopro.app.ui.theme.TextPrimary,
                             navigationIconContentColor = com.relatopro.app.ui.theme.TextPrimary
-                        )
+                        ),
+                        actions = {
+                            IconButton(onClick = { /* TODO */ }) {
+                                Icon(androidx.compose.material.icons.Icons.Default.Notifications, contentDescription = "Notificações", tint = com.relatopro.app.ui.theme.TextSecondary)
+                            }
+                            IconButton(onClick = { /* TODO */ }) {
+                                Icon(androidx.compose.material.icons.Icons.Default.AccountCircle, contentDescription = "Perfil", tint = com.relatopro.app.ui.theme.TextSecondary)
+                            }
+                        }
                     )
                 }
             ) { paddingValues ->

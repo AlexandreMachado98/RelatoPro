@@ -26,6 +26,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyReportsScreen(
@@ -34,6 +40,7 @@ fun MyReportsScreen(
 ) {
     val reports by viewModel.reports.collectAsState()
     val context = LocalContext.current
+    var searchQuery by remember { mutableStateOf("") }
 
     val openPdf = { localPath: String ->
         val file = File(localPath)
@@ -76,18 +83,51 @@ fun MyReportsScreen(
             ) {
                 Text("Meus Relatórios", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
             }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Barra de Pesquisa
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Pesquisar relatório ou local...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Pesquisar") },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryBlue,
+                    unfocusedBorderColor = BorderColor,
+                    focusedContainerColor = SurfaceWhite,
+                    unfocusedContainerColor = SurfaceWhite
+                ),
+                singleLine = true
+            )
+            
             Spacer(modifier = Modifier.height(24.dp))
             
-            if (reports.isEmpty()) {
+            val filteredReports = reports.filter { 
+                it.title.contains(searchQuery, ignoreCase = true) || 
+                it.location.contains(searchQuery, ignoreCase = true) ||
+                it.id.toString().contains(searchQuery)
+            }
+            
+            if (filteredReports.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nenhum relatório encontrado.", color = TextSecondary)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Nenhum relatório encontrado.", color = TextSecondary, fontSize = 16.sp)
+                        if (searchQuery.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text("Tente buscar por outro termo.", color = TextSecondary, fontSize = 14.sp)
+                        }
+                    }
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(reports) { report ->
+                    items(filteredReports) { report ->
+                        var expanded by remember { mutableStateOf(false) }
+                        
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -105,14 +145,14 @@ fun MyReportsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Relatório #${report.id}",
+                                        text = report.title.ifEmpty { "Relatório #${report.id}" },
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary,
                                         fontSize = 16.sp
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "Responsável: ${report.responsible}",
+                                        text = "Responsável: ${report.responsible} | Local: ${report.location}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextSecondary
                                     )
@@ -123,12 +163,38 @@ fun MyReportsScreen(
                                         color = TextSecondary
                                     )
                                 }
-                                Row {
-                                    IconButton(onClick = { report.pdfLocalPath?.let { openPdf(it) } }) {
-                                        Icon(Icons.Default.PictureAsPdf, contentDescription = "Ver PDF", tint = PrimaryBlue)
+                                Box {
+                                    IconButton(onClick = { expanded = true }) {
+                                        Icon(Icons.Default.MoreVert, contentDescription = "Mais opções", tint = TextSecondary)
                                     }
-                                    IconButton(onClick = { report.pdfLocalPath?.let { sharePdf(it) } }) {
-                                        Icon(Icons.Default.Share, contentDescription = "Compartilhar", tint = PrimaryBlue)
+                                    DropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Visualizar PDF") },
+                                            onClick = { 
+                                                expanded = false
+                                                report.pdfLocalPath?.let { openPdf(it) } 
+                                            },
+                                            leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = PrimaryBlue) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Compartilhar") },
+                                            onClick = { 
+                                                expanded = false
+                                                report.pdfLocalPath?.let { sharePdf(it) } 
+                                            },
+                                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = PrimaryBlue) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Arquivar") },
+                                            onClick = { expanded = false }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Excluir", color = StatusWarning) },
+                                            onClick = { expanded = false }
+                                        )
                                     }
                                 }
                             }

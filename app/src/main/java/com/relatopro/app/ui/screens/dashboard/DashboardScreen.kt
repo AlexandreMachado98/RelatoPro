@@ -73,13 +73,63 @@ fun DashboardScreen(
             }
 
             item {
+                Text("Ações Rápidas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Button(
+                        onClick = { showTemplateSelector = true },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Relatório")
+                    }
+                    OutlinedButton(
+                        onClick = onNavigateToMyReports,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryBlue)
+                    ) {
+                        Text("Ver Todos")
+                    }
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text("Atividade Recente", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 val recentReports = reports.sortedByDescending { it.date }.take(3)
                 
                 if (recentReports.isEmpty()) {
-                    Text("Nenhuma atividade recente encontrada.", color = TextSecondary)
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Você ainda não possui relatórios.", color = TextSecondary, fontSize = 16.sp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = { showTemplateSelector = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("+ Criar primeiro relatório")
+                            }
+                        }
+                    }
                 } else {
                     Card(
                         modifier = Modifier.fillMaxWidth(),

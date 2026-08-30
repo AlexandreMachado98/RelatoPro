@@ -19,18 +19,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.ui.theme.*
 
+import androidx.compose.runtime.LaunchedEffect
+import com.relatopro.app.ui.screens.fieldmode.FieldModeViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FieldModeScreen(
+    viewModel: FieldModeViewModel,
     onNavigateBack: () -> Unit
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.initializeReportFromTemplate(1L, "Fábrica Central", "João Inspetor")
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Relatório em Andamento", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
+                    titleContentColor = Color.White
                 )
             )
         },
@@ -47,7 +55,7 @@ fun FieldModeScreen(
                     TextButton(onClick = onNavigateBack) {
                         Text("Voltar")
                     }
-                    Button(onClick = { /* TODO */ }) {
+                    Button(onClick = { viewModel.finalizeReport { onNavigateBack() } }) {
                         Text("Finalizar e Gerar PDF")
                     }
                 }

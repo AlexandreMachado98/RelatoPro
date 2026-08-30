@@ -14,10 +14,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.relatopro.app.pdf.PdfGenerator
+
 @HiltViewModel
 class FieldModeViewModel @Inject constructor(
     private val reportRepository: ReportRepository,
     private val templateRepository: TemplateRepository,
+    private val pdfGenerator: PdfGenerator
 ) : ViewModel() {
 
     private val _currentReport = MutableStateFlow<ReportEntity?>(null)
@@ -32,11 +35,9 @@ class FieldModeViewModel @Inject constructor(
     // 1. Inicializa o relatório a partir de um Modelo Existente (Req: Fluxo de Inicialização)
     fun initializeReportFromTemplate(templateId: Long, location: String, responsible: String) {
         viewModelScope.launch {
-            // Busca os campos do modelo no banco
             templateRepository.getTemplateFields(templateId).collect { templateFields ->
                 _fields.value = templateFields
                 
-                // Cria o rascunho do relatório
                 val newReport = ReportEntity(
                     templateId = templateId,
                     title = "Relatório " + System.currentTimeMillis().toString().takeLast(4),
@@ -49,10 +50,9 @@ class FieldModeViewModel @Inject constructor(
                     status = "DRAFT",
                     generalObservations = "",
                     pdfLocalPath = null,
-                    syncStatus = "PENDING",
+                    syncStatus = "PENDING"
                 )
                 
-                // Salva no banco e guarda a referência
                 val reportId = reportRepository.createReport(newReport)
                 _currentReport.value = newReport.copy(id = reportId)
             }
@@ -72,26 +72,43 @@ class FieldModeViewModel @Inject constructor(
                 templateFieldId = fieldId,
                 answerValue = answerValue ?: existingAnswer?.answerValue,
                 observation = observation ?: existingAnswer?.observation,
-                status = "VALID",
+                status = "VALID"
             )
 
-            // Salva no Room Database instantaneamente 
             reportRepository.saveAnswer(newAnswer)
             
-            // Atualiza estado local da UI
             val updatedMap = _answers.value.toMutableMap()
             updatedMap[fieldId] = newAnswer
             _answers.value = updatedMap
         }
     }
 
-    // Marca como FINALIZED impedindo edições (Req 15)
-    fun finalizeReport() {
+    // Marca como FINALIZED impedindo edições (Req 15) e Gera o PDF
+    fun finalizeReport(onPdfGenerated: () -> Unit) {
         val report = _currentReport.value ?: return
         viewModelScope.launch {
-            val finalized = report.copy(status = "FINALIZED")
+            // Gera o PDF físico
+            val pdfPath = try {
+                pdfGenerator.generatePdf(
+                    report = report,
+                    fields = _fields.value,
+                    answers = _answers.value,
+                    photos = emptyList(), // Busca de fotos via DB poderia entrar aqui
+                    signatureBitmap = null // Assinatura real passaria por aqui
+                )
+            } catch (e: Exception) {
+                null
+            }
+
+            // Atualiza o relatório no banco de dados com status Finalizado e o caminho do PDF
+            val finalized = report.copy(
+                status = "FINALIZED",
+                pdfLocalPath = pdfPath
+            )
             reportRepository.updateReport(finalized)
             _currentReport.value = finalized
+            
+            onPdfGenerated()
         }
     }
 

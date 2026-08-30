@@ -31,4 +31,10 @@ object AppModule {
 
     @Provides
     fun provideReportDao(db: RelatoProDatabase): ReportDao = db.reportDao
+
+    @Provides
+    @Singleton
+    fun providePdfGenerator(@ApplicationContext context: Context): com.relatopro.app.pdf.PdfGenerator {
+        return com.relatopro.app.pdf.PdfGenerator(context)
+    }
 }

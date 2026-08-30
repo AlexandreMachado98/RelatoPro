@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("field_mode") {
                             FieldModeScreen(
+                                viewModel = hiltViewModel(),
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }

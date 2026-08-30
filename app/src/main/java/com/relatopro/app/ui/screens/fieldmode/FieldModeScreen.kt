@@ -31,11 +31,12 @@ import android.net.Uri
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FieldModeScreen(
+    templateId: Long,
     viewModel: FieldModeViewModel,
     onNavigateBack: () -> Unit
 ) {
-    LaunchedEffect(Unit) {
-        viewModel.initializeReportFromTemplate(1L, "Fábrica Central", "João Inspetor")
+    LaunchedEffect(templateId) {
+        viewModel.initializeReportFromTemplate(templateId, "Fábrica Central", "João Inspetor")
     }
 
     val context = LocalContext.current
@@ -139,8 +140,8 @@ fun FieldModeScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     SignaturePad(
-                        onSignatureCaptured = { _ ->
-                            // Here we could store the bitmap to pass to PDF
+                        onSignatureCaptured = { bitmap ->
+                            viewModel.saveSignature(bitmap, context)
                         },
                         onClear = {}
                     )

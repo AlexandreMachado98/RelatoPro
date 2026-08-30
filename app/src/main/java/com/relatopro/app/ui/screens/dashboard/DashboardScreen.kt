@@ -4,10 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,10 +22,14 @@ import com.relatopro.app.ui.theme.TextPrimary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
+    viewModel: DashboardViewModel,
     onNavigateToTemplateBuilder: () -> Unit,
-    onNavigateToFieldMode: () -> Unit,
+    onNavigateToFieldMode: (Long) -> Unit,
     onNavigateToMyReports: () -> Unit
 ) {
+    val templates by viewModel.templates.collectAsState()
+    var showTemplateSelector by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -42,7 +47,7 @@ fun DashboardScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onNavigateToFieldMode,
+                onClick = { showTemplateSelector = true },
                 icon = { Icon(Icons.Default.Add, "Novo Relatório") },
                 text = { Text("Novo Relatório") },
                 containerColor = PrimaryBlue,
@@ -104,6 +109,36 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+
+    if (showTemplateSelector) {
+        AlertDialog(
+            onDismissRequest = { showTemplateSelector = false },
+            title = { Text("Escolher Modelo") },
+            text = {
+                if (templates.isEmpty()) {
+                    Text("Você ainda não criou nenhum Modelo. Vá em 'Meus Checklists' para criar o primeiro!")
+                } else {
+                    LazyColumn {
+                        items(templates) { template ->
+                            ListItem(
+                                headlineContent = { Text(template.name, fontWeight = FontWeight.Bold) },
+                                modifier = Modifier.clickable {
+                                    showTemplateSelector = false
+                                    onNavigateToFieldMode(template.id)
+                                }
+                            )
+                            HorizontalDivider()
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTemplateSelector = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 

@@ -37,32 +37,6 @@ class FieldModeViewModel @Inject constructor(
     // 1. Inicializa o relatório a partir de um Modelo Existente (Req: Fluxo de Inicialização)
     fun initializeReportFromTemplate(templateId: Long, location: String, responsible: String) {
         viewModelScope.launch {
-            // Verifica se o template existe (Evita Crash de Foreign Key no SQLite)
-            var template = templateRepository.getTemplateById(templateId)
-            if (template == null) {
-                // Cria um mock para o MVP não fechar
-                val mockTemplate = com.relatopro.app.data.local.entity.TemplateEntity(
-                    id = templateId,
-                    name = "Inspeção Veicular (Mock)",
-                    description = "Gerado automaticamente para testes",
-                    category = "Geral",
-                    version = 1,
-                    createdAt = System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis(),
-                    status = "ACTIVE",
-                    visualConfig = "{}"
-                )
-                val mockFields = listOf(
-                    com.relatopro.app.data.local.entity.TemplateFieldEntity(
-                        templateId = templateId, orderIndex = 1, label = "Pneus dianteiros", type = "C_NC_NA", category = "Exterior", isRequired = true
-                    ),
-                    com.relatopro.app.data.local.entity.TemplateFieldEntity(
-                        templateId = templateId, orderIndex = 2, label = "Pneus traseiros", type = "C_NC_NA", category = "Exterior", isRequired = true
-                    )
-                )
-                templateRepository.createTemplate(mockTemplate, mockFields)
-            }
-
             // O uso do 'first()' evita que o collect rode infinitamente recriando relatórios
             val templateFields = templateRepository.getTemplateFields(templateId).first()
             _fields.value = templateFields
@@ -154,6 +128,24 @@ class FieldModeViewModel @Inject constructor(
             )
             reportRepository.savePhoto(photoEntity)
             // Na vida real, atualizaríamos um StateFlow de fotos aqui para a UI refletir
+        }
+    }
+
+    fun saveSignature(bitmap: android.graphics.Bitmap, context: android.content.Context) {
+        val reportId = _currentReport.value?.id ?: return
+        viewModelScope.launch {
+            val file = java.io.File(context.filesDir, "signatures/sig_${System.currentTimeMillis()}.png")
+            file.parentFile?.mkdirs()
+            java.io.FileOutputStream(file).use { out ->
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+            }
+            reportRepository.saveSignature(
+                com.relatopro.app.data.local.entity.SignatureEntity(
+                    reportId = reportId,
+                    localPath = file.absolutePath,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
         }
     }
 }

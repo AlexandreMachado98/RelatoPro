@@ -19,6 +19,11 @@ import dagger.hilt.android.AndroidEntryPoint
 
 import com.relatopro.app.ui.screens.myreports.MyReportsScreen
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.relatopro.app.ui.screens.dashboard.DashboardViewModel
+import com.relatopro.app.ui.screens.templatebuilder.TemplateBuilderViewModel
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,20 +38,28 @@ class MainActivity : ComponentActivity() {
                     
                     NavHost(navController = navController, startDestination = "dashboard") {
                         composable("dashboard") {
+                            val viewModel = hiltViewModel<DashboardViewModel>()
                             DashboardScreen(
+                                viewModel = viewModel,
                                 onNavigateToTemplateBuilder = { navController.navigate("template_builder") },
-                                onNavigateToFieldMode = { navController.navigate("field_mode") },
+                                onNavigateToFieldMode = { templateId -> navController.navigate("field_mode/$templateId") },
                                 onNavigateToMyReports = { navController.navigate("my_reports") }
                             )
                         }
                         composable("template_builder") {
+                            val viewModel = hiltViewModel<TemplateBuilderViewModel>()
                             TemplateBuilderScreen(
-                                viewModel = hiltViewModel(),
+                                viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }
-                        composable("field_mode") {
+                        composable(
+                            route = "field_mode/{templateId}",
+                            arguments = listOf(navArgument("templateId") { type = NavType.LongType })
+                        ) { backStackEntry ->
+                            val templateId = backStackEntry.arguments?.getLong("templateId") ?: 1L
                             FieldModeScreen(
+                                templateId = templateId,
                                 viewModel = hiltViewModel(),
                                 onNavigateBack = { navController.popBackStack() }
                             )

@@ -14,7 +14,7 @@ val SurfaceWhite = Color(0xFFFFFFFF)
 val BorderColor = Color(0xFFE2E8F0)
 
 // Text
-val TextPrimary = Color(0xFF0F172A)
+val TextPrimary = Color(0xFF0B2A5B) // Dark Blue from Kit for titles and main text
 val TextSecondary = Color(0xFF64748B)
 
 // Status Colors

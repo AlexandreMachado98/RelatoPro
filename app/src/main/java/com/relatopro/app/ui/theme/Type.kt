@@ -17,42 +17,48 @@ val RelatoProTypography = Typography(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold, // 700
         fontSize = 28.sp,
-        lineHeight = 34.sp
+        lineHeight = 34.sp,
+        color = TextPrimary
     ),
     // H2 (Título de seção): Inter Semibold – 20px
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold, // 600
         fontSize = 20.sp,
-        lineHeight = 28.sp
+        lineHeight = 28.sp,
+        color = TextPrimary
     ),
     // H3 (Título de card): Inter Semibold – 16px
     titleMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold, // 600
         fontSize = 16.sp,
-        lineHeight = 24.sp
+        lineHeight = 24.sp,
+        color = TextPrimary
     ),
     // Texto principal: Inter Regular – 14px
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal, // 400
         fontSize = 14.sp,
-        lineHeight = 20.sp
+        lineHeight = 20.sp,
+        color = TextSecondary
     ),
     // Texto secundário: Inter Regular – 12px
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal, // 400
         fontSize = 12.sp,
-        lineHeight = 16.sp
+        lineHeight = 16.sp,
+        color = TextSecondary
     ),
     // Legenda/Caption: Inter Regular – 11px
     labelSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal, // 400
         fontSize = 11.sp,
-        lineHeight = 16.sp
+        lineHeight = 16.sp,
+        color = TextSecondary
     ),
     // Botões principais: Inter Semibold
     labelLarge = TextStyle(

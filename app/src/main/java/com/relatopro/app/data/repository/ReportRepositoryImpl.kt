@@ -13,24 +13,31 @@ class ReportRepositoryImpl @Inject constructor(
     private val dao: ReportDao,
 ) : ReportRepository {
     override fun getAllReports(): Flow<List<ReportEntity>> = dao.getAllReports()
-    
+
+    override suspend fun getReportById(reportId: Long): ReportEntity? = dao.getReportById(reportId)
+
     override suspend fun createReport(report: ReportEntity): Long = dao.insertReport(report)
-    
+
     override suspend fun updateReport(report: ReportEntity) = dao.updateReport(report)
-    
+
     override suspend fun saveAnswer(answer: ReportAnswerEntity): Long = dao.insertAnswer(answer)
-    
+
     override fun getReportAnswers(reportId: Long): Flow<List<ReportAnswerEntity>> = dao.getReportAnswers(reportId)
-    
+
     override suspend fun savePhoto(photo: PhotoEntity): Long = dao.insertPhoto(photo)
     
     override fun getReportPhotos(reportId: Long): Flow<List<PhotoEntity>> = dao.getReportPhotos(reportId)
 
     override fun getAllPhotos(): Flow<List<PhotoEntity>> = dao.getAllPhotos()
     
-    override suspend fun saveSignature(signature: SignatureEntity): Long = dao.insertSignature(signature)
+    override suspend fun saveSignature(signature: SignatureEntity): Long {
+        dao.deleteSignatureByRole(signature.reportId, signature.role)
+        return dao.insertSignature(signature)
+    }
 
     override suspend fun getSignature(reportId: Long): SignatureEntity? = dao.getSignature(reportId)
-    
+
+    override suspend fun getSignatures(reportId: Long): List<SignatureEntity> = dao.getSignatures(reportId)
+
     override suspend fun deleteReport(report: ReportEntity) = dao.deleteReport(report)
 }

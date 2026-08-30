@@ -949,7 +949,7 @@ fun ObservationsStepContent(
 }
 
 // ----------------------------------------------------
-// ETAPA 5: REVISÃO E ASSINATURA
+// ETAPA 5: REVISÃO E DUAS ASSINATURAS
 // ----------------------------------------------------
 @Composable
 fun SignatureStepContent(
@@ -960,17 +960,22 @@ fun SignatureStepContent(
     viewModel: FieldModeViewModel
 ) {
     val context = LocalContext.current
-    var hasSigned by remember { mutableStateOf(false) }
+    val inspectorSig by viewModel.inspectorSignature.collectAsState()
+    val operationSig by viewModel.operationSignature.collectAsState()
+
+    var inspectorName by remember(report?.responsible) { mutableStateOf(report?.responsible ?: "João da Silva") }
+    var operationName by remember { mutableStateOf("") }
+    var operationRole by remember { mutableStateOf("Supervisor / Acompanhante") }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
-            Text("Revisão & Assinatura", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+            Text("Revisão & Assinaturas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Confira os dados antes de gerar o PDF final.", fontSize = 13.sp, color = TextSecondary)
+            Text("Confira os dados e colete as assinaturas digitais antes de gerar o laudo.", fontSize = 13.sp, color = TextSecondary)
         }
 
         // Resumo do Relatório Card
@@ -981,7 +986,7 @@ fun SignatureStepContent(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Resumo do Relatório", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PrimaryBlue)
+                    Text("Resumo da Vistoria", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PrimaryBlue)
                     HorizontalDivider(color = BorderColor)
                     
                     SummaryRow("Título", report?.title ?: "Inspeção")
@@ -993,34 +998,155 @@ fun SignatureStepContent(
             }
         }
 
-        // Assinatura Digital Pad
+        // Assinatura 1: Responsável pelo Relatório
         item {
-            Text("Assinatura Digital", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Assine com o dedo ou caneta stylus na área abaixo:", fontSize = 13.sp, color = TextSecondary)
-            
-            Spacer(modifier = Modifier.height(10.dp))
-
             Card(
                 colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (hasSigned) StatusConforme else BorderColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (inspectorSig != null) StatusConforme else BorderColor),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                ) {
-                    SignaturePad(
-                        modifier = Modifier.fillMaxSize(),
-                        onSignatureCaptured = { bitmap ->
-                            viewModel.saveSignature(bitmap, context)
-                            hasSigned = true
-                        },
-                        onClear = {
-                            hasSigned = false
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("1. Responsável pelo Relatório", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                            Text("Inspetor / Engenheiro Técnico", fontSize = 12.sp, color = TextSecondary)
                         }
+                        if (inspectorSig != null) {
+                            Box(
+                                modifier = Modifier
+                                    .background(StatusConforme.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text("Assinado ✓", color = StatusConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = inspectorName,
+                        onValueChange = { inspectorName = it },
+                        label = { Text("Nome do Inspetor Responsável") },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = BorderColor,
+                            focusedContainerColor = SurfaceWhite,
+                            unfocusedContainerColor = SurfaceWhite
+                        )
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Desenhe a assinatura abaixo:", fontSize = 12.sp, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .border(1.dp, BorderColor, RoundedCornerShape(8.dp))
+                    ) {
+                        SignaturePad(
+                            modifier = Modifier.fillMaxSize(),
+                            onSignatureCaptured = { bitmap ->
+                                viewModel.saveSignature(bitmap, context, inspectorName, "RESPONSAVEL_RELATORIO")
+                            },
+                            onClear = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        // Assinatura 2: Presente na Operação / Acompanhante
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (operationSig != null) StatusConforme else BorderColor),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("2. Presente na Operação", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                            Text("Acompanhante / Supervisor no Local", fontSize = 12.sp, color = TextSecondary)
+                        }
+                        if (operationSig != null) {
+                            Box(
+                                modifier = Modifier
+                                    .background(StatusConforme.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text("Assinado ✓", color = StatusConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = operationName,
+                        onValueChange = { operationName = it },
+                        label = { Text("Nome do Acompanhante / Cliente") },
+                        placeholder = { Text("Ex: Carlos Souza") },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = BorderColor,
+                            focusedContainerColor = SurfaceWhite,
+                            unfocusedContainerColor = SurfaceWhite
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = operationRole,
+                        onValueChange = { operationRole = it },
+                        label = { Text("Cargo / Função") },
+                        placeholder = { Text("Ex: Gerente de Operações") },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = BorderColor,
+                            focusedContainerColor = SurfaceWhite,
+                            unfocusedContainerColor = SurfaceWhite
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Desenhe a assinatura abaixo:", fontSize = 12.sp, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .border(1.dp, BorderColor, RoundedCornerShape(8.dp))
+                    ) {
+                        SignaturePad(
+                            modifier = Modifier.fillMaxSize(),
+                            onSignatureCaptured = { bitmap ->
+                                viewModel.saveSignature(bitmap, context, operationName.ifEmpty { "Acompanhante" }, "PRESENTE_OPERACAO")
+                            },
+                            onClear = {}
+                        )
+                    }
                 }
             }
         }

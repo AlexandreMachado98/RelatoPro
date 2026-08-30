@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface ReportRepository {
     fun getAllReports(): Flow<List<ReportEntity>>
+    suspend fun getReportById(reportId: Long): ReportEntity?
     suspend fun createReport(report: ReportEntity): Long
     suspend fun updateReport(report: ReportEntity)
     suspend fun saveAnswer(answer: ReportAnswerEntity): Long
@@ -17,5 +18,6 @@ interface ReportRepository {
     fun getAllPhotos(): Flow<List<PhotoEntity>>
     suspend fun saveSignature(signature: SignatureEntity): Long
     suspend fun getSignature(reportId: Long): SignatureEntity?
+    suspend fun getSignatures(reportId: Long): List<SignatureEntity>
     suspend fun deleteReport(report: ReportEntity)
 }

@@ -25,6 +25,9 @@ interface ReportDao {
     @Query("SELECT * FROM reports ORDER BY date DESC")
     fun getAllReports(): Flow<List<ReportEntity>>
 
+    @Query("SELECT * FROM reports WHERE id = :reportId")
+    suspend fun getReportById(reportId: Long): ReportEntity?
+
     @Query("SELECT * FROM report_answers WHERE reportId = :reportId")
     fun getReportAnswers(reportId: Long): Flow<List<ReportAnswerEntity>>
 
@@ -42,6 +45,12 @@ interface ReportDao {
 
     @Query("SELECT * FROM signatures WHERE reportId = :reportId LIMIT 1")
     suspend fun getSignature(reportId: Long): SignatureEntity?
+
+    @Query("SELECT * FROM signatures WHERE reportId = :reportId ORDER BY id ASC")
+    suspend fun getSignatures(reportId: Long): List<SignatureEntity>
+
+    @Query("DELETE FROM signatures WHERE reportId = :reportId AND role = :role")
+    suspend fun deleteSignatureByRole(reportId: Long, role: String)
 
     @androidx.room.Delete
     suspend fun deleteReport(report: ReportEntity)

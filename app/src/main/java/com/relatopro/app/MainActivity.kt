@@ -110,6 +110,7 @@ class MainActivity : ComponentActivity() {
                             composable("settings") { SettingsScreen(onNavigateBack = { navController.popBackStack() }) }
                             composable("help") { HelpScreen(onNavigateBack = { navController.popBackStack() }) }
                             composable("evidence_gallery") { EvidenceGalleryScreen(onNavigateBack = { navController.popBackStack() }) }
+                            composable("history") { com.relatopro.app.ui.screens.history.HistoryScreen(onNavigateBack = { navController.popBackStack() }) }
                         }
                     }
                 }

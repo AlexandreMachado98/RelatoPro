@@ -36,8 +36,11 @@ class FieldModeViewModel @Inject constructor(
     private val _photos = MutableStateFlow<List<PhotoEntity>>(emptyList())
     val photos: StateFlow<List<PhotoEntity>> = _photos.asStateFlow()
 
-    private val _signature = MutableStateFlow<SignatureEntity?>(null)
-    val signature: StateFlow<SignatureEntity?> = _signature.asStateFlow()
+    private val _inspectorSignature = MutableStateFlow<SignatureEntity?>(null)
+    val inspectorSignature: StateFlow<SignatureEntity?> = _inspectorSignature.asStateFlow()
+
+    private val _operationSignature = MutableStateFlow<SignatureEntity?>(null)
+    val operationSignature: StateFlow<SignatureEntity?> = _operationSignature.asStateFlow()
 
     fun initializeReportFromTemplate(templateId: Long, location: String, responsible: String) {
         viewModelScope.launch {
@@ -131,23 +134,32 @@ class FieldModeViewModel @Inject constructor(
         }
     }
 
-    fun saveSignature(bitmap: android.graphics.Bitmap, context: android.content.Context) {
+    fun saveSignature(
+        bitmap: android.graphics.Bitmap,
+        context: android.content.Context,
+        name: String,
+        role: String = "RESPONSAVEL_RELATORIO"
+    ) {
         val reportId = _currentReport.value?.id ?: return
         viewModelScope.launch {
-            val file = File(context.filesDir, "signatures/sig_${System.currentTimeMillis()}.png")
+            val file = File(context.filesDir, "signatures/sig_${role}_${reportId}_${System.currentTimeMillis()}.png")
             file.parentFile?.mkdirs()
             FileOutputStream(file).use { out ->
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
             }
             val sigEntity = SignatureEntity(
                 reportId = reportId,
-                name = _currentReport.value?.responsible ?: "Responsável",
-                role = "Inspetor",
+                name = name.ifEmpty { if (role == "RESPONSAVEL_RELATORIO") (_currentReport.value?.responsible ?: "João da Silva") else "Acompanhante" },
+                role = role,
                 localPath = file.absolutePath,
                 timestamp = System.currentTimeMillis()
             )
             reportRepository.saveSignature(sigEntity)
-            _signature.value = sigEntity
+            if (role == "RESPONSAVEL_RELATORIO") {
+                _inspectorSignature.value = sigEntity
+            } else {
+                _operationSignature.value = sigEntity
+            }
         }
     }
 
@@ -155,7 +167,7 @@ class FieldModeViewModel @Inject constructor(
         val report = _currentReport.value ?: return
         viewModelScope.launch {
             val photosList = reportRepository.getReportPhotos(report.id).first()
-            val signature = reportRepository.getSignature(report.id)
+            val signaturesList = reportRepository.getSignatures(report.id)
             
             val photosMap = photosList
                 .filter { it.templateFieldId != null }
@@ -163,17 +175,15 @@ class FieldModeViewModel @Inject constructor(
                 .mapValues { entry ->
                     entry.value.map { it.localPath }
                 }.toMutableMap()
-            
-            if (signature != null) {
-                photosMap[-1L] = listOf(signature.localPath)
-            }
 
             val pdfFile = try {
                 pdfGenerator.generateReportPdf(
                     report = report,
                     fields = _fields.value,
                     answers = _answers.value.values.toList(),
-                    photos = photosMap
+                    photos = photosMap,
+                    signatures = signaturesList,
+                    photoEntities = photosList
                 )
             } catch (e: Exception) {
                 e.printStackTrace()

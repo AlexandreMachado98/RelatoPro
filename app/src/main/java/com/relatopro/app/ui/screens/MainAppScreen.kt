@@ -40,6 +40,7 @@ fun MainAppScreen(
 
     val isMainRoute = currentRoute?.startsWith("dashboard") == true ||
                       currentRoute?.startsWith("my_reports") == true ||
+                      currentRoute?.startsWith("history") == true ||
                       currentRoute?.startsWith("template_builder") == true ||
                       currentRoute?.startsWith("evidence_gallery") == true ||
                       currentRoute?.startsWith("settings") == true ||
@@ -132,6 +133,7 @@ private fun DesktopTopBar(currentRoute: String?) {
     val title = when {
         currentRoute?.startsWith("dashboard") == true -> "Dashboard"
         currentRoute?.startsWith("my_reports") == true -> "Meus Relatórios"
+        currentRoute?.startsWith("history") == true -> "Histórico de Relatórios"
         currentRoute?.startsWith("template_builder") == true -> "Modelos de Checklist"
         currentRoute?.startsWith("evidence_gallery") == true -> "Fotos e Anexos"
         currentRoute?.startsWith("profile") == true -> "Perfil"
@@ -234,6 +236,10 @@ private fun PermanentSidebar(
             item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) { onNewReportClick(); onItemClick() } }
             item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute?.startsWith("my_reports") == true) { 
                 navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") } 
+                onItemClick()
+            } }
+            item { SidebarItem(Icons.Default.History, "Histórico Mensal", currentRoute == "history") { 
+                navController.navigate("history") { popUpTo("dashboard") } 
                 onItemClick()
             } }
             item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { navController.navigate("my_reports?filter=Rascunhos") { popUpTo("dashboard") }; onItemClick() } }

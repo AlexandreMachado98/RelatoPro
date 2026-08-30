@@ -25,8 +25,6 @@ import com.relatopro.app.ui.screens.templatebuilder.TemplateBuilderViewModel
 
 import com.relatopro.app.ui.screens.auth.SplashScreen
 import com.relatopro.app.ui.screens.auth.LoginScreen
-import com.relatopro.app.ui.screens.auth.RegisterScreen
-import com.relatopro.app.ui.screens.auth.ForgotPasswordScreen
 import com.relatopro.app.ui.screens.dashboard.IndicatorsScreen
 import com.relatopro.app.ui.screens.settings.*
 
@@ -42,26 +40,40 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     
-                    com.relatopro.app.ui.screens.MainAppScreen(navController = navController) {
+                    val handleLogout: () -> Unit = {
+                        navController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+
+                    com.relatopro.app.ui.screens.MainAppScreen(
+                        navController = navController,
+                        onLogout = handleLogout
+                    ) {
                         NavHost(navController = navController, startDestination = "splash") {
                             composable("splash") {
-                                SplashScreen(onNavigateToLogin = { navController.navigate("login") { popUpTo("splash") { inclusive = true } } })
+                                SplashScreen(
+                                    onNavigateToDashboard = {
+                                        navController.navigate("dashboard") {
+                                            popUpTo("splash") { inclusive = true }
+                                        }
+                                    },
+                                    onNavigateToLogin = {
+                                        navController.navigate("login") {
+                                            popUpTo("splash") { inclusive = true }
+                                        }
+                                    }
+                                )
                             }
                             composable("login") {
                                 LoginScreen(
-                                    onNavigateToDashboard = { navController.navigate("dashboard") { popUpTo("login") { inclusive = true } } },
-                                    onNavigateToRegister = { navController.navigate("register") },
-                                    onNavigateToForgotPassword = { navController.navigate("forgot_password") }
+                                    onNavigateToDashboard = {
+                                        navController.navigate("dashboard") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    }
                                 )
-                            }
-                            composable("register") {
-                                RegisterScreen(
-                                    onNavigateToDashboard = { navController.navigate("dashboard") { popUpTo("login") { inclusive = true } } },
-                                    onNavigateToLogin = { navController.navigate("login") { popUpTo("register") { inclusive = true } } }
-                                )
-                            }
-                            composable("forgot_password") {
-                                ForgotPasswordScreen(onNavigateBack = { navController.popBackStack() })
                             }
                             composable("dashboard") {
                                 val viewModel = hiltViewModel<DashboardViewModel>()
@@ -106,11 +118,27 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }
-                            composable("profile") { ProfileScreen(onNavigateBack = { navController.popBackStack() }) }
-                            composable("settings") { SettingsScreen(onNavigateBack = { navController.popBackStack() }) }
-                            composable("help") { HelpScreen(onNavigateBack = { navController.popBackStack() }) }
-                            composable("evidence_gallery") { EvidenceGalleryScreen(onNavigateBack = { navController.popBackStack() }) }
-                            composable("history") { com.relatopro.app.ui.screens.history.HistoryScreen(onNavigateBack = { navController.popBackStack() }) }
+                            composable("history") {
+                                com.relatopro.app.ui.screens.history.HistoryScreen(
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable("profile") {
+                                ProfileScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onLogout = handleLogout
+                                )
+                            }
+                            composable("settings") {
+                                SettingsScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToProfile = { navController.navigate("profile") },
+                                    onLogout = handleLogout
+                                )
+                            }
+                            composable("help") {
+                                HelpScreen(onNavigateBack = { navController.popBackStack() })
+                            }
                         }
                     }
                 }

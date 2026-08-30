@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="18"
+        android:translateY="18">
+        <!-- Shield Base -->
+        <path
+            android:fillColor="#2563EB"
+            android:pathData="M36,6 L12,16 L12,38 C12,54 22,66 36,70 C50,66 60,54 60,38 L60,16 Z" />
+        <!-- Inner Accent -->
+        <path
+            android:fillColor="#60A5FA"
+            android:pathData="M36,11 L16,19.5 L16,38 C16,51.5 24.5,61.8 36,65.2 C47.5,61.8 56,51.5 56,38 L56,19.5 Z" />
+        <!-- Inner Core -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M36,15 L20,23 L20,38 C20,49 27,57.5 36,60.5 C45,57.5 52,49 52,38 L52,23 Z" />
+        <!-- Document / Checkmark inside -->
+        <path
+            android:fillColor="#0B2A5B"
+            android:pathData="M32.5,43.5 L26,37 L28.8,34.2 L32.5,37.9 L43.2,27.2 L46,30 Z" />
+    </group>
+</vector>

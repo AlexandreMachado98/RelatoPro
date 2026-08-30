@@ -108,12 +108,12 @@ fun DashboardScreen(
                 val paddingH = 24.dp
                 if (isDesktop) {
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        QuickActionsCard(Modifier.weight(1f), { showTemplateSelector = true }, onNavigateToMyReports)
+                        QuickActionsCard(Modifier.weight(1f), { showTemplateSelector = true }, onNavigateToTemplateBuilder, onNavigateToMyReports)
                         Spacer(modifier = Modifier.weight(1.2f))
                     }
                 } else {
                     Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                        QuickActionsCard(Modifier.fillMaxWidth(), { showTemplateSelector = true }, onNavigateToMyReports)
+                        QuickActionsCard(Modifier.fillMaxWidth(), { showTemplateSelector = true }, onNavigateToTemplateBuilder, onNavigateToMyReports)
                     }
                 }
             }
@@ -312,7 +312,12 @@ fun RecentRow(title: String, subtitle: String, statusText: String, statusColor: 
 }
 
 @Composable
-fun QuickActionsCard(modifier: Modifier, onNewReport: () -> Unit, onMyReports: () -> Unit) {
+fun QuickActionsCard(
+    modifier: Modifier,
+    onNewReport: () -> Unit,
+    onTemplateBuilder: () -> Unit,
+    onMyReports: () -> Unit
+) {
     Card(
         modifier = modifier.height(180.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
@@ -325,9 +330,8 @@ fun QuickActionsCard(modifier: Modifier, onNewReport: () -> Unit, onMyReports: (
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 QuickActionItem(Icons.Default.Add, "Novo\nRelatório", onNewReport)
-                QuickActionItem(Icons.Default.Create, "Novo\nChecklist") { }
-                QuickActionItem(Icons.Default.CameraAlt, "Adicionar\nFoto") { }
-                QuickActionItem(Icons.AutoMirrored.Filled.ListAlt, "Ver\nRelatórios", onMyReports)
+                QuickActionItem(Icons.AutoMirrored.Filled.Assignment, "Modelos\nChecklist", onTemplateBuilder)
+                QuickActionItem(Icons.AutoMirrored.Filled.ListAlt, "Meus\nRelatórios", onMyReports)
             }
         }
     }
@@ -337,7 +341,7 @@ fun QuickActionsCard(modifier: Modifier, onNewReport: () -> Unit, onMyReports: (
 fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }.width(60.dp)
+        modifier = Modifier.clickable { onClick() }.width(80.dp)
     ) {
         Box(
             modifier = Modifier

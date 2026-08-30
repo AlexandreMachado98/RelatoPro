@@ -271,6 +271,7 @@ fun SaaSTextField(label: String, value: String, modifier: Modifier = Modifier) {
 fun ChecklistStepContent(viewModel: FieldModeViewModel, launchCamera: (Long) -> Unit) {
     val template by viewModel.template.collectAsState()
     val fields by viewModel.fields.collectAsState()
+    val answers by viewModel.answers.collectAsState()
     
     if (template == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -282,7 +283,8 @@ fun ChecklistStepContent(viewModel: FieldModeViewModel, launchCamera: (Long) -> 
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         items(fields.size) { index ->
             val field = fields[index]
-            val fieldState by viewModel.getFieldState(field.id).collectAsState()
+            val answer = answers[field.id]
+            val answerValue = answer?.answerValue
             
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -314,20 +316,20 @@ fun ChecklistStepContent(viewModel: FieldModeViewModel, launchCamera: (Long) -> 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ComplianceChip("Conforme", StatusConforme, fieldState.value == "Conforme") {
-                                viewModel.updateFieldValue(field.id, "Conforme")
+                            ComplianceChip("Conforme", StatusConforme, answerValue == "Conforme") {
+                                viewModel.updateAnswer(field.id, "Conforme", answer?.observation)
                             }
-                            ComplianceChip("Não Conforme", StatusNaoConforme, fieldState.value == "Não Conforme") {
-                                viewModel.updateFieldValue(field.id, "Não Conforme")
+                            ComplianceChip("Não Conforme", StatusNaoConforme, answerValue == "Não Conforme") {
+                                viewModel.updateAnswer(field.id, "Não Conforme", answer?.observation)
                             }
-                            ComplianceChip("N/A", StatusNaoAplicavel, fieldState.value == "N/A") {
-                                viewModel.updateFieldValue(field.id, "N/A")
+                            ComplianceChip("N/A", StatusNaoAplicavel, answerValue == "N/A") {
+                                viewModel.updateAnswer(field.id, "N/A", answer?.observation)
                             }
                         }
                         
                         Row {
                             IconButton(onClick = { launchCamera(field.id) }) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = "Foto", tint = if (fieldState.photoLocalPath != null) PrimaryBlue else TextSecondary)
+                                Icon(Icons.Default.CameraAlt, contentDescription = "Foto", tint = TextSecondary)
                             }
                         }
                     }
@@ -371,6 +373,8 @@ fun ObservationsStepContent() {
 
 @Composable
 fun SignatureStepContent(viewModel: FieldModeViewModel) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
     Column(modifier = Modifier.fillMaxSize()) {
         Text("Revisão e Assinatura", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
         Spacer(modifier = Modifier.height(16.dp))
@@ -378,19 +382,19 @@ fun SignatureStepContent(viewModel: FieldModeViewModel) {
         Spacer(modifier = Modifier.height(8.dp))
         
         Box(
-            modifier = Modifier.fillMaxWidth().height(200.dp).background(Color.White).border(1.dp, BorderColor)
+            modifier = Modifier.fillMaxWidth().height(250.dp)
         ) {
             SignaturePad(
                 modifier = Modifier.fillMaxSize(),
-                onSignatureChange = { bitmap ->
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    if (bitmap != null) {
-                        val file = File(context.filesDir, "signature_${System.currentTimeMillis()}.png")
-                        file.outputStream().use { out ->
-                            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-                        }
-                        viewModel.saveSignature(file.absolutePath)
+                onSignatureCaptured = { bitmap ->
+                    val file = File(context.filesDir, "signature_${System.currentTimeMillis()}.png")
+                    file.outputStream().use { out ->
+                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
                     }
+                    viewModel.saveSignature(file.absolutePath)
+                },
+                onClear = {
+                    // Nothing extra to do yet
                 }
             )
         }

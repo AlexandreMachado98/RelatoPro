@@ -66,7 +66,7 @@ fun IndicatorsScreen(onNavigateBack: () -> Unit) {
         
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-            contentPadding = PaddingValues(vertical = 24.dp, bottom = 100.dp)
+            contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
         ) {
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {

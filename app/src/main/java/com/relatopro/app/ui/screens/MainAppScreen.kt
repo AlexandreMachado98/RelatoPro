@@ -123,10 +123,10 @@ fun MainAppScreen(
                         ),
                         actions = {
                             IconButton(onClick = { /* TODO */ }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.Notifications, contentDescription = "Notificações", tint = com.relatopro.app.ui.theme.TextSecondary)
+                                Icon(androidx.compose.material.icons.Icons.Default.Settings, contentDescription = "Configurações", tint = com.relatopro.app.ui.theme.TextSecondary)
                             }
                             IconButton(onClick = { /* TODO */ }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.AccountCircle, contentDescription = "Perfil", tint = com.relatopro.app.ui.theme.TextSecondary)
+                                Icon(androidx.compose.material.icons.Icons.Default.Person, contentDescription = "Perfil", tint = com.relatopro.app.ui.theme.TextSecondary)
                             }
                         }
                     )

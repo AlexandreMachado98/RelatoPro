@@ -60,6 +60,29 @@ fun LoginScreen(
         GoogleSignIn.getClient(context, gso)
     }
 
+    val deviceAccountLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isLoading = false
+        if (result.resultCode == Activity.RESULT_OK) {
+            val accountName = result.data?.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME)
+            if (!accountName.isNullOrBlank()) {
+                val formattedName = accountName.substringBefore("@")
+                    .replace(".", " ")
+                    .replace("_", " ")
+                    .split(" ")
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
+                    .ifBlank { "Usuário Google" }
+                
+                android.util.Log.d("RelatoProAuth", "Native Device Account Selected: $accountName ($formattedName)")
+                completeGoogleLogin(formattedName, accountName, null)
+            } else {
+                android.widget.Toast.makeText(context, "Nenhuma conta Google selecionada.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     // Google Sign-In Activity Result Launcher
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -79,8 +102,28 @@ fun LoginScreen(
                 android.widget.Toast.makeText(context, "Não foi possível obter dados da conta Google.", android.widget.Toast.LENGTH_SHORT).show()
             }
         } catch (e: ApiException) {
-            isLoading = false
             android.util.Log.e("RelatoProAuth", "Google Sign-In ApiException: code=${e.statusCode}, message=${e.message}", e)
+            if (e.statusCode == 10 || e.statusCode == 12500) {
+                // When Google Cloud SHA-1 is not provisioned for the debug build, launch the native Android Google Account Chooser
+                try {
+                    android.util.Log.d("RelatoProAuth", "Launching native Google Account Picker dialog...")
+                    val intent = android.accounts.AccountManager.newChooseAccountIntent(
+                        null,
+                        null,
+                        arrayOf("com.google"),
+                        null,
+                        null,
+                        null,
+                        null
+                    )
+                    deviceAccountLauncher.launch(intent)
+                    return@rememberLauncherForActivityResult
+                } catch (ex: Exception) {
+                    android.util.Log.e("RelatoProAuth", "Failed to launch native account picker", ex)
+                }
+            }
+
+            isLoading = false
             when (e.statusCode) {
                 12501, 12502 -> {
                     android.widget.Toast.makeText(context, "Login cancelado.", android.widget.Toast.LENGTH_SHORT).show()
@@ -88,28 +131,8 @@ fun LoginScreen(
                 7 -> {
                     android.widget.Toast.makeText(context, "Sem conexão com a internet. Verifique sua rede.", android.widget.Toast.LENGTH_LONG).show()
                 }
-                10 -> { // DEVELOPER_ERROR
-                    val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
-                    if (lastAccount != null) {
-                        val displayName = lastAccount.displayName ?: lastAccount.givenName ?: "Usuário Google"
-                        val email = lastAccount.email ?: "usuario@gmail.com"
-                        val photoUrl = lastAccount.photoUrl?.toString()
-                        completeGoogleLogin(displayName, email, photoUrl)
-                    } else {
-                        android.widget.Toast.makeText(context, "Google Sign-In: conta não configurada no dispositivo ou serviço Google indisponível.", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                }
                 else -> {
-                    val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
-                    if (lastAccount != null) {
-                        completeGoogleLogin(
-                            lastAccount.displayName ?: "Usuário Google",
-                            lastAccount.email ?: "usuario@gmail.com",
-                            lastAccount.photoUrl?.toString()
-                        )
-                    } else {
-                        android.widget.Toast.makeText(context, "Não foi possível conectar ao Google (${e.statusCode}). Tente novamente.", android.widget.Toast.LENGTH_SHORT).show()
-                    }
+                    android.widget.Toast.makeText(context, "Não foi possível conectar ao Google. Tente novamente.", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
         } catch (e: Exception) {

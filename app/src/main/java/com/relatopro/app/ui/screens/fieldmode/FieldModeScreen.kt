@@ -56,7 +56,9 @@ fun FieldModeScreen(
 
     val launchCamera = { fieldId: Long ->
         activeFieldId = fieldId
-        val tempFile = File(context.cacheDir, "temp_photo_${System.currentTimeMillis()}.jpg")
+        val photosDir = File(context.filesDir, "photos")
+        photosDir.mkdirs()
+        val tempFile = File(photosDir, "temp_photo_${System.currentTimeMillis()}.jpg")
         currentPhotoFile = tempFile
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
         cameraLauncher.launch(uri)

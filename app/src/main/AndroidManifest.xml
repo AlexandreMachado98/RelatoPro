@@ -7,9 +7,6 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Necessário para acessar fotos na galeria (opcional, dependendo do target SDK) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <!-- Acesso a localização (opcional pelo requisito 26) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

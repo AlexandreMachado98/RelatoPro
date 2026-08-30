@@ -20,6 +20,14 @@ import androidx.compose.ui.unit.sp
 import com.relatopro.app.ui.components.signature.SignaturePad
 import com.relatopro.app.ui.theme.*
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import com.relatopro.app.utils.ImageOptimizer
+import java.io.File
+import android.net.Uri
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FieldModeScreen(
@@ -28,6 +36,30 @@ fun FieldModeScreen(
 ) {
     LaunchedEffect(Unit) {
         viewModel.initializeReportFromTemplate(1L, "Fábrica Central", "João Inspetor")
+    }
+
+    val context = LocalContext.current
+    var currentPhotoFile by remember { mutableStateOf<File?>(null) }
+    var activeFieldId by remember { mutableStateOf<Long?>(null) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            if (success && currentPhotoFile != null && activeFieldId != null) {
+                val optFile = ImageOptimizer.optimizeImageFile(context, currentPhotoFile!!)
+                if (optFile != null) {
+                    viewModel.savePhoto(activeFieldId!!, optFile.absolutePath)
+                }
+            }
+        }
+    )
+
+    val launchCamera = { fieldId: Long ->
+        activeFieldId = fieldId
+        val tempFile = File(context.cacheDir, "temp_photo_${System.currentTimeMillis()}.jpg")
+        currentPhotoFile = tempFile
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
+        cameraLauncher.launch(uri)
     }
 
     Scaffold(
@@ -90,10 +122,7 @@ fun FieldModeScreen(
                         onAnswerChange = { newAns, newObs ->
                             viewModel.updateAnswer(field.id, newAns, newObs)
                         },
-                        onAddPhoto = {
-                            // Dummy path for now, in a real app would be the Camera intent URI
-                            viewModel.savePhoto(field.id, "/dummy/path/foto.webp")
-                        }
+                        onAddPhoto = { launchCamera(field.id) }
                     )
                 }
 

@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import com.relatopro.app.utils.ImageOptimizer
 import java.io.File
-import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +41,8 @@ fun FieldModeScreen(
     val context = LocalContext.current
     var currentPhotoFile by remember { mutableStateOf<File?>(null) }
     var activeFieldId by remember { mutableStateOf<Long?>(null) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Informações", "Checklist", "Assinatura")
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -67,30 +68,40 @@ fun FieldModeScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Relatório em Andamento", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White
-                )
-            )
-        },
+        containerColor = BackgroundLight,
         bottomBar = {
-            BottomAppBar(
-                containerColor = Color.White,
-                contentPadding = PaddingValues(horizontal = 16.dp)
-            ) {
+            BottomAppBar(containerColor = SurfaceWhite) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onNavigateBack) {
-                        Text("Voltar")
+                    if (selectedTabIndex > 0) {
+                        TextButton(onClick = { selectedTabIndex -= 1 }) {
+                            Text("Anterior", color = TextSecondary)
+                        }
+                    } else {
+                        TextButton(onClick = onNavigateBack) {
+                            Text("Cancelar", color = StatusNaoConforme)
+                        }
                     }
-                    Button(onClick = { viewModel.finalizeReport { onNavigateBack() } }) {
-                        Text("Finalizar e Gerar PDF")
+                    
+                    if (selectedTabIndex < tabs.lastIndex) {
+                        Button(
+                            onClick = { selectedTabIndex += 1 },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Próximo")
+                        }
+                    } else {
+                        Button(
+                            onClick = { viewModel.finalizeReport { onNavigateBack() } },
+                            colors = ButtonDefaults.buttonColors(containerColor = StatusConforme),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Gerar Relatório")
+                        }
                     }
                 }
             }
@@ -102,50 +113,105 @@ fun FieldModeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundLight)
                 .padding(paddingValues)
         ) {
-            ProgressHeader(
-                total = fields.size,
-                completed = answers.values.count { it.answerValue != null }
-            )
-            
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = SurfaceWhite,
+                contentColor = PrimaryBlue
             ) {
-                items(count = fields.size) { index ->
-                    val field = fields[index]
-                    val answer = answers[field.id]
-                    ChecklistItemCard(
-                        number = String.format(java.util.Locale.getDefault(), "%02d", field.orderIndex),
-                        title = field.label,
-                        initialAnswer = answer?.answerValue,
-                        initialObservation = answer?.observation ?: "",
-                        onAnswerChange = { newAns, newObs ->
-                            viewModel.updateAnswer(field.id, newAns, newObs)
-                        },
-                        onAddPhoto = { launchCamera(field.id) }
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title, fontWeight = FontWeight.Medium) }
                     )
                 }
-
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Assinatura do Responsável",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    SignaturePad(
-                        onSignatureCaptured = { bitmap ->
-                            viewModel.saveSignature(bitmap, context)
-                        },
-                        onClear = {}
-                    )
-                    Spacer(modifier = Modifier.height(60.dp)) // Extra padding for bottom bar
+            }
+            
+            Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                when (selectedTabIndex) {
+                    0 -> {
+                        // Informações
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Text("Detalhes da Vistoria", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            OutlinedTextField(
+                                value = "João Inspetor",
+                                onValueChange = {},
+                                label = { Text("Responsável") },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = false,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledBorderColor = BorderColor,
+                                    disabledTextColor = TextPrimary,
+                                    disabledLabelColor = TextSecondary
+                                )
+                            )
+                            OutlinedTextField(
+                                value = "Fábrica Central",
+                                onValueChange = {},
+                                label = { Text("Local / Cliente") },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = false,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledBorderColor = BorderColor,
+                                    disabledTextColor = TextPrimary,
+                                    disabledLabelColor = TextSecondary
+                                )
+                            )
+                        }
+                    }
+                    1 -> {
+                        // Checklist
+                        Column {
+                            ProgressHeader(
+                                total = fields.size,
+                                completed = answers.values.count { it.answerValue != null }
+                            )
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(count = fields.size) { index ->
+                                    val field = fields[index]
+                                    val answer = answers[field.id]
+                                    ChecklistItemCard(
+                                        number = String.format(java.util.Locale.getDefault(), "%02d", field.orderIndex),
+                                        title = field.label,
+                                        initialAnswer = answer?.answerValue,
+                                        initialObservation = answer?.observation ?: "",
+                                        onAnswerChange = { newAns, newObs ->
+                                            viewModel.updateAnswer(field.id, newAns, newObs)
+                                        },
+                                        onAddPhoto = { launchCamera(field.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    2 -> {
+                        // Assinatura
+                        Column {
+                            Text("Conclusão e Assinatura", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("Assine abaixo para validar as evidências.", color = TextSecondary, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    SignaturePad(
+                                        onSignatureCaptured = { bitmap ->
+                                            viewModel.saveSignature(bitmap, context)
+                                        },
+                                        onClear = {}
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -154,38 +220,30 @@ fun FieldModeScreen(
 
 @Composable
 fun ProgressHeader(total: Int, completed: Int) {
-    Surface(
-        color = Color.White,
-        shadowElevation = 4.dp,
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "$completed/$total itens concluídos",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            LinearProgressIndicator(
-                progress = { if (total > 0) completed.toFloat() / total.toFloat() else 0f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = StatusConforme,
-                trackColor = Color.LightGray
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Progresso", fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text("$completed / $total", color = PrimaryBlue, fontWeight = FontWeight.Medium)
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = { if (total > 0) completed.toFloat() / total.toFloat() else 0f },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            color = PrimaryBlue,
+            trackColor = BorderColor
+        )
     }
 }
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -200,48 +258,60 @@ fun ChecklistItemCard(
     var observation by remember(initialObservation) { mutableStateOf(initialObservation) }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "$number - $title",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = TextPrimary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .background(BackgroundLight, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(text = number, color = TextSecondary, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = TextPrimary
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // C / NC / NA Buttons
+            // C / NC / NA Buttons (Modern Segmented-like)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AnswerButton(
-                    text = "C",
-                    color = StatusConforme,
-                    isSelected = initialAnswer == "C",
+                    text = "Conforme",
+                    selected = initialAnswer == "C",
+                    selectedColor = StatusConforme,
+                    onClick = { onAnswerChange(if (initialAnswer == "C") null else "C", observation) },
                     modifier = Modifier.weight(1f)
-                ) { onAnswerChange("C", observation) }
-                
+                )
                 AnswerButton(
-                    text = "NC",
-                    color = StatusNaoConforme,
-                    isSelected = initialAnswer == "NC",
-                    modifier = Modifier.weight(1f)
-                ) { onAnswerChange("NC", observation) }
-                
+                    text = "Não Conforme",
+                    selected = initialAnswer == "NC",
+                    selectedColor = StatusNaoConforme,
+                    onClick = { onAnswerChange(if (initialAnswer == "NC") null else "NC", observation) },
+                    modifier = Modifier.weight(1.2f)
+                )
                 AnswerButton(
-                    text = "NA",
-                    color = StatusNaoAplicavel,
-                    isSelected = initialAnswer == "NA",
+                    text = "N/A",
+                    selected = initialAnswer == "NA",
+                    selectedColor = StatusNaoAplicavel,
+                    onClick = { onAnswerChange(if (initialAnswer == "NA") null else "NA", observation) },
                     modifier = Modifier.weight(1f)
-                ) { onAnswerChange("NA", observation) }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
             OutlinedTextField(
                 value = observation,
                 onValueChange = { 
@@ -250,29 +320,22 @@ fun ChecklistItemCard(
                 },
                 label = { Text("Observação") },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 2
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryBlue,
+                    unfocusedBorderColor = BorderColor
+                )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Photos Row (Mock)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            OutlinedButton(
+                onClick = onAddPhoto,
+                modifier = Modifier.fillMaxWidth(),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, PrimaryBlue, RoundedCornerShape(8.dp))
-                        .clickable { onAddPhoto() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = "Adicionar Foto", tint = PrimaryBlue)
-                        Text("Adicionar", fontSize = 10.sp, color = PrimaryBlue)
-                    }
-                }
+                Icon(androidx.compose.material.icons.Icons.Default.CameraAlt, contentDescription = "Foto", tint = PrimaryBlue)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Adicionar Evidência (Foto)", color = PrimaryBlue)
             }
         }
     }
@@ -281,30 +344,29 @@ fun ChecklistItemCard(
 @Composable
 fun AnswerButton(
     text: String,
-    color: Color,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    selected: Boolean,
+    selectedColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val containerColor = if (isSelected) color else Color.White
-    val contentColor = if (isSelected) Color.White else color
-    val borderColor = if (isSelected) Color.Transparent else color
+    val backgroundColor = if (selected) selectedColor else SurfaceWhite
+    val contentColor = if (selected) Color.White else TextSecondary
+    val borderCol = if (selected) selectedColor else BorderColor
 
     Surface(
         modifier = modifier
-            .height(56.dp)
-            .clickable { onClick() },
+            .height(48.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
-        color = containerColor,
-        border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, borderColor) else null,
-        shadowElevation = if (isSelected) 4.dp else 0.dp
+        color = backgroundColor,
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderCol)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = contentColor
+                color = contentColor,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 13.sp
             )
         }
     }

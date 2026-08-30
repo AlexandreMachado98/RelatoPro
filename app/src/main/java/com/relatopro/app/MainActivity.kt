@@ -36,39 +36,41 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     
-                    NavHost(navController = navController, startDestination = "dashboard") {
-                        composable("dashboard") {
-                            val viewModel = hiltViewModel<DashboardViewModel>()
-                            DashboardScreen(
-                                viewModel = viewModel,
-                                onNavigateToTemplateBuilder = { navController.navigate("template_builder") },
-                                onNavigateToFieldMode = { templateId -> navController.navigate("field_mode/$templateId") },
-                                onNavigateToMyReports = { navController.navigate("my_reports") }
-                            )
-                        }
-                        composable("template_builder") {
-                            val viewModel = hiltViewModel<TemplateBuilderViewModel>()
-                            TemplateBuilderScreen(
-                                viewModel = viewModel,
-                                onNavigateBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable(
-                            route = "field_mode/{templateId}",
-                            arguments = listOf(navArgument("templateId") { type = NavType.LongType })
-                        ) { backStackEntry ->
-                            val templateId = backStackEntry.arguments?.getLong("templateId") ?: 1L
-                            FieldModeScreen(
-                                templateId = templateId,
-                                viewModel = hiltViewModel(),
-                                onNavigateBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable("my_reports") {
-                            MyReportsScreen(
-                                viewModel = hiltViewModel(),
-                                onNavigateBack = { navController.popBackStack() }
-                            )
+                    com.relatopro.app.ui.screens.MainAppScreen(navController = navController) {
+                        NavHost(navController = navController, startDestination = "dashboard") {
+                            composable("dashboard") {
+                                val viewModel = hiltViewModel<DashboardViewModel>()
+                                DashboardScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToTemplateBuilder = { navController.navigate("template_builder") },
+                                    onNavigateToFieldMode = { templateId -> navController.navigate("field_mode/$templateId") },
+                                    onNavigateToMyReports = { navController.navigate("my_reports") }
+                                )
+                            }
+                            composable("template_builder") {
+                                val viewModel = hiltViewModel<TemplateBuilderViewModel>()
+                                TemplateBuilderScreen(
+                                    viewModel = viewModel,
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable(
+                                route = "field_mode/{templateId}",
+                                arguments = listOf(navArgument("templateId") { type = NavType.LongType })
+                            ) { backStackEntry ->
+                                val templateId = backStackEntry.arguments?.getLong("templateId") ?: 1L
+                                FieldModeScreen(
+                                    templateId = templateId,
+                                    viewModel = hiltViewModel(),
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable("my_reports") {
+                                MyReportsScreen(
+                                    viewModel = hiltViewModel(),
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
                         }
                     }
                 }

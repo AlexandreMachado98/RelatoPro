@@ -24,6 +24,12 @@ import androidx.navigation.navArgument
 import com.relatopro.app.ui.screens.dashboard.DashboardViewModel
 import com.relatopro.app.ui.screens.templatebuilder.TemplateBuilderViewModel
 
+import com.relatopro.app.ui.screens.auth.SplashScreen
+import com.relatopro.app.ui.screens.auth.LoginScreen
+import com.relatopro.app.ui.screens.auth.RegisterScreen
+import com.relatopro.app.ui.screens.auth.ForgotPasswordScreen
+import com.relatopro.app.ui.screens.dashboard.IndicatorsScreen
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,7 +43,26 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     
                     com.relatopro.app.ui.screens.MainAppScreen(navController = navController) {
-                        NavHost(navController = navController, startDestination = "dashboard") {
+                        NavHost(navController = navController, startDestination = "splash") {
+                            composable("splash") {
+                                SplashScreen(onNavigateToLogin = { navController.navigate("login") { popUpTo("splash") { inclusive = true } } })
+                            }
+                            composable("login") {
+                                LoginScreen(
+                                    onNavigateToDashboard = { navController.navigate("dashboard") { popUpTo("login") { inclusive = true } } },
+                                    onNavigateToRegister = { navController.navigate("register") },
+                                    onNavigateToForgotPassword = { navController.navigate("forgot_password") }
+                                )
+                            }
+                            composable("register") {
+                                RegisterScreen(
+                                    onNavigateToDashboard = { navController.navigate("dashboard") { popUpTo("login") { inclusive = true } } },
+                                    onNavigateToLogin = { navController.navigate("login") { popUpTo("register") { inclusive = true } } }
+                                )
+                            }
+                            composable("forgot_password") {
+                                ForgotPasswordScreen(onNavigateBack = { navController.popBackStack() })
+                            }
                             composable("dashboard") {
                                 val viewModel = hiltViewModel<DashboardViewModel>()
                                 DashboardScreen(
@@ -62,6 +87,11 @@ class MainActivity : ComponentActivity() {
                                 FieldModeScreen(
                                     templateId = templateId,
                                     viewModel = hiltViewModel(),
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable("indicators") {
+                                IndicatorsScreen(
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.relatopro.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,13 +59,40 @@ fun MainAppScreen(
                 }
             }
         } else {
-            // MOBILE LAYOUT: Custom Bottom Navigation
-            Scaffold(
-                containerColor = BackgroundLight,
-                bottomBar = { MobileBottomBar(currentRoute, navController) }
-            ) { paddingValues ->
-                Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-                    content()
+            // MOBILE LAYOUT: Custom Bottom Navigation + Drawer Menu
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+            val scope = rememberCoroutineScope()
+            
+            ModalNavigationDrawer(
+                drawerState = drawerState,
+                drawerContent = {
+                    ModalDrawerSheet(
+                        modifier = Modifier.width(280.dp),
+                        drawerContainerColor = SidebarDark
+                    ) {
+                        PermanentSidebar(
+                            currentRoute = currentRoute,
+                            navController = navController,
+                            modifier = Modifier.fillMaxSize(),
+                            onItemClick = { scope.launch { drawerState.close() } }
+                        )
+                    }
+                },
+                gesturesEnabled = true
+            ) {
+                Scaffold(
+                    containerColor = BackgroundLight,
+                    bottomBar = { 
+                        MobileBottomBar(
+                            currentRoute = currentRoute, 
+                            navController = navController,
+                            onMenuClick = { scope.launch { drawerState.open() } }
+                        ) 
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+                        content()
+                    }
                 }
             }
         }
@@ -132,7 +160,8 @@ private fun DesktopTopBar(currentRoute: String?) {
 private fun PermanentSidebar(
     currentRoute: String?,
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onItemClick: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -154,7 +183,10 @@ private fun PermanentSidebar(
             val isDashboard = currentRoute == "dashboard"
             val bg = if (isDashboard) PrimaryBlue else Color.Transparent
             Button(
-                onClick = { navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } } },
+                onClick = { 
+                    navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } } 
+                    onItemClick()
+                },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = bg),
                 shape = RoundedCornerShape(8.dp),
@@ -173,30 +205,36 @@ private fun PermanentSidebar(
         // Menu Items
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             item { SidebarCategory("RELATÓRIOS") }
-            item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) {} }
-            item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute == "my_reports") { navController.navigate("my_reports") { popUpTo("dashboard") } } }
-            item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) {} }
-            item { SidebarItem(Icons.Default.Send, "Enviados", false) {} }
-            item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) {} }
-            item { SidebarItem(Icons.Default.Checklist, "Modelos", currentRoute == "template_builder") { navController.navigate("template_builder") { popUpTo("dashboard") } } }
+            item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) { onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute == "my_reports") { 
+                navController.navigate("my_reports") { popUpTo("dashboard") } 
+                onItemClick()
+            } }
+            item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.Send, "Enviados", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.Checklist, "Modelos", currentRoute == "template_builder") { 
+                navController.navigate("template_builder") { popUpTo("dashboard") } 
+                onItemClick()
+            } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CHECKLISTS") }
-            item { SidebarItem(Icons.Default.FactCheck, "Checklists", false) {} }
-            item { SidebarItem(Icons.Default.Assignment, "Modelos de Checklist", false) {} }
+            item { SidebarItem(Icons.Default.FactCheck, "Checklists", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.Assignment, "Modelos de Checklist", false) { onItemClick() } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item { SidebarCategory("EVIDÊNCIAS") }
-            item { SidebarItem(Icons.Default.CameraAlt, "Fotos e Anexos", false) {} }
+            item { SidebarItem(Icons.Default.CameraAlt, "Fotos e Anexos", false) { onItemClick() } }
             
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CONFIGURAÇÕES") }
-            item { SidebarItem(Icons.Default.Settings, "Configurações", false) {} }
-            item { SidebarItem(Icons.Default.Person, "Perfil", false) {} }
-            item { SidebarItem(Icons.Default.HelpOutline, "Ajuda e Suporte", false) {} }
+            item { SidebarItem(Icons.Default.Settings, "Configurações", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.Person, "Perfil", false) { onItemClick() } }
+            item { SidebarItem(Icons.Default.HelpOutline, "Ajuda e Suporte", false) { onItemClick() } }
         }
         
         // Footer User Profile
@@ -255,7 +293,7 @@ private fun SidebarItem(icon: ImageVector, title: String, selected: Boolean, onC
 }
 
 @Composable
-private fun MobileBottomBar(currentRoute: String?, navController: NavHostController) {
+private fun MobileBottomBar(currentRoute: String?, navController: NavHostController, onMenuClick: () -> Unit = {}) {
     Box(
         modifier = Modifier.fillMaxWidth().height(80.dp),
         contentAlignment = Alignment.BottomCenter
@@ -278,7 +316,7 @@ private fun MobileBottomBar(currentRoute: String?, navController: NavHostControl
             BottomNavIcon(Icons.Default.Checklist, "Checklists", currentRoute == "template_builder") {
                 navController.navigate("template_builder") { popUpTo("dashboard") }
             }
-            BottomNavIcon(Icons.Default.Menu, "Mais", false) { }
+            BottomNavIcon(Icons.Default.Menu, "Mais", false) { onMenuClick() }
         }
         
         // Floating Center Button

@@ -91,43 +91,30 @@ fun DashboardScreen(
     val pendingReports = 3
 
     Box(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
-        
-        // Mobile Dark Blue Header Background (Only visible on mobile)
-        if (!isDesktop) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-                    .background(SidebarDark)
-            )
-        }
-
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp) // Bottom padding for Mobile Nav Bar
         ) {
             item {
                 if (isDesktop) {
-                    // Desktop Header is handled in MainAppScreen TopBar
-                    // We just need the welcome text
                     Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)) {
-                        Text("Bom dia, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text("Aqui está um resumo das suas atividades.", fontSize = 14.sp, color = TextSecondary)
+                        Text("Olá, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text("Aqui está o resumo das suas atividades.", fontSize = 14.sp, color = TextSecondary)
                     }
                 } else {
-                    // Mobile Custom Header
+                    // Mobile Custom Header (White)
                     Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Security, contentDescription = "Logo", tint = Color.White, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.Security, contentDescription = "Logo", tint = PrimaryBlue, modifier = Modifier.size(24.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Relato Pro", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("Relato Pro", color = PrimaryBlue, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             }
-                            Icon(Icons.Default.Notifications, contentDescription = "Notificações", tint = Color.White)
+                            Icon(Icons.Default.Notifications, contentDescription = "Notificações", tint = TextPrimary)
                         }
                         Spacer(modifier = Modifier.height(32.dp))
-                        Text("Bom dia, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Resumo das suas atividades", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
+                        Text("Olá, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text("Aqui está o resumo das suas atividades.", fontSize = 14.sp, color = TextSecondary)
                     }
                 }
             }
@@ -180,12 +167,11 @@ fun DashboardScreen(
                 if (isDesktop) {
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         QuickActionsCard(Modifier.weight(1f), { showTemplateSelector = true }, onNavigateToMyReports)
-                        LineChartCard(Modifier.weight(1.2f))
+                        Spacer(modifier = Modifier.weight(1.2f)) // Placeholder for balance
                     }
                 } else {
                     Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                         QuickActionsCard(Modifier.fillMaxWidth(), { showTemplateSelector = true }, onNavigateToMyReports)
-                        LineChartCard(Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -404,74 +390,4 @@ fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun LineChartCard(modifier: Modifier) {
-    Card(
-        modifier = modifier.height(180.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-            Text("Relatórios por Período", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val points = listOf(10f, 15f, 25f, 18f, 40f, 25f, 20f)
-                    val maxPoint = 40f
-                    val stepX = size.width / (points.size - 1)
-                    
-                    val path = Path()
-                    val fillPath = Path()
-                    
-                    points.forEachIndexed { index, value ->
-                        val x = index * stepX
-                        val y = size.height - (value / maxPoint * size.height)
-                        if (index == 0) {
-                            path.moveTo(x, y)
-                            fillPath.moveTo(x, size.height)
-                            fillPath.lineTo(x, y)
-                        } else {
-                            path.lineTo(x, y)
-                            fillPath.lineTo(x, y)
-                        }
-                        
-                        if (index == points.lastIndex) {
-                            fillPath.lineTo(x, size.height)
-                            fillPath.close()
-                        }
-                    }
-                    
-                    // Draw filled area
-                    drawPath(
-                        path = fillPath,
-                        color = PrimaryBlue.copy(alpha = 0.1f),
-                        style = Fill
-                    )
-                    
-                    // Draw Line
-                    drawPath(
-                        path = path,
-                        color = PrimaryBlue,
-                        style = Stroke(width = 3f.dp.toPx(), cap = StrokeCap.Round)
-                    )
-                    
-                    // Draw Points
-                    points.forEachIndexed { index, value ->
-                        val x = index * stepX
-                        val y = size.height - (value / maxPoint * size.height)
-                        drawCircle(color = PrimaryBlue, radius = 4f.dp.toPx(), center = Offset(x, y))
-                    }
-                }
-            }
-            
-            // X-Axis Labels
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                listOf("24/08", "25/08", "26/08", "27/08", "28/08", "29/08", "30/08").forEach { label ->
-                    Text(label, color = TextSecondary, fontSize = 9.sp)
-                }
-            }
-        }
-    }
-}
+

@@ -18,7 +18,6 @@ import com.relatopro.app.ui.theme.RelatoProTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 import com.relatopro.app.ui.screens.myreports.MyReportsScreen
-import com.relatopro.app.ui.screens.myreports.MyReportsViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {

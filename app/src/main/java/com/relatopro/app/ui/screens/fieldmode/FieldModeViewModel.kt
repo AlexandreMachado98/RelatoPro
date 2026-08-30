@@ -2,22 +2,20 @@ package com.relatopro.app.ui.screens.fieldmode
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.relatopro.app.data.local.entity.PhotoEntity
 import com.relatopro.app.data.local.entity.ReportAnswerEntity
 import com.relatopro.app.data.local.entity.ReportEntity
+import com.relatopro.app.data.local.entity.SignatureEntity
 import com.relatopro.app.data.local.entity.TemplateFieldEntity
 import com.relatopro.app.domain.repository.ReportRepository
 import com.relatopro.app.domain.repository.TemplateRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.first
-import javax.inject.Inject
-
 import com.relatopro.app.pdf.PdfGenerator
-
-import kotlinx.coroutines.flow.first
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import javax.inject.Inject
 
 @HiltViewModel
 class FieldModeViewModel @Inject constructor(
@@ -35,20 +33,24 @@ class FieldModeViewModel @Inject constructor(
     private val _answers = MutableStateFlow<Map<Long, ReportAnswerEntity>>(emptyMap())
     val answers: StateFlow<Map<Long, ReportAnswerEntity>> = _answers.asStateFlow()
 
-    // 1. Inicializa o relatório a partir de um Modelo Existente (Req: Fluxo de Inicialização)
+    private val _photos = MutableStateFlow<List<PhotoEntity>>(emptyList())
+    val photos: StateFlow<List<PhotoEntity>> = _photos.asStateFlow()
+
+    private val _signature = MutableStateFlow<SignatureEntity?>(null)
+    val signature: StateFlow<SignatureEntity?> = _signature.asStateFlow()
+
     fun initializeReportFromTemplate(templateId: Long, location: String, responsible: String) {
         viewModelScope.launch {
-            // O uso do 'first()' evita que o collect rode infinitamente recriando relatórios
             val templateFields = templateRepository.getTemplateFields(templateId).first()
             _fields.value = templateFields
             
             val newReport = ReportEntity(
                 templateId = templateId,
-                title = "Relatório " + System.currentTimeMillis().toString().takeLast(4),
-                reportNumber = "REP-${System.currentTimeMillis()}",
+                title = "Inspeção " + SimpleDateFormatUtil.currentDateFormatted(),
+                reportNumber = "REP-${System.currentTimeMillis().toString().takeLast(6)}",
                 date = System.currentTimeMillis(),
-                responsible = responsible,
-                location = location,
+                responsible = responsible.ifEmpty { "João da Silva" },
+                location = location.ifEmpty { "Indústria ABC Lda." },
                 lat = null,
                 lng = null,
                 status = "DRAFT",
@@ -58,11 +60,38 @@ class FieldModeViewModel @Inject constructor(
             )
             
             val reportId = reportRepository.createReport(newReport)
-            _currentReport.value = newReport.copy(id = reportId)
+            val created = newReport.copy(id = reportId)
+            _currentReport.value = created
+
+            // Collect photos for this report
+            reportRepository.getReportPhotos(reportId).collect { photoList ->
+                _photos.value = photoList
+            }
         }
     }
 
-    // 2. Lógica de Auto-save Progressivo e Imediato (Req 28 e 29 - Prevenção de Perda de Dados)
+    fun updateReportInfo(title: String, location: String, responsible: String) {
+        val report = _currentReport.value ?: return
+        val updated = report.copy(
+            title = title,
+            location = location,
+            responsible = responsible
+        )
+        _currentReport.value = updated
+        viewModelScope.launch {
+            reportRepository.updateReport(updated)
+        }
+    }
+
+    fun updateGeneralObservations(observations: String) {
+        val report = _currentReport.value ?: return
+        val updated = report.copy(generalObservations = observations)
+        _currentReport.value = updated
+        viewModelScope.launch {
+            reportRepository.updateReport(updated)
+        }
+    }
+
     fun updateAnswer(fieldId: Long, answerValue: String?, observation: String?) {
         val reportId = _currentReport.value?.id ?: return
 
@@ -86,12 +115,46 @@ class FieldModeViewModel @Inject constructor(
         }
     }
 
-    // Marca como FINALIZED impedindo edições (Req 15) e Gera o PDF
+    fun savePhoto(fieldId: Long?, localPath: String, description: String = "") {
+        val reportId = _currentReport.value?.id ?: return
+        viewModelScope.launch {
+            val photoEntity = PhotoEntity(
+                reportId = reportId,
+                templateFieldId = fieldId,
+                localPath = localPath,
+                timestamp = System.currentTimeMillis(),
+                description = description,
+                lat = null,
+                lng = null
+            )
+            reportRepository.savePhoto(photoEntity)
+        }
+    }
+
+    fun saveSignature(bitmap: android.graphics.Bitmap, context: android.content.Context) {
+        val reportId = _currentReport.value?.id ?: return
+        viewModelScope.launch {
+            val file = File(context.filesDir, "signatures/sig_${System.currentTimeMillis()}.png")
+            file.parentFile?.mkdirs()
+            FileOutputStream(file).use { out ->
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+            }
+            val sigEntity = SignatureEntity(
+                reportId = reportId,
+                name = _currentReport.value?.responsible ?: "Responsável",
+                role = "Inspetor",
+                localPath = file.absolutePath,
+                timestamp = System.currentTimeMillis()
+            )
+            reportRepository.saveSignature(sigEntity)
+            _signature.value = sigEntity
+        }
+    }
+
     fun finalizeReport(onPdfGenerated: () -> Unit) {
         val report = _currentReport.value ?: return
         viewModelScope.launch {
-            // Busca fotos e assinaturas no DB
-            val photosList: List<com.relatopro.app.data.local.entity.PhotoEntity> = reportRepository.getReportPhotos(report.id).first()
+            val photosList = reportRepository.getReportPhotos(report.id).first()
             val signature = reportRepository.getSignature(report.id)
             
             val photosMap = photosList
@@ -105,7 +168,6 @@ class FieldModeViewModel @Inject constructor(
                 photosMap[-1L] = listOf(signature.localPath)
             }
 
-            // Gera o PDF físico com o WebView HTML Template
             val pdfFile = try {
                 pdfGenerator.generateReportPdf(
                     report = report,
@@ -118,7 +180,6 @@ class FieldModeViewModel @Inject constructor(
                 null
             }
 
-            // Atualiza o relatório no banco de dados com status Finalizado e o caminho do PDF
             val finalized = report.copy(
                 status = "FINALIZED",
                 pdfLocalPath = pdfFile?.absolutePath
@@ -129,42 +190,11 @@ class FieldModeViewModel @Inject constructor(
             onPdfGenerated()
         }
     }
+}
 
-    // Lógica para salvar foto otimizada (Req 8 e 9)
-    fun savePhoto(fieldId: Long, localPath: String) {
-        val reportId = _currentReport.value?.id ?: return
-        viewModelScope.launch {
-            val photoEntity = com.relatopro.app.data.local.entity.PhotoEntity(
-                reportId = reportId,
-                templateFieldId = fieldId,
-                localPath = localPath,
-                timestamp = System.currentTimeMillis(),
-                description = "",
-                lat = null,
-                lng = null
-            )
-            reportRepository.savePhoto(photoEntity)
-            // Na vida real, atualizaríamos um StateFlow de fotos aqui para a UI refletir
-        }
-    }
-
-    fun saveSignature(bitmap: android.graphics.Bitmap, context: android.content.Context) {
-        val reportId = _currentReport.value?.id ?: return
-        viewModelScope.launch {
-            val file = java.io.File(context.filesDir, "signatures/sig_${System.currentTimeMillis()}.png")
-            file.parentFile?.mkdirs()
-            java.io.FileOutputStream(file).use { out ->
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-            }
-            reportRepository.saveSignature(
-                com.relatopro.app.data.local.entity.SignatureEntity(
-                    reportId = reportId,
-                    name = _currentReport.value?.responsible ?: "Responsável",
-                    role = "Inspetor",
-                    localPath = file.absolutePath,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
-        }
+object SimpleDateFormatUtil {
+    fun currentDateFormatted(): String {
+        val sdf = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
+        return sdf.format(java.util.Date())
     }
 }

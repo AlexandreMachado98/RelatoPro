@@ -1,12 +1,13 @@
 package com.relatopro.app.ui.screens.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -15,14 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.ui.theme.*
 
@@ -33,43 +33,47 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit
 ) {
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundLight)
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         
         // Logo
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(painterResource(id = com.relatopro.app.R.drawable.logo), contentDescription = "Logo", modifier = Modifier.size(32.dp))
-            Spacer(modifier = Modifier.width(8.dp))
+            Image(painterResource(id = com.relatopro.app.R.drawable.logo), contentDescription = "Logo", modifier = Modifier.size(36.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             Text("Relato Pro", color = PrimaryBlue, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
         
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         
         Text("Bem-vindo de volta!", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Faça login para continuar", fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text("Faça login para gerenciar suas vistorias", fontSize = 14.sp, color = TextSecondary)
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(28.dp))
         
         // E-mail Field
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text("E-mail", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text("E-mail", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                placeholder = { Text("seu@email.com") },
-                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("seu@email.com", fontSize = 14.sp) },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 shape = RoundedCornerShape(8.dp),
@@ -86,13 +90,13 @@ fun LoginScreen(
         
         // Password Field
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text("Senha", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text("Senha", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                placeholder = { Text("••••••••") },
-                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("••••••••", fontSize = 14.sp) },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -112,13 +116,13 @@ fun LoginScreen(
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         
         // Esqueci minha senha
         Text(
             text = "Esqueci minha senha",
             color = PrimaryBlue,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(Alignment.End)
@@ -126,11 +130,19 @@ fun LoginScreen(
                 .padding(vertical = 8.dp)
         )
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         
         // Entrar Button
         Button(
-            onClick = onNavigateToDashboard,
+            onClick = {
+                val prefs = context.getSharedPreferences("relatopro_prefs", android.content.Context.MODE_PRIVATE)
+                prefs.edit()
+                    .putBoolean("is_logged_in", true)
+                    .putString("user_name", "João da Silva")
+                    .putString("user_email", email.ifEmpty { "joao.silva@relatopro.com" })
+                    .apply()
+                onNavigateToDashboard()
+            },
             modifier = Modifier.fillMaxWidth().height(48.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
             shape = RoundedCornerShape(8.dp)
@@ -138,7 +150,7 @@ fun LoginScreen(
             Text("Entrar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(28.dp))
         
         // Separator
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -147,12 +159,16 @@ fun LoginScreen(
             HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         
-        // Social Login Buttons (Mock)
+        // Social Login Buttons
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             OutlinedButton(
-                onClick = { },
+                onClick = {
+                    val prefs = context.getSharedPreferences("relatopro_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean("is_logged_in", true).putString("user_name", "João da Silva").apply()
+                    onNavigateToDashboard()
+                },
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
@@ -161,7 +177,11 @@ fun LoginScreen(
                 Text("Google", fontWeight = FontWeight.Bold)
             }
             OutlinedButton(
-                onClick = { },
+                onClick = {
+                    val prefs = context.getSharedPreferences("relatopro_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean("is_logged_in", true).putString("user_name", "João da Silva").apply()
+                    onNavigateToDashboard()
+                },
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
@@ -171,7 +191,7 @@ fun LoginScreen(
             }
         }
         
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(32.dp))
         
         // Cadastre-se
         Row(modifier = Modifier.padding(bottom = 16.dp)) {
@@ -186,5 +206,3 @@ fun LoginScreen(
         }
     }
 }
-
-

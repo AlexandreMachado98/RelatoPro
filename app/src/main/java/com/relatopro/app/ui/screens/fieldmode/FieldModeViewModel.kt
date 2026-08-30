@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 import com.relatopro.app.pdf.PdfGenerator
@@ -90,7 +91,7 @@ class FieldModeViewModel @Inject constructor(
         val report = _currentReport.value ?: return
         viewModelScope.launch {
             // Busca fotos e assinaturas no DB
-            val photosList = kotlinx.coroutines.flow.first(reportRepository.getReportPhotos(report.id))
+            val photosList: List<com.relatopro.app.data.local.entity.PhotoEntity> = reportRepository.getReportPhotos(report.id).first()
             val signature = reportRepository.getSignature(report.id)
             
             val photosMap = photosList.groupBy { it.templateFieldId }.mapValues { entry ->

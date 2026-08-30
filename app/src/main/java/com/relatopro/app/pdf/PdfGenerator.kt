@@ -182,9 +182,9 @@ class PdfGenerator(private val context: Context) {
                             ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE
                         )
                         
-                        printAdapter.onLayout(null, printAttributes, null, object : PrintDocumentAdapter.LayoutResultCallback() {
+                        printAdapter.onLayout(null, printAttributes, null, object : android.print.PdfPrint.LayoutResultCallbackWrapper() {
                             override fun onLayoutFinished(info: PrintDocumentInfo, changed: Boolean) {
-                                printAdapter.onWrite(arrayOf(PageRange.ALL_PAGES), descriptor, CancellationSignal(), object : PrintDocumentAdapter.WriteResultCallback() {
+                                printAdapter.onWrite(arrayOf(PageRange.ALL_PAGES), descriptor, CancellationSignal(), object : android.print.PdfPrint.WriteResultCallbackWrapper() {
                                     override fun onWriteFinished(pages: Array<out PageRange>?) {
                                         super.onWriteFinished(pages)
                                         descriptor.close()

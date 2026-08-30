@@ -173,6 +173,7 @@ private fun DrawerHeader() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DrawerItem(
     icon: ImageVector,

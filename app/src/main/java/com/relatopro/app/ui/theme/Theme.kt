@@ -22,6 +22,7 @@ fun RelatoProTheme(
     // Forcing light theme for now as per clean professional request, can add dark later
     MaterialTheme(
         colorScheme = LightColorScheme,
+        typography = RelatoProTypography,
         content = content
     )
 }

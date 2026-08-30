@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -211,7 +211,7 @@ private fun PermanentSidebar(
                 onItemClick()
             } }
             item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { onItemClick() } }
-            item { SidebarItem(Icons.Default.Send, "Enviados", false) { onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) { onItemClick() } }
             item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) { onItemClick() } }
             item { SidebarItem(Icons.Default.Checklist, "Modelos", currentRoute == "template_builder") { 
                 navController.navigate("template_builder") { popUpTo("dashboard") } 
@@ -221,8 +221,8 @@ private fun PermanentSidebar(
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CHECKLISTS") }
-            item { SidebarItem(Icons.Default.FactCheck, "Checklists", false) { onItemClick() } }
-            item { SidebarItem(Icons.Default.Assignment, "Modelos de Checklist", false) { onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.FactCheck, "Checklists", false) { onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.Assignment, "Modelos de Checklist", false) { onItemClick() } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
@@ -234,7 +234,7 @@ private fun PermanentSidebar(
             item { SidebarCategory("CONFIGURAÇÕES") }
             item { SidebarItem(Icons.Default.Settings, "Configurações", false) { onItemClick() } }
             item { SidebarItem(Icons.Default.Person, "Perfil", false) { onItemClick() } }
-            item { SidebarItem(Icons.Default.HelpOutline, "Ajuda e Suporte", false) { onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.HelpOutline, "Ajuda e Suporte", false) { onItemClick() } }
         }
         
         // Footer User Profile

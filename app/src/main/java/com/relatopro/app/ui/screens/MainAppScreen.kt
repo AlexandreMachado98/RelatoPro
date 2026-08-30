@@ -331,6 +331,10 @@ private fun PermanentSidebar(
         }
         
         // Footer User Profile
+        val customPhotoPath = prefs.getString("user_custom_photo_path", null)
+        val googlePhotoUrl = prefs.getString("user_photo_url", null)
+        val activeAvatar = customPhotoPath ?: googlePhotoUrl
+
         HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
         Row(
             modifier = Modifier
@@ -343,10 +347,19 @@ private fun PermanentSidebar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(PrimaryBlue),
+                modifier = Modifier.size(38.dp).clip(CircleShape).background(PrimaryBlue),
                 contentAlignment = Alignment.Center
             ) {
-                Text(initials.ifEmpty { "RP" }, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                if (!activeAvatar.isNullOrBlank()) {
+                    coil.compose.AsyncImage(
+                        model = activeAvatar,
+                        contentDescription = "Avatar",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    Text(initials.ifEmpty { "RP" }, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {

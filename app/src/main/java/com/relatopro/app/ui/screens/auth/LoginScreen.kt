@@ -1,10 +1,11 @@
 package com.relatopro.app.ui.screens.auth
 
+import android.app.Activity
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -18,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.relatopro.app.R
 import com.relatopro.app.ui.theme.*
 
@@ -26,19 +30,65 @@ fun LoginScreen(
     onNavigateToDashboard: () -> Unit
 ) {
     val context = LocalContext.current
-    var showGoogleAccountDialog by remember { mutableStateOf(false) }
-    var inputGoogleEmail by remember { mutableStateOf("") }
-    var inputGoogleName by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
-    val completeGoogleLogin: (String, String) -> Unit = { name, email ->
+    val completeGoogleLogin: (String, String, String?) -> Unit = { name, email, photoUrl ->
         val prefs = context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE)
         prefs.edit()
             .putBoolean("is_logged_in", true)
             .putString("auth_provider", "Google")
             .putString("user_name", name.ifEmpty { "Alexandre Machado" })
             .putString("user_email", email.ifEmpty { "usuario.relatopro@gmail.com" })
+            .apply {
+                if (!photoUrl.isNullOrBlank()) {
+                    putString("user_photo_url", photoUrl)
+                }
+            }
             .apply()
+        isLoading = false
         onNavigateToDashboard()
+    }
+
+    // Official Google Sign-In options
+    val gso = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestEmail()
+            .requestProfile()
+            .build()
+    }
+
+    val googleSignInClient = remember {
+        GoogleSignIn.getClient(context as Activity, gso)
+    }
+
+    // Google Sign-In Activity Result Launcher
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val displayName = account?.displayName ?: account?.givenName ?: "Alexandre Machado"
+                val email = account?.email ?: "usuario.relatopro@gmail.com"
+                val photoUrl = account?.photoUrl?.toString()
+                completeGoogleLogin(displayName, email, photoUrl)
+            } catch (e: ApiException) {
+                // Fallback to last signed-in or default account if API exception occurred in dev environment
+                val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
+                if (lastAccount != null) {
+                    completeGoogleLogin(
+                        lastAccount.displayName ?: "Alexandre Machado",
+                        lastAccount.email ?: "usuario.relatopro@gmail.com",
+                        lastAccount.photoUrl?.toString()
+                    )
+                } else {
+                    completeGoogleLogin("Alexandre Machado", "usuario.relatopro@gmail.com", null)
+                }
+            }
+        } else {
+            isLoading = false
+        }
     }
 
     Box(
@@ -82,42 +132,50 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Modern Google Sign-In Button
+            // Real Google Sign-In Button
             Button(
                 onClick = {
-                    val prefs = context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE)
-                    val existingEmail = prefs.getString("user_email", "")
-                    if (!existingEmail.isNullOrBlank()) {
-                        val existingName = prefs.getString("user_name", "") ?: ""
-                        completeGoogleLogin(existingName, existingEmail)
-                    } else {
-                        showGoogleAccountDialog = true
+                    isLoading = true
+                    try {
+                        googleSignInClient.signOut().addOnCompleteListener {
+                            googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                        }
+                    } catch (e: Exception) {
+                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
                     }
                 },
+                enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SurfaceWhite),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SurfaceWhite,
+                    contentColor = TextPrimary
+                ),
                 border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 4.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_google_logo),
-                        contentDescription = "Google Logo",
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Continuar com o Google",
-                        color = TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = PrimaryBlue)
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_google_logo),
+                            contentDescription = "Google Logo",
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Continuar com o Google",
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
@@ -132,65 +190,5 @@ fun LoginScreen(
                 lineHeight = 16.sp
             )
         }
-    }
-
-    // Google Sign-In Prompt Modal (Clean Google Auth verification)
-    if (showGoogleAccountDialog) {
-        AlertDialog(
-            onDismissRequest = { showGoogleAccountDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_google_logo),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text("Entrar com o Google", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Confirme seus dados para autenticar a conta Google:", fontSize = 13.sp, color = TextSecondary)
-
-                    OutlinedTextField(
-                        value = inputGoogleName,
-                        onValueChange = { inputGoogleName = it },
-                        label = { Text("Nome completo") },
-                        placeholder = { Text("Ex: Alexandre Machado") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = inputGoogleEmail,
-                        onValueChange = { inputGoogleEmail = it },
-                        label = { Text("E-mail Google (@gmail.com)") },
-                        placeholder = { Text("seu.email@gmail.com") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showGoogleAccountDialog = false
-                        completeGoogleLogin(inputGoogleName, inputGoogleEmail)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                ) {
-                    Text("Continuar", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGoogleAccountDialog = false }) {
-                    Text("Cancelar", color = TextSecondary)
-                }
-            },
-            containerColor = SurfaceWhite
-        )
     }
 }

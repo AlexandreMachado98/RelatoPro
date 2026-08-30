@@ -1,6 +1,9 @@
 package com.relatopro.app.ui.screens.settings
 
 import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,12 +23,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.relatopro.app.ui.theme.*
+import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,10 +48,35 @@ fun ProfileScreen(
     var userRole by remember { mutableStateOf(prefs.getString("user_role", "Inspetor Técnico") ?: "Inspetor Técnico") }
     var userCompany by remember { mutableStateOf(prefs.getString("user_company", "") ?: "") }
     
+    var userCustomPhotoPath by remember { mutableStateOf(prefs.getString("user_custom_photo_path", null)) }
+    val userGooglePhotoUrl = prefs.getString("user_photo_url", null)
+
     var showEditDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     val initials = userName.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("").uppercase()
+
+    // Image Picker Launcher
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val photoFile = File(context.filesDir, "profile_avatar_${System.currentTimeMillis()}.jpg")
+                val outputStream = FileOutputStream(photoFile)
+                inputStream?.use { input ->
+                    outputStream.use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                userCustomPhotoPath = photoFile.absolutePath
+                prefs.edit().putString("user_custom_photo_path", photoFile.absolutePath).apply()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     Scaffold(
         containerColor = BackgroundLight,
@@ -68,7 +100,7 @@ fun ProfileScreen(
             contentPadding = PaddingValues(top = 20.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Profile Card Header
+            // Profile Card Header with Real Photo & Alterar Foto
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -82,19 +114,61 @@ fun ProfileScreen(
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        val activePhoto = userCustomPhotoPath ?: userGooglePhotoUrl
+
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
+                                .size(96.dp)
                                 .clip(CircleShape)
                                 .background(PrimaryDark),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = initials.ifEmpty { "RP" },
-                                color = Color.White,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            if (!activePhoto.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = activePhoto,
+                                    contentDescription = "Foto de Perfil",
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Text(
+                                    text = initials.ifEmpty { "RP" },
+                                    color = Color.White,
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilledTonalButton(
+                                onClick = { photoPickerLauncher.launch("image/*") },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = Color(0xFFE0E7FF),
+                                    contentColor = PrimaryBlue
+                                )
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Alterar foto", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+
+                            if (!userCustomPhotoPath.isNullOrBlank()) {
+                                TextButton(
+                                    onClick = {
+                                        userCustomPhotoPath = null
+                                        prefs.edit().remove("user_custom_photo_path").apply()
+                                    }
+                                ) {
+                                    Text("Remover", color = StatusNaoConforme, fontSize = 12.sp)
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -188,28 +262,34 @@ fun ProfileScreen(
             title = { Text("Editar Perfil", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Nome do Inspetor", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     OutlinedTextField(
                         value = tempName,
                         onValueChange = { tempName = it },
-                        label = { Text("Nome do Inspetor") },
+                        placeholder = { Text("Ex: Alexandre Machado") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
                     )
+
+                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     OutlinedTextField(
                         value = tempRole,
                         onValueChange = { tempRole = it },
-                        label = { Text("Cargo / Função") },
                         placeholder = { Text("Ex: Eng. de Segurança") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
                     )
+
+                    Text("Empresa", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     OutlinedTextField(
                         value = tempCompany,
                         onValueChange = { tempCompany = it },
-                        label = { Text("Empresa") },
                         placeholder = { Text("Ex: Relato Pro Consultoria") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
                     )
                 }
             },
@@ -226,9 +306,12 @@ fun ProfileScreen(
                             .apply()
                         showEditDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryBlue,
+                        contentColor = Color.White
+                    )
                 ) {
-                    Text("Salvar", fontWeight = FontWeight.Bold)
+                    Text("Salvar", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -309,7 +392,7 @@ fun SettingsScreen(
                         SettingsClickableRow(
                             icon = Icons.Outlined.Person,
                             title = "Meu Perfil",
-                            subtitle = "Visualizar dados da conta Google e credenciais",
+                            subtitle = "Visualizar dados da conta Google, foto e credenciais",
                             onClick = onNavigateToProfile
                         )
                         HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
@@ -620,8 +703,14 @@ private fun InfoDialog(title: String, content: String, onDismiss: () -> Unit) {
             Text(content, fontSize = 13.sp, color = TextSecondary, lineHeight = 19.sp)
         },
         confirmButton = {
-            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)) {
-                Text("Fechar", fontWeight = FontWeight.Bold)
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryBlue,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Fechar", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
         containerColor = SurfaceWhite
@@ -645,9 +734,12 @@ private fun LogoutConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Uni
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = StatusNaoConforme)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = StatusNaoConforme,
+                    contentColor = Color.White
+                )
             ) {
-                Text("Sair", fontWeight = FontWeight.Bold)
+                Text("Sair", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

@@ -46,11 +46,14 @@ fun TemplateBuilderScreen(
                     }
                     Button(
                         onClick = { viewModel.saveTemplate(onComplete = onNavigateBack) },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryBlue,
+                            contentColor = Color.White
+                        ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.padding(end = 16.dp)
                     ) {
-                        Text("Salvar Modelo")
+                        Text("Salvar Modelo", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             )

@@ -175,13 +175,16 @@ fun FieldModeScreen(
                     if (selectedStep < steps.lastIndex) {
                         Button(
                             onClick = { selectedStep++ },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryBlue,
+                                contentColor = Color.White
+                            ),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(48.dp).weight(1.3f)
                         ) {
-                            Text("Próximo", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Próximo", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Spacer(Modifier.width(8.dp))
-                            Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                         }
                     } else {
                         Button(
@@ -193,7 +196,10 @@ fun FieldModeScreen(
                                 } 
                             },
                             enabled = !isGeneratingPdf,
-                            colors = ButtonDefaults.buttonColors(containerColor = StatusConforme),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = StatusConforme,
+                                contentColor = Color.White
+                            ),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(48.dp).weight(1.5f)
                         ) {
@@ -537,7 +543,7 @@ fun EditableField(
             value = value,
             onValueChange = onValueChange,
             placeholder = { Text(placeholder, fontSize = 14.sp, color = TextSecondary.copy(alpha = 0.6f)) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
@@ -963,9 +969,10 @@ fun SignatureStepContent(
     val inspectorSig by viewModel.inspectorSignature.collectAsState()
     val operationSig by viewModel.operationSignature.collectAsState()
 
-    var inspectorName by remember(report?.responsible) { mutableStateOf(report?.responsible ?: "João da Silva") }
+    var inspectorName by remember(report?.responsible) { mutableStateOf(report?.responsible ?: "Alexandre Machado") }
+    var inspectorRole by remember { mutableStateOf("Inspetor Técnico") }
     var operationName by remember { mutableStateOf("") }
-    var operationRole by remember { mutableStateOf("Supervisor / Acompanhante") }
+    var operationRole by remember { mutableStateOf("Supervisor no Local") }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -989,9 +996,9 @@ fun SignatureStepContent(
                     Text("Resumo da Vistoria", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PrimaryBlue)
                     HorizontalDivider(color = BorderColor)
                     
-                    SummaryRow("Título", report?.title ?: "Inspeção")
-                    SummaryRow("Local", report?.location ?: "Indústria ABC")
-                    SummaryRow("Responsável", report?.responsible ?: "João da Silva")
+                    SummaryRow("Título", report?.title ?: "Inspeção Técnica")
+                    SummaryRow("Local", report?.location ?: "Local da Inspeção")
+                    SummaryRow("Responsável", report?.responsible ?: "Inspetor Técnico")
                     SummaryRow("Itens Respondidos", "$answersCount de $fieldsCount")
                     SummaryRow("Fotos Anexadas", "$photosCount fotos")
                 }
@@ -1026,13 +1033,15 @@ fun SignatureStepContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
+                    Text("Nome do Responsável", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = inspectorName,
                         onValueChange = { inspectorName = it },
-                        label = { Text("Nome do Inspetor Responsável") },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        placeholder = { Text("Nome completo do responsável", fontSize = 14.sp) },
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -1044,13 +1053,32 @@ fun SignatureStepContent(
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
+
+                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = inspectorRole,
+                        onValueChange = { inspectorRole = it },
+                        placeholder = { Text("Digite o cargo ou função", fontSize = 14.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = BorderColor,
+                            focusedContainerColor = SurfaceWhite,
+                            unfocusedContainerColor = SurfaceWhite
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text("Desenhe a assinatura no quadro abaixo:", fontSize = 12.sp, color = TextSecondary)
                     Spacer(modifier = Modifier.height(6.dp))
 
                     SignaturePad(
                         modifier = Modifier.fillMaxWidth(),
                         onSignatureCaptured = { bitmap ->
-                            viewModel.saveSignature(bitmap, context, inspectorName, "RESPONSAVEL_RELATORIO")
+                            viewModel.saveSignature(bitmap, context, inspectorName, "RESPONSAVEL_RELATORIO", inspectorRole)
                         },
                         onClear = {}
                     )
@@ -1086,32 +1114,15 @@ fun SignatureStepContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
+                    Text("Nome do Acompanhante / Cliente", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = operationName,
                         onValueChange = { operationName = it },
-                        label = { Text("Nome do Acompanhante / Cliente") },
-                        placeholder = { Text("Ex: Carlos Souza") },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryBlue,
-                            unfocusedBorderColor = BorderColor,
-                            focusedContainerColor = SurfaceWhite,
-                            unfocusedContainerColor = SurfaceWhite
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = operationRole,
-                        onValueChange = { operationRole = it },
-                        label = { Text("Cargo / Função") },
-                        placeholder = { Text("Ex: Gerente de Operações") },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        placeholder = { Text("Nome do responsável no local", fontSize = 14.sp) },
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -1123,13 +1134,32 @@ fun SignatureStepContent(
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
+
+                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = operationRole,
+                        onValueChange = { operationRole = it },
+                        placeholder = { Text("Digite o cargo ou função", fontSize = 14.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = BorderColor,
+                            focusedContainerColor = SurfaceWhite,
+                            unfocusedContainerColor = SurfaceWhite
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text("Desenhe a assinatura no quadro abaixo:", fontSize = 12.sp, color = TextSecondary)
                     Spacer(modifier = Modifier.height(6.dp))
 
                     SignaturePad(
                         modifier = Modifier.fillMaxWidth(),
                         onSignatureCaptured = { bitmap ->
-                            viewModel.saveSignature(bitmap, context, operationName.ifEmpty { "Acompanhante" }, "PRESENTE_OPERACAO")
+                            viewModel.saveSignature(bitmap, context, operationName.ifEmpty { "Acompanhante" }, "PRESENTE_OPERACAO", operationRole)
                         },
                         onClear = {}
                     )

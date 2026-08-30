@@ -78,6 +78,9 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    // Google Play Services Auth
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+
     // Coil
     implementation(libs.coil.compose)
 

@@ -98,7 +98,8 @@ fun DashboardScreen(
     val isDesktop = configuration.screenWidthDp >= 800
 
     // Mock data for visual fidelity to the reference image
-    val reportsList by viewModel.reports.collectAsState()`n    val totalReports = reportsList.size
+    val reportsList by viewModel.reports.collectAsState()
+    val totalReports = reportsList.size
     val completedReports = reportsList.count { it.status == "FINALIZED" }
     val drafts = reportsList.count { it.status == "DRAFT" }
     val pendingReports = reportsList.count { it.syncStatus == "PENDING" && it.status == "FINALIZED" }
@@ -402,6 +403,7 @@ fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Text(label, color = TextPrimary, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
+
 
 
 

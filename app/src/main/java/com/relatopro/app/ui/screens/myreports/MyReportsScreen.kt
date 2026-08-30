@@ -292,7 +292,8 @@ fun DesktopReportsTable(
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(
-                                    text = { Text("Excluir", color = StatusNaoConforme) },`n                                    onClick = { expanded = false; onDeleteReport(report) },
+                                    text = { Text("Excluir", color = StatusNaoConforme) },
+                                    onClick = { expanded = false; onDeleteReport(report) },
                                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
                                 )
                             }
@@ -351,7 +352,8 @@ fun MobileReportsList(
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(
-                                    text = { Text("Excluir", color = StatusNaoConforme) },`n                                    onClick = { expanded = false; onDeleteReport(report) },
+                                    text = { Text("Excluir", color = StatusNaoConforme) },
+                                    onClick = { expanded = false; onDeleteReport(report) },
                                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
                                 )
                             }
@@ -385,4 +387,5 @@ fun StatusBadge(isFinal: Boolean) {
         }
     }
 }
+
 

@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.ui.theme.*
 import com.relatopro.app.ui.components.signature.SignaturePad
-import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.runtime.LaunchedEffect
 import com.relatopro.app.ui.screens.fieldmode.FieldModeViewModel

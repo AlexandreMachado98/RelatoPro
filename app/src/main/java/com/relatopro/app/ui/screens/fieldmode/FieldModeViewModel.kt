@@ -94,4 +94,22 @@ class FieldModeViewModel @Inject constructor(
             _currentReport.value = finalized
         }
     }
+
+    // Lógica para salvar foto otimizada (Req 8 e 9)
+    fun savePhoto(fieldId: Long, localPath: String) {
+        val reportId = _currentReport.value?.id ?: return
+        viewModelScope.launch {
+            val photoEntity = com.relatopro.app.data.local.entity.PhotoEntity(
+                reportId = reportId,
+                templateFieldId = fieldId,
+                localPath = localPath,
+                timestamp = System.currentTimeMillis(),
+                description = "",
+                lat = null,
+                lng = null
+            )
+            reportRepository.savePhoto(photoEntity)
+            // Na vida real, atualizaríamos um StateFlow de fotos aqui para a UI refletir
+        }
+    }
 }

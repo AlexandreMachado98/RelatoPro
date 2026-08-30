@@ -54,9 +54,19 @@ fun NewReportDialog(
                                     ) {
                                         Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
                                         Spacer(modifier = Modifier.width(10.dp))
-                                        Column {
-                                            Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                                            Text(template.description, fontSize = 11.sp, color = TextSecondary)
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary, modifier = Modifier.weight(1f))
+                                                if (!template.isGlobal) {
+                                                    Text("Meu Checklist", color = PrimaryBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                            Spacer(Modifier.height(2.dp))
+                                            Text(template.category.ifBlank { template.description.ifBlank { "Checklist de Campo" } }, fontSize = 11.sp, color = TextSecondary)
                                         }
                                     }
                                 }

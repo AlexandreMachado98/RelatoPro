@@ -48,6 +48,7 @@ fun MainAppScreen(
     val isMainRoute = currentRoute?.startsWith("dashboard") == true ||
                       currentRoute?.startsWith("my_reports") == true ||
                       currentRoute?.startsWith("history") == true ||
+                      currentRoute?.startsWith("checklists") == true ||
                       currentRoute?.startsWith("template_builder") == true ||
                       currentRoute?.startsWith("settings") == true ||
                       currentRoute?.startsWith("profile") == true ||
@@ -199,7 +200,8 @@ private fun DesktopTopBar(currentRoute: String?) {
         currentRoute?.startsWith("dashboard") == true -> "Dashboard"
         currentRoute?.startsWith("my_reports") == true -> "Meus Relatórios"
         currentRoute?.startsWith("history") == true -> "Histórico de Relatórios"
-        currentRoute?.startsWith("template_builder") == true -> "Modelos de Checklist"
+        currentRoute?.startsWith("checklists") == true -> "Checklists & Modelos"
+        currentRoute?.startsWith("template_builder") == true -> "Criar/Editar Checklist"
         currentRoute?.startsWith("profile") == true -> "Meu Perfil"
         currentRoute?.startsWith("settings") == true -> "Configurações"
         currentRoute?.startsWith("help") == true -> "Ajuda e Suporte"
@@ -308,7 +310,14 @@ private fun PermanentSidebar(
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CHECKLISTS") }
-            item { SidebarItem(Icons.AutoMirrored.Filled.Assignment, "Modelos de Checklist", currentRoute == "template_builder") { navController.navigate("template_builder") { popUpTo("dashboard") }; onItemClick() } }
+            item { SidebarItem(Icons.AutoMirrored.Filled.Assignment, "Meus Checklists & Modelos", currentRoute?.startsWith("checklists") == true) { 
+                navController.navigate("checklists") { popUpTo("dashboard") }
+                onItemClick() 
+            } }
+            item { SidebarItem(Icons.Default.Add, "Criar Checklist", currentRoute?.startsWith("template_builder") == true) { 
+                navController.navigate("template_builder?templateId=0") { popUpTo("dashboard") }
+                onItemClick() 
+            } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
             

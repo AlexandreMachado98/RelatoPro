@@ -98,14 +98,29 @@ class MainActivity : ComponentActivity() {
                                 val viewModel = hiltViewModel<DashboardViewModel>()
                                 DashboardScreen(
                                     viewModel = viewModel,
-                                    onNavigateToTemplateBuilder = { navController.navigate("template_builder") },
+                                    onNavigateToTemplateBuilder = { navController.navigate("checklists") },
                                     onNavigateToFieldMode = { templateId -> navController.navigate("field_mode/$templateId") },
                                     onNavigateToMyReports = { navController.navigate("my_reports") }
                                 )
                             }
-                            composable("template_builder") {
+                            composable("checklists") {
+                                val viewModel = hiltViewModel<com.relatopro.app.ui.screens.checklists.ChecklistsViewModel>()
+                                com.relatopro.app.ui.screens.checklists.ChecklistsScreen(
+                                    viewModel = viewModel,
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToCreate = { navController.navigate("template_builder?templateId=0") },
+                                    onNavigateToEdit = { templateId -> navController.navigate("template_builder?templateId=$templateId") },
+                                    onNavigateToStartReport = { templateId -> navController.navigate("field_mode/$templateId") }
+                                )
+                            }
+                            composable(
+                                route = "template_builder?templateId={templateId}",
+                                arguments = listOf(navArgument("templateId") { type = NavType.LongType; defaultValue = 0L })
+                            ) { backStackEntry ->
+                                val templateId = backStackEntry.arguments?.getLong("templateId") ?: 0L
                                 val viewModel = hiltViewModel<TemplateBuilderViewModel>()
                                 TemplateBuilderScreen(
+                                    templateId = templateId,
                                     viewModel = viewModel,
                                     onNavigateBack = { navController.popBackStack() }
                                 )

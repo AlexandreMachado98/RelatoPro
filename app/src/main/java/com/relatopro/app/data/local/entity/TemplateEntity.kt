@@ -13,6 +13,8 @@ data class TemplateEntity(
     val version: Int = 1,
     val createdAt: Long,
     val updatedAt: Long,
-    val status: String, // e.g., ACTIVE, ARCHIVED
-    val visualConfig: String // JSON string for header/footer config, colors, etc.
+    val status: String = "ACTIVE", // e.g., ACTIVE, ARCHIVED
+    val visualConfig: String = "{}", // JSON string for header/footer config, colors, etc.
+    val userId: String = "", // Identificador do usuário proprietário (vazio para templates globais)
+    val isGlobal: Boolean = false // Indica se é um modelo padrão do sistema
 )

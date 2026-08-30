@@ -27,11 +27,21 @@ import com.relatopro.app.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TemplateBuilderScreen(
+    templateId: Long = 0L,
     viewModel: TemplateBuilderViewModel,
     onNavigateBack: () -> Unit,
 ) {
+    LaunchedEffect(templateId) {
+        if (templateId > 0L) {
+            viewModel.loadTemplate(templateId)
+        }
+    }
+
     val templateName by viewModel.templateName.collectAsState()
+    val templateCategory by viewModel.templateCategory.collectAsState()
+    val templateDescription by viewModel.templateDescription.collectAsState()
     val fields by viewModel.fields.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
 
     var showAddFieldDialog by remember { mutableStateOf(false) }
 
@@ -39,7 +49,13 @@ fun TemplateBuilderScreen(
         containerColor = BackgroundLight,
         topBar = {
             TopAppBar(
-                title = { Text("Novo Modelo de Relatório", fontWeight = FontWeight.Bold, color = TextPrimary) },
+                title = { 
+                    Text(
+                        if (templateId > 0L) "Editar Checklist" else "Novo Checklist",
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    ) 
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite),
                 actions = {
                     TextButton(onClick = onNavigateBack, modifier = Modifier.padding(end = 8.dp)) {
@@ -47,6 +63,7 @@ fun TemplateBuilderScreen(
                     }
                     Button(
                         onClick = { viewModel.saveTemplate(onComplete = onNavigateBack) },
+                        enabled = !isSaving && templateName.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PrimaryBlue,
                             contentColor = Color.White
@@ -54,7 +71,13 @@ fun TemplateBuilderScreen(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.padding(end = 16.dp)
                     ) {
-                        Text("Salvar Modelo", color = Color.White, fontWeight = FontWeight.Bold)
+                        if (isSaving) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(6.dp))
+                            Text("Salvando...", color = Color.White, fontWeight = FontWeight.Bold)
+                        } else {
+                            Text("Salvar Checklist", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             )
@@ -64,10 +87,9 @@ fun TemplateBuilderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(24.dp)
+                .padding(20.dp)
         ) {
-            
-            // Header Info
+            // Header Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
@@ -75,13 +97,48 @@ fun TemplateBuilderScreen(
                 border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
-                    Text("Informações do Modelo", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-                    Spacer(Modifier.height(16.dp))
+                Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+                    Text("Informações do Checklist", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                    Spacer(Modifier.height(14.dp))
+                    
                     OutlinedTextField(
                         value = templateName,
                         onValueChange = viewModel::updateName,
-                        label = { Text("Nome do Modelo (Ex: Inspeção de Extintores)") },
+                        label = { Text("Nome do Checklist (Ex: Inspeção de EPI)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = BorderColor,
+                            focusedContainerColor = SurfaceWhite,
+                            unfocusedContainerColor = SurfaceWhite
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = templateCategory,
+                        onValueChange = viewModel::updateCategory,
+                        label = { Text("Categoria (Ex: Segurança do Trabalho, Infraestrutura)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = BorderColor,
+                            focusedContainerColor = SurfaceWhite,
+                            unfocusedContainerColor = SurfaceWhite
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = templateDescription,
+                        onValueChange = viewModel::updateDescription,
+                        label = { Text("Descrição / Instruções de aplicação") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(

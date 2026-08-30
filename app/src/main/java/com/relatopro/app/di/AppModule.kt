@@ -19,11 +19,21 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): RelatoProDatabase {
+        val migration12 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE templates ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE templates ADD COLUMN isGlobal INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             RelatoProDatabase::class.java,
             "relatopro_db",
-        ).build()
+        )
+        .addMigrations(migration12)
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides

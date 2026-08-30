@@ -112,6 +112,9 @@ fun MyReportsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Filtros / Toolbar
+            val draftsCount = reports.count { it.status == "DRAFT" }
+            val completedCount = reports.count { it.status == "FINALIZED" }
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -133,8 +136,14 @@ fun MyReportsScreen(
                     singleLine = true
                 )
 
-                if (isDesktop) {
-                    StatusFilterDropdown(selectedStatus) { selectedStatus = it }
+                if (!isDesktop) {
+                    Box(
+                        modifier = Modifier.size(56.dp).border(1.dp, BorderColor, RoundedCornerShape(8.dp)).background(SurfaceWhite, RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.FilterList, contentDescription = null, tint = TextSecondary)
+                    }
+                } else {
                     OutlinedButton(
                         onClick = { },
                         shape = RoundedCornerShape(8.dp),
@@ -148,9 +157,15 @@ fun MyReportsScreen(
                 }
             }
             
-            if (!isDesktop) {
-                Spacer(modifier = Modifier.height(16.dp))
-                StatusFilterDropdown(selectedStatus) { selectedStatus = it }
+            Spacer(modifier = Modifier.height(16.dp))
+            // Row of Filter Chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChipItem("Todos", reports.size, selectedStatus == "Todos") { selectedStatus = "Todos" }
+                FilterChipItem("Rascunhos", draftsCount, selectedStatus == "Rascunhos") { selectedStatus = "Rascunhos" }
+                FilterChipItem("Concluídos", completedCount, selectedStatus == "Concluídos") { selectedStatus = "Concluídos" }
             }
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -176,34 +191,28 @@ fun MyReportsScreen(
 }
 
 @Composable
-fun StatusFilterDropdown(selectedStatus: String, onStatusSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val statuses = listOf("Todos", "Concluídos", "Rascunhos")
-
-    Box {
-        OutlinedButton(
-            onClick = { expanded = true },
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = SurfaceWhite,
-                contentColor = TextPrimary
-            ),
-            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-            modifier = Modifier.height(56.dp)
-        ) {
-            Text(selectedStatus)
-            Spacer(Modifier.width(8.dp))
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            statuses.forEach { status ->
-                DropdownMenuItem(
-                    text = { Text(status) },
-                    onClick = {
-                        onStatusSelected(status)
-                        expanded = false
-                    }
-                )
+fun FilterChipItem(title: String, count: Int, isSelected: Boolean, onClick: () -> Unit) {
+    val bgColor = if (isSelected) PrimaryBlue else Color.Transparent
+    val contentColor = if (isSelected) Color.White else TextSecondary
+    val borderColor = if (isSelected) PrimaryBlue else BorderColor
+    
+    Box(
+        modifier = Modifier
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            .background(bgColor, RoundedCornerShape(20.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(title, color = contentColor, fontSize = 14.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+            Spacer(modifier = Modifier.width(6.dp))
+            Box(
+                modifier = Modifier.background(
+                    if (isSelected) Color.White.copy(alpha = 0.2f) else BorderColor,
+                    RoundedCornerShape(10.dp)
+                ).padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(count.toString(), color = contentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

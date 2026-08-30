@@ -83,7 +83,7 @@ fun FieldModeScreen(
                 items(fields) { field ->
                     val answer = answers[field.id]
                     ChecklistItemCard(
-                        number = String.format("%02d", field.orderIndex),
+                        number = String.format(java.util.Locale.getDefault(), "%02d", field.orderIndex),
                         title = field.label,
                         initialAnswer = answer?.answerValue,
                         initialObservation = answer?.observation ?: "",
@@ -107,7 +107,7 @@ fun FieldModeScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     SignaturePad(
-                        onSignatureCaptured = { bitmap ->
+                        onSignatureCaptured = { _ ->
                             // Here we could store the bitmap to pass to PDF
                         },
                         onClear = {}
@@ -152,17 +152,7 @@ fun ProgressHeader(total: Int, completed: Int) {
     }
 }
 
-@Composable
-fun StatusBadge(text: String, color: Color) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(color)
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    ) {
-        Text(text = text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    }
-}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

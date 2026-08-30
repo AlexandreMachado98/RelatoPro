@@ -267,12 +267,16 @@ fun SaaSTextField(label: String, value: String, modifier: Modifier = Modifier) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChecklistStepContent(viewModel: FieldModeViewModel, launchCamera: (Long) -> Unit) {
     val currentReport by viewModel.currentReport.collectAsState()
     val fields by viewModel.fields.collectAsState()
     val answers by viewModel.answers.collectAsState()
     
+    var selectedFieldId by remember { mutableStateOf<Long?>(null) }
+    var showBottomSheet by remember { mutableStateOf(false) }
+
     if (currentReport == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = PrimaryBlue)
@@ -280,14 +284,21 @@ fun ChecklistStepContent(viewModel: FieldModeViewModel, launchCamera: (Long) -> 
         return
     }
     
-    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(), 
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(bottom = 80.dp)
+    ) {
         items(fields.size) { index ->
             val field = fields[index]
             val answer = answers[field.id]
             val answerValue = answer?.answerValue
             
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().clickable { 
+                    selectedFieldId = field.id
+                    showBottomSheet = true 
+                },
                 colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
                 border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
                 shape = RoundedCornerShape(8.dp)
@@ -316,24 +327,86 @@ fun ChecklistStepContent(viewModel: FieldModeViewModel, launchCamera: (Long) -> 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ComplianceChip("Conforme", StatusConforme, answerValue == "Conforme") {
+                            ComplianceChip("C", StatusConforme, answerValue == "Conforme") {
                                 viewModel.updateAnswer(field.id, "Conforme", answer?.observation)
                             }
-                            ComplianceChip("Não Conforme", StatusNaoConforme, answerValue == "Não Conforme") {
+                            ComplianceChip("NC", StatusNaoConforme, answerValue == "Não Conforme") {
                                 viewModel.updateAnswer(field.id, "Não Conforme", answer?.observation)
                             }
-                            ComplianceChip("N/A", StatusNaoAplicavel, answerValue == "N/A") {
+                            ComplianceChip("NA", StatusNaoAplicavel, answerValue == "N/A") {
                                 viewModel.updateAnswer(field.id, "N/A", answer?.observation)
                             }
                         }
                         
-                        Row {
-                            IconButton(onClick = { launchCamera(field.id) }) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = "Foto", tint = TextSecondary)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            IconButton(onClick = { launchCamera(field.id) }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = "Foto", tint = TextSecondary, modifier = Modifier.size(20.dp))
+                            }
+                            IconButton(onClick = { 
+                                selectedFieldId = field.id
+                                showBottomSheet = true
+                            }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Comentário", tint = if (answer?.observation.isNullOrBlank()) TextSecondary else PrimaryBlue, modifier = Modifier.size(20.dp))
+                            }
+                            IconButton(onClick = { 
+                                selectedFieldId = field.id
+                                showBottomSheet = true
+                            }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Mais", tint = TextSecondary, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    if (showBottomSheet && selectedFieldId != null) {
+        val field = fields.find { it.id == selectedFieldId }
+        val currentAnswer = answers[selectedFieldId]
+        
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            containerColor = SurfaceWhite
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Text("Detalhes do Item", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(field?.label ?: "", fontSize = 14.sp, color = TextSecondary)
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text("Observações", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                Spacer(modifier = Modifier.height(8.dp))
+                var obsText by remember { mutableStateOf(currentAnswer?.observation ?: "") }
+                
+                OutlinedTextField(
+                    value = obsText,
+                    onValueChange = { obsText = it },
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    placeholder = { Text("Adicione comentários, motivos de não conformidade...") },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryBlue,
+                        unfocusedBorderColor = BorderColor
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Button(
+                    onClick = {
+                        viewModel.updateAnswer(selectedFieldId!!, currentAnswer?.answerValue, obsText)
+                        showBottomSheet = false
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Salvar Observação", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -359,15 +432,70 @@ fun ComplianceChip(label: String, color: Color, selected: Boolean, onClick: () -
 
 @Composable
 fun PhotosStepContent() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Galeria de Evidências (Mock)", color = TextSecondary)
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Evidências Fotográficas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+            Button(
+                onClick = { },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Adicionar Foto")
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Mock Grid of photos
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            PhotoMockCard(Modifier.weight(1f), "Fachada Frontal")
+            PhotoMockCard(Modifier.weight(1f), "Extintor Vencido")
+        }
+    }
+}
+
+@Composable
+fun PhotoMockCard(modifier: Modifier, label: String) {
+    Card(
+        modifier = modifier.height(140.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxWidth().weight(1f).background(BorderColor), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.CameraAlt, contentDescription = null, tint = TextSecondary.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
+            }
+            Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                Text(label, fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+            }
+        }
     }
 }
 
 @Composable
 fun ObservationsStepContent() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Observações (Mock)", color = TextSecondary)
+    var observations by remember { mutableStateOf("") }
+    Column(modifier = Modifier.fillMaxSize()) {
+        Text("Observações Finais", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Adicione comentários gerais, recomendações ou ressalvas sobre a inspeção.", fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        OutlinedTextField(
+            value = observations,
+            onValueChange = { observations = it },
+            modifier = Modifier.fillMaxWidth().height(200.dp),
+            placeholder = { Text("Digite suas observações aqui...") },
+            shape = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = PrimaryBlue,
+                unfocusedBorderColor = BorderColor,
+                focusedContainerColor = SurfaceWhite,
+                unfocusedContainerColor = SurfaceWhite
+            )
+        )
     }
 }
 

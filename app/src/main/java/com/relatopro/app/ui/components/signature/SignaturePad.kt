@@ -25,6 +25,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.relatopro.app.ui.theme.PrimaryBlue
 import com.relatopro.app.ui.theme.StatusNaoConforme
 import com.relatopro.app.ui.theme.TextSecondary

@@ -4,84 +4,30 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
-import com.relatopro.app.ui.theme.BackgroundLight
-import com.relatopro.app.ui.theme.BorderColor
-import com.relatopro.app.ui.theme.PrimaryBlue
-import com.relatopro.app.ui.theme.SidebarDark
-import com.relatopro.app.ui.theme.StatusConforme
-import com.relatopro.app.ui.theme.StatusNaoConforme
-import com.relatopro.app.ui.theme.StatusWarning
-import com.relatopro.app.ui.theme.SurfaceWhite
-import com.relatopro.app.ui.theme.TextPrimary
-import com.relatopro.app.ui.theme.TextSecondary
+import com.relatopro.app.data.local.entity.ReportEntity
+import com.relatopro.app.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +43,6 @@ fun DashboardScreen(
     val configuration = LocalConfiguration.current
     val isDesktop = configuration.screenWidthDp >= 800
 
-    // Mock data for visual fidelity to the reference image
     val reportsList by viewModel.reports.collectAsState()
     val totalReports = reportsList.size
     val completedReports = reportsList.count { it.status == "FINALIZED" }
@@ -107,30 +52,64 @@ fun DashboardScreen(
     Box(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 100.dp) // Bottom padding for Mobile Nav Bar
+            contentPadding = PaddingValues(bottom = 100.dp)
         ) {
+            // METRIC SUMMARY CARDS
             item {
-                                if (isDesktop) {
+                Spacer(modifier = Modifier.height(24.dp))
+                val paddingH = 24.dp
+                if (isDesktop) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        SummaryCard(Modifier.weight(1f), "Total de Relatórios", totalReports, "Todos os registros", Icons.AutoMirrored.Filled.ListAlt, PrimaryBlue)
+                        SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Finalizados", Icons.Default.CheckCircle, StatusConforme)
+                        SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, StatusWarning)
+                        SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, StatusNaoConforme)
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.padding(horizontal = paddingH),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            SummaryCard(Modifier.weight(1f), "Total", totalReports, "Todos os registros", Icons.AutoMirrored.Filled.ListAlt, PrimaryBlue)
+                            SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Finalizados", Icons.Default.CheckCircle, StatusConforme)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, StatusWarning)
+                            SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, StatusNaoConforme)
+                        }
+                    }
+                }
+            }
+
+            // CHARTS AND RECENT ACTIVITY
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                val paddingH = 24.dp
+                if (isDesktop) {
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        DonutChartCard(Modifier.weight(1f))
+                        DonutChartCard(Modifier.weight(1f), totalReports, completedReports, drafts, pendingReports)
                         RecentActivityCard(Modifier.weight(1.2f), reportsList)
                     }
                 } else {
                     Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                        DonutChartCard(Modifier.fillMaxWidth())
+                        DonutChartCard(Modifier.fillMaxWidth(), totalReports, completedReports, drafts, pendingReports)
                         RecentActivityCard(Modifier.fillMaxWidth(), reportsList)
                     }
                 }
             }
 
-            // QUICK ACTIONS & LINE CHART
+            // QUICK ACTIONS
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 val paddingH = 24.dp
                 if (isDesktop) {
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         QuickActionsCard(Modifier.weight(1f), { showTemplateSelector = true }, onNavigateToMyReports)
-                        Spacer(modifier = Modifier.weight(1.2f)) // Placeholder for balance
+                        Spacer(modifier = Modifier.weight(1.2f))
                     }
                 } else {
                     Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -192,7 +171,7 @@ fun SummaryCard(modifier: Modifier, title: String, value: Int, subtitle: String,
 }
 
 @Composable
-fun DonutChartCard(modifier: Modifier) {
+fun DonutChartCard(modifier: Modifier, total: Int, completed: Int, drafts: Int, pending: Int) {
     Card(
         modifier = modifier.height(280.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
@@ -204,29 +183,31 @@ fun DonutChartCard(modifier: Modifier) {
             Spacer(modifier = Modifier.weight(1f))
             
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                // Thick Donut Chart
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.size(140.dp)) {
                     Canvas(modifier = Modifier.size(140.dp)) {
                         val strokeWidth = 36f
-                        val cAngle = (24f / 32f) * 360f // 75%
-                        val dAngle = (5f / 32f) * 360f  // 16%
-                        val pAngle = (3f / 32f) * 360f  // 9%
+                        val t = if (total > 0) total.toFloat() else 1f
+                        val cAngle = (completed.toFloat() / t) * 360f
+                        val dAngle = (drafts.toFloat() / t) * 360f
+                        val pAngle = (pending.toFloat() / t) * 360f
                         
                         var currentAngle = -90f
                         
                         // Green (Concluídos)
-                        drawArc(color = StatusConforme, startAngle = currentAngle, sweepAngle = cAngle, useCenter = false, style = Stroke(strokeWidth))
+                        drawArc(color = StatusConforme, startAngle = currentAngle, sweepAngle = if (total == 0) 360f else cAngle, useCenter = false, style = Stroke(strokeWidth))
                         currentAngle += cAngle
                         
                         // Blue (Rascunhos)
-                        drawArc(color = PrimaryBlue, startAngle = currentAngle, sweepAngle = dAngle, useCenter = false, style = Stroke(strokeWidth))
-                        currentAngle += dAngle
-                        
-                        // Orange (Pendentes)
-                        drawArc(color = StatusWarning, startAngle = currentAngle, sweepAngle = pAngle, useCenter = false, style = Stroke(strokeWidth))
+                        if (total > 0) {
+                            drawArc(color = PrimaryBlue, startAngle = currentAngle, sweepAngle = dAngle, useCenter = false, style = Stroke(strokeWidth))
+                            currentAngle += dAngle
+                            
+                            // Orange (Pendentes)
+                            drawArc(color = StatusWarning, startAngle = currentAngle, sweepAngle = pAngle, useCenter = false, style = Stroke(strokeWidth))
+                        }
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("32", fontWeight = FontWeight.Bold, fontSize = 28.sp, color = TextPrimary)
+                        Text(total.toString(), fontWeight = FontWeight.Bold, fontSize = 28.sp, color = TextPrimary)
                         Text("Total", fontSize = 12.sp, color = TextSecondary)
                     }
                 }
@@ -235,9 +216,9 @@ fun DonutChartCard(modifier: Modifier) {
                 
                 // Legend
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LegendItem("Concluídos", "24 (75%)", StatusConforme)
-                    LegendItem("Rascunhos", "5 (16%)", PrimaryBlue)
-                    LegendItem("Pendentes", "3 (9%)", StatusWarning)
+                    LegendItem("Concluídos", "$completed", StatusConforme)
+                    LegendItem("Rascunhos", "$drafts", PrimaryBlue)
+                    LegendItem("Pendentes", "$pending", StatusWarning)
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
@@ -256,7 +237,7 @@ fun LegendItem(label: String, value: String, color: Color) {
 }
 
 @Composable
-fun RecentActivityCard(modifier: Modifier, reports: List<com.relatopro.app.data.local.entity.ReportEntity>) {
+fun RecentActivityCard(modifier: Modifier, reports: List<ReportEntity>) {
     Card(
         modifier = modifier.height(280.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
@@ -293,7 +274,7 @@ fun RecentActivityCard(modifier: Modifier, reports: List<com.relatopro.app.data.
                             else -> StatusWarning
                         }
                         
-                        RecentRow(report.title, report.location, statusText, statusColor, dateStr)
+                        RecentRow(report.title.ifEmpty { "Relatório #${report.id}" }, report.location, statusText, statusColor, dateStr)
                         HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
                     }
                 }
@@ -313,7 +294,7 @@ fun RecentRow(title: String, subtitle: String, statusText: String, statusColor: 
             Icon(Icons.Default.Description, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Column {
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary, maxLines = 1)
                 Text(subtitle, fontSize = 11.sp, color = TextSecondary, maxLines = 1)
             }
         }
@@ -325,7 +306,7 @@ fun RecentRow(title: String, subtitle: String, statusText: String, statusColor: 
                 Text(statusText, color = statusColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Text(date, color = TextSecondary, fontSize = 11.sp, modifier = Modifier.width(70.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+            Text(date, color = TextSecondary, fontSize = 11.sp, modifier = Modifier.width(90.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
         }
     }
 }
@@ -370,10 +351,3 @@ fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Text(label, color = TextPrimary, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
-
-
-
-
-
-
-

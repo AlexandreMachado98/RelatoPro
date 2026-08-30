@@ -18,7 +18,6 @@ import com.relatopro.app.ui.theme.RelatoProTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 import com.relatopro.app.ui.screens.myreports.MyReportsScreen
-
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.relatopro.app.ui.screens.dashboard.DashboardViewModel
@@ -29,6 +28,7 @@ import com.relatopro.app.ui.screens.auth.LoginScreen
 import com.relatopro.app.ui.screens.auth.RegisterScreen
 import com.relatopro.app.ui.screens.auth.ForgotPasswordScreen
 import com.relatopro.app.ui.screens.dashboard.IndicatorsScreen
+import com.relatopro.app.ui.screens.settings.*
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }
-                                                        composable(
+                            composable(
                                 route = "my_reports?filter={filter}",
                                 arguments = listOf(navArgument("filter") { type = NavType.StringType; defaultValue = "Todos" })
                             ) { backStackEntry ->
@@ -106,10 +106,10 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }
-                            composable("profile") { com.relatopro.app.ui.screens.settings.ProfileScreen { navController.popBackStack() } }
-                            composable("settings") { com.relatopro.app.ui.screens.settings.SettingsScreen { navController.popBackStack() } }
-                            composable("help") { com.relatopro.app.ui.screens.settings.HelpScreen { navController.popBackStack() } }
-                            composable("evidence_gallery") { com.relatopro.app.ui.screens.settings.EvidenceGalleryScreen { navController.popBackStack() } }
+                            composable("profile") { ProfileScreen(onNavigateBack = { navController.popBackStack() }) }
+                            composable("settings") { SettingsScreen(onNavigateBack = { navController.popBackStack() }) }
+                            composable("help") { HelpScreen(onNavigateBack = { navController.popBackStack() }) }
+                            composable("evidence_gallery") { EvidenceGalleryScreen(onNavigateBack = { navController.popBackStack() }) }
                         }
                     }
                 }
@@ -117,4 +117,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

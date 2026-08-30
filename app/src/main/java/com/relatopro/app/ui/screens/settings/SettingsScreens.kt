@@ -6,7 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -14,8 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.ui.theme.*
 import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import java.io.File
@@ -74,8 +72,8 @@ fun SettingsScreen(onNavigateBack: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = context.getSharedPreferences("relatopro_prefs", android.content.Context.MODE_PRIVATE)
     
-    var syncWifi by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(prefs.getBoolean("sync_wifi", true)) }
-    var autoSave by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(prefs.getBoolean("auto_save", true)) }
+    var syncWifi by remember { mutableStateOf(prefs.getBoolean("sync_wifi", true)) }
+    var autoSave by remember { mutableStateOf(prefs.getBoolean("auto_save", true)) }
 
     GenericSettingsScreen(title = "Configurações", onNavigateBack = onNavigateBack) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {

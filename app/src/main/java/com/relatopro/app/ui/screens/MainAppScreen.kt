@@ -38,7 +38,13 @@ fun MainAppScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val isMainRoute = currentRoute?.startsWith("dashboard") == true || currentRoute?.startsWith("my_reports") == true || currentRoute?.startsWith("template_builder") == true || currentRoute?.startsWith("evidence_gallery") == true || currentRoute?.startsWith("settings") == true || currentRoute?.startsWith("profile") == true || currentRoute?.startsWith("help") == true
+    val isMainRoute = currentRoute?.startsWith("dashboard") == true ||
+                      currentRoute?.startsWith("my_reports") == true ||
+                      currentRoute?.startsWith("template_builder") == true ||
+                      currentRoute?.startsWith("evidence_gallery") == true ||
+                      currentRoute?.startsWith("settings") == true ||
+                      currentRoute?.startsWith("profile") == true ||
+                      currentRoute?.startsWith("help") == true
 
     val configuration = LocalConfiguration.current
     val isDesktop = configuration.screenWidthDp >= 800
@@ -56,27 +62,25 @@ fun MainAppScreen(
             }
         )
     }
+
     if (isMainRoute) {
         if (isDesktop) {
-            // DESKTOP / TABLET LAYOUT: Permanent Sidebar + Content
             Row(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
                 PermanentSidebar(
                     currentRoute = currentRoute,
                     navController = navController,
-                    modifier = Modifier.width(260.dp)
+                    modifier = Modifier.width(260.dp),
+                    onNewReportClick = { showNewReportDialog = true }
                 )
                 
                 Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    // Desktop TopBar exactly like the image
                     DesktopTopBar(currentRoute)
-                    
                     Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                         content()
                     }
                 }
             }
         } else {
-            // MOBILE LAYOUT: Custom Bottom Navigation + Drawer Menu
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             val scope = rememberCoroutineScope()
             
@@ -91,6 +95,10 @@ fun MainAppScreen(
                             currentRoute = currentRoute,
                             navController = navController,
                             modifier = Modifier.fillMaxSize(),
+                            onNewReportClick = { 
+                                scope.launch { drawerState.close() }
+                                showNewReportDialog = true 
+                            },
                             onItemClick = { scope.launch { drawerState.close() } }
                         )
                     }
@@ -103,7 +111,8 @@ fun MainAppScreen(
                         MobileBottomBar(
                             currentRoute = currentRoute, 
                             navController = navController,
-                            onMenuClick = { scope.launch { drawerState.open() } }
+                            onMenuClick = { scope.launch { drawerState.open() } },
+                            onNewReportClick = { showNewReportDialog = true }
                         ) 
                     }
                 ) { paddingValues ->
@@ -114,17 +123,20 @@ fun MainAppScreen(
             }
         }
     } else {
-        // Full screen for internal routes (e.g., field mode)
         content()
     }
 }
 
 @Composable
 private fun DesktopTopBar(currentRoute: String?) {
-    val title = when (currentRoute) {
-        "dashboard" -> "Dashboard"
-        "my_reports" -> "Meus Relatórios"
-        "template_builder" -> "Modelos"
+    val title = when {
+        currentRoute?.startsWith("dashboard") == true -> "Dashboard"
+        currentRoute?.startsWith("my_reports") == true -> "Meus Relatórios"
+        currentRoute?.startsWith("template_builder") == true -> "Modelos de Checklist"
+        currentRoute?.startsWith("evidence_gallery") == true -> "Fotos e Anexos"
+        currentRoute?.startsWith("profile") == true -> "Perfil"
+        currentRoute?.startsWith("settings") == true -> "Configurações"
+        currentRoute?.startsWith("help") == true -> "Ajuda e Suporte"
         else -> "Relato Pro"
     }
 
@@ -137,12 +149,9 @@ private fun DesktopTopBar(currentRoute: String?) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left side: Title or Breadcrumbs
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         
-        // Right side: Date and Notifications
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            // Date Picker mock button
             Box(
                 modifier = Modifier
                     .background(BackgroundLight, RoundedCornerShape(8.dp))
@@ -151,7 +160,6 @@ private fun DesktopTopBar(currentRoute: String?) {
                 Text("28/08/2026 - 30/08/2026", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             
-            // Bell Icon with Red Dot
             Box {
                 IconButton(onClick = { }) {
                     Icon(Icons.Default.Notifications, contentDescription = "Notificações", tint = TextSecondary)
@@ -178,6 +186,7 @@ private fun PermanentSidebar(
     currentRoute: String?,
     navController: NavHostController,
     modifier: Modifier = Modifier,
+    onNewReportClick: () -> Unit = {},
     onItemClick: () -> Unit = {}
 ) {
     Column(
@@ -195,7 +204,7 @@ private fun PermanentSidebar(
             Text("Relato Pro", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         
-        // Navigation Button equivalent (Dashboard)
+        // Dashboard Button
         Box(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
             val isDashboard = currentRoute == "dashboard"
             val bg = if (isDashboard) PrimaryBlue else Color.Transparent
@@ -223,14 +232,13 @@ private fun PermanentSidebar(
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             item { SidebarCategory("RELATÓRIOS") }
             item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) { onNewReportClick(); onItemClick() } }
-            item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute == "my_reports") { 
+            item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute?.startsWith("my_reports") == true) { 
                 navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") } 
                 onItemClick()
             } }
             item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { navController.navigate("my_reports?filter=Rascunhos") { popUpTo("dashboard") }; onItemClick() } }
             item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) { navController.navigate("my_reports?filter=Enviados") { popUpTo("dashboard") }; onItemClick() } }
-            item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) { onItemClick() } }
-            
+            item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) { navController.navigate("my_reports?filter=Concluídos") { popUpTo("dashboard") }; onItemClick() } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
@@ -273,7 +281,6 @@ private fun PermanentSidebar(
                 modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                // Em um app real, seria a foto do usuário
                 Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -319,12 +326,16 @@ private fun SidebarItem(icon: ImageVector, title: String, selected: Boolean, onC
 }
 
 @Composable
-private fun MobileBottomBar(currentRoute: String?, navController: NavHostController, onMenuClick: () -> Unit = {}, onNewReportClick: () -> Unit = {}) {
+private fun MobileBottomBar(
+    currentRoute: String?,
+    navController: NavHostController,
+    onMenuClick: () -> Unit = {},
+    onNewReportClick: () -> Unit = {}
+) {
     Box(
         modifier = Modifier.fillMaxWidth().height(80.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Actual Bottom Nav Background
         Row(
             modifier = Modifier.fillMaxWidth().height(64.dp).background(SurfaceWhite),
             horizontalArrangement = Arrangement.SpaceAround,
@@ -333,10 +344,9 @@ private fun MobileBottomBar(currentRoute: String?, navController: NavHostControl
             BottomNavIcon(Icons.Default.Home, "Início", currentRoute == "dashboard") {
                 navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } }
             }
-            BottomNavIcon(Icons.AutoMirrored.Filled.ListAlt, "Relatórios", currentRoute == "my_reports") {
+            BottomNavIcon(Icons.AutoMirrored.Filled.ListAlt, "Relatórios", currentRoute?.startsWith("my_reports") == true) {
                 navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") }
             }
-            // Space for central FAB
             Spacer(modifier = Modifier.width(48.dp))
             
             BottomNavIcon(Icons.Default.Checklist, "Checklists", currentRoute == "template_builder") {
@@ -345,8 +355,7 @@ private fun MobileBottomBar(currentRoute: String?, navController: NavHostControl
             BottomNavIcon(Icons.Default.Menu, "Mais", false) { onMenuClick() }
         }
         
-        // Floating Center Button
-                Box(
+        Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .size(56.dp)
@@ -372,6 +381,3 @@ private fun BottomNavIcon(icon: ImageVector, label: String, selected: Boolean, o
         Text(label, color = color, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
-
-
-

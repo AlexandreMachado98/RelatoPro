@@ -235,10 +235,18 @@ fun FieldModeScreen(
             
             HorizontalDivider(color = BorderColor, thickness = 1.dp)
 
-            // STEP CONTENT (Animated Transition)
+            // STEP CONTENT (Smooth Directional Animated Transition)
             AnimatedContent(
                 targetState = selectedStep,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (androidx.compose.animation.slideInHorizontally(animationSpec = androidx.compose.animation.core.tween(240)) { width -> width / 3 } + fadeIn(androidx.compose.animation.core.tween(200)))
+                            .togetherWith(androidx.compose.animation.slideOutHorizontally(animationSpec = androidx.compose.animation.core.tween(240)) { width -> -width / 3 } + fadeOut(androidx.compose.animation.core.tween(160)))
+                    } else {
+                        (androidx.compose.animation.slideInHorizontally(animationSpec = androidx.compose.animation.core.tween(240)) { width -> -width / 3 } + fadeIn(androidx.compose.animation.core.tween(200)))
+                            .togetherWith(androidx.compose.animation.slideOutHorizontally(animationSpec = androidx.compose.animation.core.tween(240)) { width -> width / 3 } + fadeOut(androidx.compose.animation.core.tween(160)))
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
                 label = "StepContentAnimation"
             ) { step ->
@@ -791,22 +799,29 @@ fun ChecklistStepContent(
 
 @Composable
 fun ComplianceChip(fullLabel: String, shortLabel: String, color: Color, selected: Boolean, onClick: () -> Unit) {
-    val bgColor = if (selected) color else SurfaceWhite
-    val contentColor = if (selected) Color.White else color
-    val borderColor = color
+    val animatedBg by androidx.compose.animation.animateColorAsState(
+        targetValue = if (selected) color else SurfaceWhite,
+        animationSpec = androidx.compose.animation.core.tween(180),
+        label = "ChipBg"
+    )
+    val animatedContent by androidx.compose.animation.animateColorAsState(
+        targetValue = if (selected) Color.White else color,
+        animationSpec = androidx.compose.animation.core.tween(180),
+        label = "ChipContent"
+    )
 
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .background(animatedBg)
+            .border(1.dp, color, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = shortLabel,
-            color = contentColor,
+            text = if (selected) "✓ $shortLabel" else shortLabel,
+            color = animatedContent,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )

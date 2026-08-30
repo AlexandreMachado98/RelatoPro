@@ -367,14 +367,17 @@ fun HistoryScreen(
                         HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 6.dp))
                     }
 
-                    items(reportsInMonth) { report ->
-                        HistoryReportCard(
-                            report = report,
-                            onCardClick = { selectedReportForDetails = report },
-                            onOpenPdf = { path -> openPdf(path) },
-                            onSharePdf = { path, id -> sharePdf(path, id) },
-                            onDelete = { viewModel.deleteReport(report) }
-                        )
+                    items(reportsInMonth.size) { rIdx ->
+                        val report = reportsInMonth[rIdx]
+                        com.relatopro.app.ui.components.animation.AnimatedListItem(index = rIdx) {
+                            HistoryReportCard(
+                                report = report,
+                                onCardClick = { selectedReportForDetails = report },
+                                onOpenPdf = { path -> openPdf(path) },
+                                onSharePdf = { path, id -> sharePdf(path, id) },
+                                onDelete = { viewModel.deleteReport(report) }
+                            )
+                        }
                     }
                 }
             }

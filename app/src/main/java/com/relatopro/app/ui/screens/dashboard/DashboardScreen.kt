@@ -256,8 +256,10 @@ fun RecentActivityCard(modifier: Modifier, reports: List<ReportEntity>) {
                     Text("Nenhuma atividade registrada.", color = TextSecondary)
                 }
             } else {
+                val recentReports = reports.sortedByDescending { it.date }.take(4)
                 LazyColumn {
-                    items(reports.sortedByDescending { it.date }.take(4)) { report ->
+                    items(recentReports.size) { idx ->
+                        val report = recentReports[idx]
                         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                         val dateStr = sdf.format(Date(report.date))
                         
@@ -275,7 +277,9 @@ fun RecentActivityCard(modifier: Modifier, reports: List<ReportEntity>) {
                             else -> StatusWarning
                         }
                         
-                        RecentRow(report.title.ifEmpty { "Relatório #${report.id}" }, report.location, statusText, statusColor, dateStr)
+                        com.relatopro.app.ui.components.animation.AnimatedListItem(index = idx) {
+                            RecentRow(report.title.ifEmpty { "Relatório #${report.id}" }, report.location, statusText, statusColor, dateStr)
+                        }
                         HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
                     }
                 }

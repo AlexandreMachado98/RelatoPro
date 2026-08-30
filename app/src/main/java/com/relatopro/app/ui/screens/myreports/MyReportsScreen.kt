@@ -308,55 +308,78 @@ fun MobileReportsList(
     onSharePdf: (String, Long) -> Unit,
     onDeleteReport: (ReportEntity) -> Unit
 ) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(reports) { report ->
-            var expanded by remember { mutableStateOf(false) }
-            val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.date))
-            
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { report.pdfLocalPath?.let { onOpenPdf(it) } },
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(report.title.ifEmpty { "Relatório #${report.id}" }, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
-                            Spacer(Modifier.height(4.dp))
-                            Text(report.location, color = TextSecondary, fontSize = 14.sp)
-                        }
-                        Box {
-                            IconButton(onClick = { expanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = TextSecondary)
+    if (reports.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxWidth().height(260.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ListAlt,
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp),
+                    tint = TextSecondary.copy(alpha = 0.4f)
+                )
+                Spacer(Modifier.height(12.dp))
+                Text("Nenhum relatório encontrado", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                Spacer(Modifier.height(4.dp))
+                Text("Crie seu primeiro relatório ou ajuste os filtros.", fontSize = 13.sp, color = TextSecondary)
+            }
+        }
+    } else {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(reports.size) { index ->
+                val report = reports[index]
+                var expanded by remember { mutableStateOf(false) }
+                val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.date))
+                
+                com.relatopro.app.ui.components.animation.AnimatedListItem(index = index) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { report.pdfLocalPath?.let { onOpenPdf(it) } },
+                        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(0.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(report.title.ifEmpty { "Relatório #${report.id}" }, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(report.location, color = TextSecondary, fontSize = 14.sp)
+                                }
+                                Box {
+                                    IconButton(onClick = { expanded = true }) {
+                                        Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = TextSecondary)
+                                    }
+                                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                        DropdownMenuItem(
+                                            text = { Text("Visualizar PDF") },
+                                            onClick = { expanded = false; report.pdfLocalPath?.let { onOpenPdf(it) } },
+                                            leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Compartilhar") },
+                                            onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it, report.id) } },
+                                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+                                        )
+                                        HorizontalDivider()
+                                        DropdownMenuItem(
+                                            text = { Text("Excluir", color = StatusNaoConforme) },
+                                            onClick = { expanded = false; onDeleteReport(report) },
+                                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
+                                        )
+                                    }
+                                }
                             }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("Visualizar PDF") },
-                                    onClick = { expanded = false; report.pdfLocalPath?.let { onOpenPdf(it) } },
-                                    leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Compartilhar") },
-                                    onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it, report.id) } },
-                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
-                                )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text("Excluir", color = StatusNaoConforme) },
-                                    onClick = { expanded = false; onDeleteReport(report) },
-                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
-                                )
+                            Spacer(Modifier.height(16.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text(dateStr, color = TextSecondary, fontSize = 12.sp)
+                                StatusBadge(report.status)
                             }
                         }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(dateStr, color = TextSecondary, fontSize = 12.sp)
-                        StatusBadge(report.status)
                     }
                 }
             }

@@ -51,7 +51,26 @@ class MainActivity : ComponentActivity() {
                         navController = navController,
                         onLogout = handleLogout
                     ) {
-                        NavHost(navController = navController, startDestination = "splash") {
+                        NavHost(
+                            navController = navController,
+                            startDestination = "splash",
+                            enterTransition = {
+                                androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(220)) +
+                                androidx.compose.animation.slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start, androidx.compose.animation.core.tween(240))
+                            },
+                            exitTransition = {
+                                androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) +
+                                androidx.compose.animation.slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start, androidx.compose.animation.core.tween(240))
+                            },
+                            popEnterTransition = {
+                                androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(220)) +
+                                androidx.compose.animation.slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End, androidx.compose.animation.core.tween(240))
+                            },
+                            popExitTransition = {
+                                androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) +
+                                androidx.compose.animation.slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End, androidx.compose.animation.core.tween(240))
+                            }
+                        ) {
                             composable("splash") {
                                 SplashScreen(
                                     onNavigateToDashboard = {

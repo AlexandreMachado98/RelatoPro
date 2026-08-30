@@ -39,23 +39,25 @@ fun NewReportDialog(
                     LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
                         items(templates.size) { index ->
                             val template = templates[index]
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onTemplateSelected(template.id) }
-                                    .padding(vertical = 4.dp),
-                                colors = CardDefaults.cardColors(containerColor = BackgroundLight),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                            com.relatopro.app.ui.components.animation.AnimatedListItem(index = index) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onTemplateSelected(template.id) }
+                                        .padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = BackgroundLight),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column {
-                                        Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                                        Text(template.description, fontSize = 11.sp, color = TextSecondary)
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                                            Text(template.description, fontSize = 11.sp, color = TextSecondary)
+                                        }
                                     }
                                 }
                             }

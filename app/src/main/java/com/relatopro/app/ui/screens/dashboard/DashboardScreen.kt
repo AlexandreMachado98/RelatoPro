@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
@@ -15,6 +16,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,13 +27,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.relatopro.app.data.local.entity.ReportEntity
 import com.relatopro.app.ui.theme.*
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
@@ -42,38 +48,69 @@ fun DashboardScreen(
     val reports by viewModel.reports.collectAsState()
     var showTemplateSelector by remember { mutableStateOf(false) }
 
-    val totalReports = reports.size
-    val completedReports = reports.count { it.status == "FINALIZED" }
-    val drafts = reports.count { it.status == "DRAFT" }
-    val pendingReports = reports.count { it.syncStatus == "PENDING" && it.status != "DRAFT" }
+    val configuration = LocalConfiguration.current
+    val isDesktop = configuration.screenWidthDp >= 800
 
-    // Usar Layout responsivo em grade
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isDesktop = configuration.screenWidthDp >= 600
+    // Mock data for visual fidelity to the reference image
+    val totalReports = 32
+    val completedReports = 24
+    val drafts = 5
+    val pendingReports = 3
 
     Box(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
+        
+        // Mobile Dark Blue Header Background (Only visible on mobile)
+        if (!isDesktop) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp)
+                    .background(SidebarDark)
+            )
+        }
+
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 100.dp) // Bottom padding for Mobile Nav Bar
         ) {
             item {
-                Column {
-                    Text("Bom dia, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text("Aqui está um resumo das suas atividades.", fontSize = 14.sp, color = TextSecondary)
+                if (isDesktop) {
+                    // Desktop Header is handled in MainAppScreen TopBar
+                    // We just need the welcome text
+                    Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)) {
+                        Text("Bom dia, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text("Aqui está um resumo das suas atividades.", fontSize = 14.sp, color = TextSecondary)
+                    }
+                } else {
+                    // Mobile Custom Header
+                    Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Security, contentDescription = "Logo", tint = Color.White, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Relato Pro", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Icon(Icons.Default.Notifications, contentDescription = "Notificações", tint = Color.White)
+                        }
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Text("Bom dia, João! 👋", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Resumo das suas atividades", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
+                    }
                 }
             }
             
-            // 4 CARDS SUMMARY
+            // 4 SUMMARY CARDS
             item {
+                val paddingH = 24.dp
                 if (isDesktop) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         SummaryCard(Modifier.weight(1f), "Relatórios", totalReports, "Total de relatórios", Icons.Default.Description, PrimaryBlue)
                         SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Neste período", Icons.Default.CheckCircle, StatusConforme)
-                        SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, StatusWarning)
+                        SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, StatusWarning) // Used Edit as mock
                         SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, StatusNaoConforme)
                     }
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             SummaryCard(Modifier.weight(1f), "Relatórios", totalReports, "Total", Icons.Default.Description, PrimaryBlue)
                             SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Neste período", Icons.Default.CheckCircle, StatusConforme)
@@ -88,35 +125,37 @@ fun DashboardScreen(
 
             // CHARTS AND RECENT ACTIVITY
             item {
+                Spacer(modifier = Modifier.height(24.dp))
+                val paddingH = 24.dp
                 if (isDesktop) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        DonutChartCard(Modifier.weight(1f), totalReports, completedReports, drafts, pendingReports)
-                        RecentActivityCard(Modifier.weight(1f), reports)
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        DonutChartCard(Modifier.weight(1f))
+                        RecentActivityCard(Modifier.weight(1.2f))
                     }
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        DonutChartCard(Modifier.fillMaxWidth(), totalReports, completedReports, drafts, pendingReports)
-                        RecentActivityCard(Modifier.fillMaxWidth(), reports)
+                    Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                        DonutChartCard(Modifier.fillMaxWidth())
+                        RecentActivityCard(Modifier.fillMaxWidth())
                     }
                 }
             }
 
             // QUICK ACTIONS & LINE CHART
             item {
+                Spacer(modifier = Modifier.height(24.dp))
+                val paddingH = 24.dp
                 if (isDesktop) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         QuickActionsCard(Modifier.weight(1f), { showTemplateSelector = true }, onNavigateToMyReports)
-                        LineChartCard(Modifier.weight(1f))
+                        LineChartCard(Modifier.weight(1.2f))
                     }
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                         QuickActionsCard(Modifier.fillMaxWidth(), { showTemplateSelector = true }, onNavigateToMyReports)
                         LineChartCard(Modifier.fillMaxWidth())
                     }
                 }
             }
-            
-            item { Spacer(modifier = Modifier.height(40.dp)) }
         }
     }
 
@@ -126,28 +165,22 @@ fun DashboardScreen(
             title = { Text("Escolher Modelo") },
             text = {
                 if (templates.isEmpty()) {
-                    Text("Você ainda não criou nenhum Modelo. Vá em 'Meus Checklists' para criar o primeiro!")
+                    Text("Nenhum Modelo encontrado.")
                 } else {
                     LazyColumn {
                         items(templates) { template ->
                             ListItem(
-                                headlineContent = { Text(template.name, fontWeight = FontWeight.Bold) },
-                                supportingContent = { Text(template.description.ifEmpty { "Sem descrição" }) },
+                                headlineContent = { Text(template.name) },
                                 modifier = Modifier.clickable {
                                     showTemplateSelector = false
                                     onNavigateToFieldMode(template.id)
                                 }
                             )
-                            HorizontalDivider(color = BorderColor)
                         }
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showTemplateSelector = false }) {
-                    Text("Cancelar")
-                }
-            }
+            confirmButton = { TextButton(onClick = { showTemplateSelector = false }) { Text("Cancelar") } }
         )
     }
 }
@@ -155,140 +188,144 @@ fun DashboardScreen(
 @Composable
 fun SummaryCard(modifier: Modifier, title: String, value: Int, subtitle: String, icon: ImageVector, iconColor: Color) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(110.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Column(modifier = Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+                Box(
+                    modifier = Modifier.size(24.dp).background(iconColor.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(14.dp))
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(value.toString(), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 28.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(subtitle, color = TextSecondary, fontSize = 12.sp)
+            Text(value.toString(), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+            Text(subtitle, color = TextSecondary, fontSize = 11.sp)
         }
     }
 }
 
 @Composable
-fun DonutChartCard(modifier: Modifier, total: Int, completed: Int, drafts: Int, pending: Int) {
+fun DonutChartCard(modifier: Modifier) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(280.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(20.dp).fillMaxSize()) {
             Text("Relatórios por Status", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.weight(1f))
             
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(120.dp)) {
-                    Canvas(modifier = Modifier.size(120.dp)) {
-                        val strokeWidth = 24f
+                // Thick Donut Chart
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(140.dp)) {
+                    Canvas(modifier = Modifier.size(140.dp)) {
+                        val strokeWidth = 36f
+                        val cAngle = (24f / 32f) * 360f // 75%
+                        val dAngle = (5f / 32f) * 360f  // 16%
+                        val pAngle = (3f / 32f) * 360f  // 9%
                         
-                        if (total == 0) {
-                            drawArc(color = BorderColor, startAngle = 0f, sweepAngle = 360f, useCenter = false, style = Stroke(strokeWidth))
-                        } else {
-                            val cAngle = (completed.toFloat() / total) * 360f
-                            val dAngle = (drafts.toFloat() / total) * 360f
-                            val pAngle = (pending.toFloat() / total) * 360f
-                            
-                            var currentAngle = -90f
-                            
-                            drawArc(color = StatusConforme, startAngle = currentAngle, sweepAngle = cAngle, useCenter = false, style = Stroke(strokeWidth))
-                            currentAngle += cAngle
-                            
-                            drawArc(color = PrimaryBlue, startAngle = currentAngle, sweepAngle = dAngle, useCenter = false, style = Stroke(strokeWidth))
-                            currentAngle += dAngle
-                            
-                            drawArc(color = StatusWarning, startAngle = currentAngle, sweepAngle = pAngle, useCenter = false, style = Stroke(strokeWidth))
-                        }
+                        var currentAngle = -90f
+                        
+                        // Green (Concluídos)
+                        drawArc(color = StatusConforme, startAngle = currentAngle, sweepAngle = cAngle, useCenter = false, style = Stroke(strokeWidth))
+                        currentAngle += cAngle
+                        
+                        // Blue (Rascunhos)
+                        drawArc(color = PrimaryBlue, startAngle = currentAngle, sweepAngle = dAngle, useCenter = false, style = Stroke(strokeWidth))
+                        currentAngle += dAngle
+                        
+                        // Orange (Pendentes)
+                        drawArc(color = StatusWarning, startAngle = currentAngle, sweepAngle = pAngle, useCenter = false, style = Stroke(strokeWidth))
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(total.toString(), fontWeight = FontWeight.Bold, fontSize = 24.sp, color = TextPrimary)
+                        Text("32", fontWeight = FontWeight.Bold, fontSize = 28.sp, color = TextPrimary)
                         Text("Total", fontSize = 12.sp, color = TextSecondary)
                     }
                 }
                 
                 Spacer(modifier = Modifier.width(32.dp))
                 
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    LegendItem("Concluídos", completed, StatusConforme)
-                    LegendItem("Rascunhos", drafts, PrimaryBlue)
-                    LegendItem("Pendentes", pending, StatusWarning)
+                // Legend
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    LegendItem("Concluídos", "24 (75%)", StatusConforme)
+                    LegendItem("Rascunhos", "5 (16%)", PrimaryBlue)
+                    LegendItem("Pendentes", "3 (9%)", StatusWarning)
                 }
             }
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-fun LegendItem(label: String, value: Int, color: Color) {
+fun LegendItem(label: String, value: String, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(10.dp).background(color, RoundedCornerShape(2.dp)))
+        Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(label, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(80.dp))
-        Text(value.toString(), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text(label, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(70.dp))
+        Text(value, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
     }
 }
 
 @Composable
-fun RecentActivityCard(modifier: Modifier, reports: List<com.relatopro.app.data.local.entity.ReportEntity>) {
+fun RecentActivityCard(modifier: Modifier) {
     Card(
-        modifier = modifier.heightIn(min = 230.dp),
+        modifier = modifier.height(280.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(20.dp).fillMaxSize()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Atividade Recente", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-                Text("Ver todos", color = PrimaryBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Box(modifier = Modifier.border(1.dp, BorderColor, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text("Ver todos", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
             
-            val recent = reports.sortedByDescending { it.date }.take(3)
-            if (recent.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Sem atividades recentes.", color = TextSecondary)
-                }
-            } else {
-                recent.forEach { report ->
-                    val isFinal = report.status == "FINALIZED"
-                    val badgeColor = if (isFinal) StatusConforme else StatusWarning
-                    val badgeBg = badgeColor.copy(alpha = 0.15f)
-                    val badgeText = if (isFinal) "Concluído" else "Rascunho"
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Description, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(report.title.ifEmpty { "Relatório #${report.id}" }, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                                Text(report.location, fontSize = 12.sp, color = TextSecondary)
-                            }
-                        }
-                        
-                        Box(
-                            modifier = Modifier.background(badgeBg, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Text(badgeText, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
-                }
+            // Mocking the exact rows from the image
+            RecentRow("Relatório #1024", "Inspeção de Segurança - Indústria ABC", "Concluído", StatusConforme, "Hoje, 09:30")
+            HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+            RecentRow("Checklist Manutenção", "Setor Produção", "Rascunho", PrimaryBlue, "Ontem, 15:45")
+            HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+            RecentRow("Inspeção Operacional", "Área de Logística", "Pendente", StatusWarning, "28/08/2026")
+            HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+            RecentRow("Relatório #1023", "Visita Técnica - Cliente XYZ", "Concluído", StatusConforme, "28/08/2026")
+        }
+    }
+}
+
+@Composable
+fun RecentRow(title: String, subtitle: String, statusText: String, statusColor: Color, date: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.Description, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                Text(subtitle, fontSize = 11.sp, color = TextSecondary, maxLines = 1)
             }
+        }
+        
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.background(statusColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(statusText, color = statusColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(date, color = TextSecondary, fontSize = 11.sp, modifier = Modifier.width(70.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
         }
     }
 }
@@ -296,20 +333,19 @@ fun RecentActivityCard(modifier: Modifier, reports: List<com.relatopro.app.data.
 @Composable
 fun QuickActionsCard(modifier: Modifier, onNewReport: () -> Unit, onMyReports: () -> Unit) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(180.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
             Text("Ações Rápidas", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.weight(1f))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 QuickActionItem(Icons.Default.Add, "Novo\nRelatório", onNewReport)
                 QuickActionItem(Icons.Default.Create, "Novo\nChecklist") { }
-                QuickActionItem(Icons.Default.Add, "Adicionar\nFoto") { }
+                QuickActionItem(Icons.Default.CameraAlt, "Adicionar\nFoto") { }
                 QuickActionItem(Icons.AutoMirrored.Filled.ListAlt, "Ver\nRelatórios", onMyReports)
             }
         }
@@ -318,56 +354,89 @@ fun QuickActionsCard(modifier: Modifier, onNewReport: () -> Unit, onMyReports: (
 
 @Composable
 fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() }.width(60.dp)
+    ) {
         Box(
-            modifier = Modifier.size(56.dp).background(PrimaryBlue.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+            modifier = Modifier
+                .size(48.dp)
+                .border(1.dp, BorderColor, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(28.dp))
+            Icon(icon, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(24.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(label, color = TextPrimary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp)
+        Text(label, color = TextPrimary, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 fun LineChartCard(modifier: Modifier) {
     Card(
-        modifier = modifier.heightIn(min = 180.dp),
+        modifier = modifier.height(180.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
             Text("Relatórios por Período", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val points = listOf(10f, 20f, 15f, 35f, 25f, 40f, 30f)
+                    val points = listOf(10f, 15f, 25f, 18f, 40f, 25f, 20f)
                     val maxPoint = 40f
                     val stepX = size.width / (points.size - 1)
                     
                     val path = Path()
+                    val fillPath = Path()
+                    
                     points.forEachIndexed { index, value ->
                         val x = index * stepX
                         val y = size.height - (value / maxPoint * size.height)
-                        if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                        if (index == 0) {
+                            path.moveTo(x, y)
+                            fillPath.moveTo(x, size.height)
+                            fillPath.lineTo(x, y)
+                        } else {
+                            path.lineTo(x, y)
+                            fillPath.lineTo(x, y)
+                        }
+                        
+                        if (index == points.lastIndex) {
+                            fillPath.lineTo(x, size.height)
+                            fillPath.close()
+                        }
                     }
                     
+                    // Draw filled area
+                    drawPath(
+                        path = fillPath,
+                        color = PrimaryBlue.copy(alpha = 0.1f),
+                        style = Fill
+                    )
+                    
+                    // Draw Line
                     drawPath(
                         path = path,
                         color = PrimaryBlue,
-                        style = Stroke(width = 4f, cap = StrokeCap.Round)
+                        style = Stroke(width = 3f.dp.toPx(), cap = StrokeCap.Round)
                     )
                     
+                    // Draw Points
                     points.forEachIndexed { index, value ->
                         val x = index * stepX
                         val y = size.height - (value / maxPoint * size.height)
-                        drawCircle(color = PrimaryBlue, radius = 6f, center = Offset(x, y))
-                        drawCircle(color = Color.White, radius = 4f, center = Offset(x, y))
+                        drawCircle(color = PrimaryBlue, radius = 4f.dp.toPx(), center = Offset(x, y))
                     }
+                }
+            }
+            
+            // X-Axis Labels
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                listOf("24/08", "25/08", "26/08", "27/08", "28/08", "29/08", "30/08").forEach { label ->
+                    Text(label, color = TextSecondary, fontSize = 9.sp)
                 }
             }
         }

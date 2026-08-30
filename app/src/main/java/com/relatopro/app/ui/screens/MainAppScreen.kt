@@ -7,9 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.ListAlt
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,79 +33,98 @@ fun MainAppScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Define main routes that should show the shell (others will be full screen, like field_mode)
     val isMainRoute = currentRoute in listOf("dashboard", "my_reports", "template_builder")
+    val configuration = LocalConfiguration.current
+    val isDesktop = configuration.screenWidthDp >= 800 // Adjusted to 800 for a better tablet/desktop breakpoint
 
     if (isMainRoute) {
-        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-        val isDesktop = configuration.screenWidthDp >= 600
-
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (isDesktop) {
-                // DESKTOP / TABLET LAYOUT: Permanent Sidebar + Content
-                Row(modifier = Modifier.fillMaxSize()) {
-                    PermanentSidebar(
-                        currentRoute = currentRoute,
-                        navController = navController,
-                        modifier = Modifier.width(260.dp)
-                    )
+        if (isDesktop) {
+            // DESKTOP / TABLET LAYOUT: Permanent Sidebar + Content
+            Row(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
+                PermanentSidebar(
+                    currentRoute = currentRoute,
+                    navController = navController,
+                    modifier = Modifier.width(260.dp)
+                )
+                
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    // Desktop TopBar exactly like the image
+                    DesktopTopBar(currentRoute)
                     
-                    // Main Content Area with TopBar
-                    Scaffold(
-                        topBar = {
-                            TopAppBar(
-                                title = { Text(getScreenTitle(currentRoute), fontWeight = FontWeight.Bold, color = TextPrimary) },
-                                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite),
-                                actions = {
-                                    TopBarActions()
-                                }
-                            )
-                        },
-                        containerColor = BackgroundLight,
-                        modifier = Modifier.weight(1f)
-                    ) { paddingValues ->
-                        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-                            content()
-                        }
-                    }
-                }
-            } else {
-                // MOBILE LAYOUT: Scaffold with Bottom Navigation
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = { Text(getScreenTitle(currentRoute), fontWeight = FontWeight.Bold, color = TextPrimary) },
-                            colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite),
-                            actions = {
-                                TopBarActions()
-                            }
-                        )
-                    },
-                    bottomBar = {
-                        MobileBottomBar(currentRoute, navController)
-                    },
-                    containerColor = BackgroundLight
-                ) { paddingValues ->
-                    Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                         content()
                     }
                 }
             }
+        } else {
+            // MOBILE LAYOUT: Custom Bottom Navigation
+            Scaffold(
+                containerColor = BackgroundLight,
+                bottomBar = { MobileBottomBar(currentRoute, navController) }
+            ) { paddingValues ->
+                Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+                    content()
+                }
+            }
         }
     } else {
-        // Full screen (e.g. Field Mode)
+        // Full screen for internal routes (e.g., field mode)
         content()
     }
 }
 
 @Composable
-private fun TopBarActions() {
-    IconButton(onClick = { /* TODO */ }) {
-        Icon(Icons.Default.Settings, contentDescription = "Configurações", tint = TextSecondary)
+private fun DesktopTopBar(currentRoute: String?) {
+    val title = when (currentRoute) {
+        "dashboard" -> "Dashboard"
+        "my_reports" -> "Meus Relatórios"
+        "template_builder" -> "Modelos"
+        else -> "Relato Pro"
     }
-    IconButton(onClick = { /* TODO */ }) {
-        Icon(Icons.Default.Person, contentDescription = "Perfil", tint = TextSecondary)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .background(SurfaceWhite)
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left side: Title or Breadcrumbs
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        
+        // Right side: Date and Notifications
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            // Date Picker mock button
+            Box(
+                modifier = Modifier
+                    .background(BackgroundLight, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("28/08/2026 - 30/08/2026", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            
+            // Bell Icon with Red Dot
+            Box {
+                IconButton(onClick = { }) {
+                    Icon(Icons.Default.Notifications, contentDescription = "Notificações", tint = TextSecondary)
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 8.dp)
+                        .size(16.dp)
+                        .background(StatusNaoConforme, CircleShape)
+                        .border(2.dp, SurfaceWhite, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("3", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
+    HorizontalDivider(color = BorderColor, thickness = 1.dp)
 }
 
 @Composable
@@ -125,26 +143,27 @@ private fun PermanentSidebar(
             modifier = Modifier.padding(24.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Lock, contentDescription = "Logo", tint = Color.White, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.Security, contentDescription = "Logo", tint = Color.White, modifier = Modifier.size(28.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Text("Relato Pro", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         
-        // Navigation Button equivalent
+        // Navigation Button equivalent (Dashboard)
         Box(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
+            val isDashboard = currentRoute == "dashboard"
+            val bg = if (isDashboard) PrimaryBlue else Color.Transparent
             Button(
-                onClick = {
-                    navController.navigate("dashboard") {
-                        popUpTo("dashboard") { inclusive = false }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                shape = RoundedCornerShape(8.dp)
+                onClick = { navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } } },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = bg),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
-                Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Dashboard")
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Dashboard", color = Color.White, fontSize = 14.sp)
+                }
             }
         }
         
@@ -153,34 +172,30 @@ private fun PermanentSidebar(
         // Menu Items
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             item { SidebarCategory("RELATÓRIOS") }
-            item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) { /* Handled in Dashboard currently */ } }
-            item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute == "my_reports") {
-                navController.navigate("my_reports") { popUpTo("dashboard") }
-            } }
+            item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) {} }
+            item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute == "my_reports") { navController.navigate("my_reports") { popUpTo("dashboard") } } }
             item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) {} }
-            item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) {} }
-            item { SidebarItem(Icons.Default.Check, "Concluídos", false) {} }
-            item { SidebarItem(Icons.Default.Build, "Modelos", currentRoute == "template_builder") {
-                navController.navigate("template_builder") { popUpTo("dashboard") }
-            } }
+            item { SidebarItem(Icons.Default.Send, "Enviados", false) {} }
+            item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) {} }
+            item { SidebarItem(Icons.Default.Checklist, "Modelos", currentRoute == "template_builder") { navController.navigate("template_builder") { popUpTo("dashboard") } } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CHECKLISTS") }
-            item { SidebarItem(Icons.Default.Check, "Checklists", false) {} }
-            item { SidebarItem(Icons.Default.Build, "Modelos de Checklist", false) {} }
+            item { SidebarItem(Icons.Default.FactCheck, "Checklists", false) {} }
+            item { SidebarItem(Icons.Default.Assignment, "Modelos de Checklist", false) {} }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item { SidebarCategory("EVIDÊNCIAS") }
-            item { SidebarItem(Icons.Default.Search, "Fotos e Anexos", false) {} }
+            item { SidebarItem(Icons.Default.CameraAlt, "Fotos e Anexos", false) {} }
             
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CONFIGURAÇÕES") }
             item { SidebarItem(Icons.Default.Settings, "Configurações", false) {} }
             item { SidebarItem(Icons.Default.Person, "Perfil", false) {} }
-            item { SidebarItem(Icons.Default.Info, "Ajuda e Suporte", false) {} }
+            item { SidebarItem(Icons.Default.HelpOutline, "Ajuda e Suporte", false) {} }
         }
         
         // Footer User Profile
@@ -190,15 +205,16 @@ private fun PermanentSidebar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)),
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White)
+                // Em um app real, seria a foto do usuário
+                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text("João da Silva", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("Administrador", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("João da Silva", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("Administrador", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
             }
         }
     }
@@ -208,8 +224,8 @@ private fun PermanentSidebar(
 private fun SidebarCategory(title: String) {
     Text(
         text = title,
-        color = Color.White.copy(alpha = 0.5f),
-        fontSize = 12.sp,
+        color = Color.White.copy(alpha = 0.4f),
+        fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp)
     )
@@ -224,86 +240,70 @@ private fun SidebarItem(icon: ImageVector, title: String, selected: Boolean, onC
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(40.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(bgColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = title, color = contentColor, fontSize = 14.sp, fontWeight = fw)
+        Text(text = title, color = contentColor, fontSize = 13.sp, fontWeight = fw)
     }
 }
 
 @Composable
 private fun MobileBottomBar(currentRoute: String?, navController: NavHostController) {
-    NavigationBar(
-        containerColor = SurfaceWhite,
-        contentColor = TextSecondary,
-        tonalElevation = 8.dp
+    Box(
+        modifier = Modifier.fillMaxWidth().height(80.dp),
+        contentAlignment = Alignment.BottomCenter
     ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-            label = { Text("Home", fontSize = 10.sp) },
-            selected = currentRoute == "dashboard",
-            onClick = { navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } } },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryBlue,
-                unselectedIconColor = TextSecondary,
-                indicatorColor = PrimaryBlue.copy(alpha = 0.1f)
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "Relatórios") },
-            label = { Text("Relatórios", fontSize = 10.sp) },
-            selected = currentRoute == "my_reports",
-            onClick = { navController.navigate("my_reports") { popUpTo("dashboard") } },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryBlue,
-                unselectedIconColor = TextSecondary,
-                indicatorColor = PrimaryBlue.copy(alpha = 0.1f)
-            )
-        )
-        // Central FAB equivalent
-        NavigationBarItem(
-            icon = {
-                Box(
-                    modifier = Modifier.size(48.dp).clip(CircleShape).background(PrimaryBlue),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Novo", tint = Color.White)
-                }
-            },
-            label = { },
-            selected = false,
-            onClick = { /* Handled in Dashboard for now */ }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.AutoMirrored.Filled.FactCheck, contentDescription = "Checklists") },
-            label = { Text("Checklists", fontSize = 10.sp) },
-            selected = currentRoute == "template_builder",
-            onClick = { navController.navigate("template_builder") { popUpTo("dashboard") } },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryBlue,
-                unselectedIconColor = TextSecondary,
-                indicatorColor = PrimaryBlue.copy(alpha = 0.1f)
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "Mais") },
-            label = { Text("Mais", fontSize = 10.sp) },
-            selected = false,
-            onClick = { }
-        )
+        // Actual Bottom Nav Background
+        Row(
+            modifier = Modifier.fillMaxWidth().height(64.dp).background(SurfaceWhite),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BottomNavIcon(Icons.Default.Home, "Início", currentRoute == "dashboard") {
+                navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } }
+            }
+            BottomNavIcon(Icons.AutoMirrored.Filled.ListAlt, "Relatórios", currentRoute == "my_reports") {
+                navController.navigate("my_reports") { popUpTo("dashboard") }
+            }
+            // Space for central FAB
+            Spacer(modifier = Modifier.width(48.dp))
+            
+            BottomNavIcon(Icons.Default.Checklist, "Checklists", currentRoute == "template_builder") {
+                navController.navigate("template_builder") { popUpTo("dashboard") }
+            }
+            BottomNavIcon(Icons.Default.Menu, "Mais", false) { }
+        }
+        
+        // Floating Center Button
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(PrimaryBlue)
+                .clickable { /* Abre modal de novo relatorio */ },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Novo", tint = Color.White, modifier = Modifier.size(28.dp))
+        }
     }
 }
 
-private fun getScreenTitle(route: String?): String {
-    return when (route) {
-        "dashboard" -> "Dashboard"
-        "my_reports" -> "Meus Relatórios"
-        "template_builder" -> "Meus Modelos"
-        else -> "Relato Pro"
+@Composable
+private fun BottomNavIcon(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    val color = if (selected) PrimaryBlue else TextSecondary
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick).padding(8.dp)
+    ) {
+        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(label, color = color, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }

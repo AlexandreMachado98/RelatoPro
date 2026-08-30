@@ -89,15 +89,28 @@ class FieldModeViewModel @Inject constructor(
     fun finalizeReport(onPdfGenerated: () -> Unit) {
         val report = _currentReport.value ?: return
         viewModelScope.launch {
-            // Gera o PDF físico
+            // Busca fotos e assinaturas no DB
+            val photosList = kotlinx.coroutines.flow.first(reportRepository.getReportPhotos(report.id))
+            val signature = reportRepository.getSignature(report.id)
+            
+            val photosMap = photosList.groupBy { it.templateFieldId }.mapValues { entry ->
+                entry.value.map { it.localPath }
+            }.toMutableMap()
+            
+            if (signature != null) {
+                photosMap[-1L] = listOf(signature.localPath)
+            }
+
+            // Gera o PDF físico com o WebView HTML Template
             val pdfFile = try {
                 pdfGenerator.generateReportPdf(
                     report = report,
                     fields = _fields.value,
                     answers = _answers.value.values.toList(),
-                    photos = emptyMap() // Busca de fotos via DB poderia entrar aqui
+                    photos = photosMap
                 )
             } catch (e: Exception) {
+                e.printStackTrace()
                 null
             }
 

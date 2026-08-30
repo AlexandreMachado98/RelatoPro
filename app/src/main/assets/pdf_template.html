@@ -211,19 +211,19 @@
             <table>
                 <tr>
                     <td><strong>Local / Obra / Fazenda:</strong></td>
-                    <td>{{LOCAL_NAME}} <span style="color:#64748B">(Fazenda Vale Verde)</span></td>
+                    <td>{{LOCAL_NAME}}</td>
                 </tr>
                 <tr>
                     <td><strong>Inspetor Responsável:</strong></td>
-                    <td>{{RESPONSIBLE_NAME}} <span style="color:#64748B">(Carlos Silva)</span></td>
+                    <td>{{RESPONSIBLE_NAME}}</td>
                 </tr>
                 <tr>
                     <td><strong>Data e Hora:</strong></td>
-                    <td>{{DATE_TIME}} <span style="color:#64748B">(30/08/2026 às 14:30)</span></td>
+                    <td>{{DATE_TIME}}</td>
                 </tr>
                 <tr>
                     <td><strong>ID do Relatório:</strong></td>
-                    <td>#{{REPORT_ID}} <span style="color:#64748B">(1024)</span></td>
+                    <td>#{{REPORT_ID}}</td>
                 </tr>
             </table>
         </div>
@@ -248,75 +248,14 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- Teste Linha 1 -->
-                <tr>
-                    <td>01</td>
-                    <td>O extintor de incêndio está dentro da validade e devidamente sinalizado?</td>
-                    <td style="text-align: center;"><span class="badge badge-c">CONFORME</span></td>
-                    <td>Equipamento verificado no setor A, selo do Inmetro intacto.</td>
-                </tr>
-                <!-- Teste Linha 2 -->
-                <tr>
-                    <td>02</td>
-                    <td>Sinalização de saída de emergência totalmente visível e desobstruída?</td>
-                    <td style="text-align: center;"><span class="badge badge-nc">NÃO CONFORME</span></td>
-                    <td>Placa de saída obstruída por caixas empilhadas. Risco altíssimo. Solicitei limpeza imediata ao gerente de turno.</td>
-                </tr>
-                <!-- Teste Linha 3 -->
-                <tr>
-                    <td>03</td>
-                    <td>EPIs específicos (protetor auricular, luvas anticorte) estão em bom estado?</td>
-                    <td style="text-align: center;"><span class="badge badge-na">N/A</span></td>
-                    <td>Setor administrativo vistoriado, não há obrigatoriedade deste tipo de EPI.</td>
-                </tr>
+                {{CHECKLIST_ROWS}}
             </tbody>
         </table>
 
         <h2 class="section-title">Evidências Fotográficas e Anexos</h2>
         
         <div class="photo-grid">
-            <!-- Linha 1 -->
-            <div class="photo-row">
-                <!-- Card 1 -->
-                <div class="photo-card">
-                    <img src="https://images.unsplash.com/photo-1626242502693-018698bf4fc7?w=600&h=400&fit=crop" alt="Extintor">
-                    <div class="photo-caption">
-                        <strong>Item 01</strong>
-                        Extintor de incêndio vistoriado, pressão do manômetro ideal.
-                    </div>
-                </div>
-                <!-- Card 2 -->
-                <div class="photo-card">
-                    <img src="https://images.unsplash.com/photo-1582298538104-fe2e74cb3ba8?w=600&h=400&fit=crop" alt="Caixas">
-                    <div class="photo-caption">
-                        <strong>Item 02 (ALERTA)</strong>
-                        Caixas de papelão bloqueando rota de fuga no corredor principal.
-                    </div>
-                </div>
-                <!-- Card 3 -->
-                <div class="photo-card">
-                    <img src="https://images.unsplash.com/photo-1541888081682-1d5b128527a5?w=600&h=400&fit=crop" alt="Visão Geral">
-                    <div class="photo-caption">
-                        <strong>Visão Geral</strong>
-                        Entrada do refeitório, iluminação de emergência checada.
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Linha 2 -->
-            <div class="photo-row">
-                <!-- Assinatura -->
-                <div class="photo-card" style="vertical-align: middle;">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fb/John_Hancock_signature.svg" style="max-height: 120px; border: none; object-fit: contain;" alt="Assinatura">
-                    <div class="photo-caption" style="text-align: center; border-top: 1px solid #cbd5e1; padding-top: 8px;">
-                        <strong>Carlos Silva (Inspetor Técnico)</strong>
-                        Assinado digitalmente em 30/08/2026.
-                    </div>
-                </div>
-                <!-- Celulas vazias (necessário para Grid em Table Layout) -->
-                <div class="photo-card" style="border: none; background: transparent;"></div>
-                <div class="photo-card" style="border: none; background: transparent;"></div>
-            </div>
+            {{PHOTO_ROWS}}
         </div>
     </div>
 </body>

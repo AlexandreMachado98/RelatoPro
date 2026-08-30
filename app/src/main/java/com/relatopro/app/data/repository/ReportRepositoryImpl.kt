@@ -27,4 +27,6 @@ class ReportRepositoryImpl @Inject constructor(
     override fun getReportPhotos(reportId: Long): Flow<List<PhotoEntity>> = dao.getReportPhotos(reportId)
     
     override suspend fun saveSignature(signature: SignatureEntity): Long = dao.insertSignature(signature)
+
+    override suspend fun getSignature(reportId: Long): SignatureEntity? = dao.getSignature(reportId)
 }

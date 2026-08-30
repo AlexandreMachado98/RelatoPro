@@ -36,4 +36,7 @@ interface ReportDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSignature(signature: SignatureEntity): Long
+
+    @Query("SELECT * FROM signatures WHERE reportId = :reportId LIMIT 1")
+    suspend fun getSignature(reportId: Long): SignatureEntity?
 }

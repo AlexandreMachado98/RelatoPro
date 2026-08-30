@@ -88,13 +88,12 @@ class FieldModeViewModel @Inject constructor(
         val report = _currentReport.value ?: return
         viewModelScope.launch {
             // Gera o PDF físico
-            val pdfPath = try {
-                pdfGenerator.generatePdf(
+            val pdfFile = try {
+                pdfGenerator.generateReportPdf(
                     report = report,
                     fields = _fields.value,
-                    answers = _answers.value,
-                    photos = emptyList(), // Busca de fotos via DB poderia entrar aqui
-                    signatureBitmap = null // Assinatura real passaria por aqui
+                    answers = _answers.value.values.toList(),
+                    photos = emptyMap() // Busca de fotos via DB poderia entrar aqui
                 )
             } catch (e: Exception) {
                 null
@@ -103,7 +102,7 @@ class FieldModeViewModel @Inject constructor(
             // Atualiza o relatório no banco de dados com status Finalizado e o caminho do PDF
             val finalized = report.copy(
                 status = "FINALIZED",
-                pdfLocalPath = pdfPath
+                pdfLocalPath = pdfFile?.absolutePath
             )
             reportRepository.updateReport(finalized)
             _currentReport.value = finalized

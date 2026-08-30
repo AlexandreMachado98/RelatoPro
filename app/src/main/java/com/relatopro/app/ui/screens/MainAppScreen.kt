@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.relatopro.app.ui.screens
 
 import androidx.compose.foundation.background
@@ -18,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.relatopro.app.ui.theme.PrimaryBlue
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppScreen(
     navController: NavHostController,

@@ -91,7 +91,7 @@ fun MyReportsScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { openPdf(report.pdfLocalPath) },
+                                .clickable { report.pdfLocalPath?.let { openPdf(it) } },
                             colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
                             border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
                             shape = RoundedCornerShape(12.dp)
@@ -116,7 +116,7 @@ fun MyReportsScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextSecondary
                                     )
-                                    val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.createdAt))
+                                    val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.date))
                                     Text(
                                         text = dateStr,
                                         style = MaterialTheme.typography.bodySmall,
@@ -124,10 +124,10 @@ fun MyReportsScreen(
                                     )
                                 }
                                 Row {
-                                    IconButton(onClick = { openPdf(report.pdfLocalPath) }) {
+                                    IconButton(onClick = { report.pdfLocalPath?.let { openPdf(it) } }) {
                                         Icon(Icons.Default.PictureAsPdf, contentDescription = "Ver PDF", tint = PrimaryBlue)
                                     }
-                                    IconButton(onClick = { sharePdf(report.pdfLocalPath) }) {
+                                    IconButton(onClick = { report.pdfLocalPath?.let { sharePdf(it) } }) {
                                         Icon(Icons.Default.Share, contentDescription = "Compartilhar", tint = PrimaryBlue)
                                     }
                                 }

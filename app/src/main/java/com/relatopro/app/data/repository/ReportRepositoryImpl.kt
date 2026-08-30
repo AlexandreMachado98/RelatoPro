@@ -29,4 +29,6 @@ class ReportRepositoryImpl @Inject constructor(
     override suspend fun saveSignature(signature: SignatureEntity): Long = dao.insertSignature(signature)
 
     override suspend fun getSignature(reportId: Long): SignatureEntity? = dao.getSignature(reportId)
+    
+    override suspend fun deleteReport(report: ReportEntity) = dao.deleteReport(report)
 }

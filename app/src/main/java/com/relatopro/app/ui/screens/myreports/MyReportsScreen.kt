@@ -182,9 +182,9 @@ fun MyReportsScreen(
                 }
             } else {
                 if (isDesktop) {
-                    DesktopReportsTable(filteredReports, openPdf, sharePdf)
+                    DesktopReportsTable(filteredReports, openPdf, sharePdf) { viewModel.deleteReport(it) }
                 } else {
-                    MobileReportsList(filteredReports, openPdf, sharePdf)
+                    MobileReportsList(filteredReports, openPdf, sharePdf) { viewModel.deleteReport(it) }
                 }
             }
         }
@@ -223,7 +223,8 @@ fun FilterChipItem(title: String, count: Int, isSelected: Boolean, onClick: () -
 fun DesktopReportsTable(
     reports: List<ReportEntity>,
     onOpenPdf: (String) -> Unit,
-    onSharePdf: (String) -> Unit
+    onSharePdf: (String) -> Unit,
+    onDeleteReport: (ReportEntity) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -291,8 +292,7 @@ fun DesktopReportsTable(
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(
-                                    text = { Text("Excluir", color = StatusNaoConforme) },
-                                    onClick = { expanded = false },
+                                    text = { Text("Excluir", color = StatusNaoConforme) },`n                                    onClick = { expanded = false; onDeleteReport(report) },
                                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
                                 )
                             }
@@ -309,7 +309,8 @@ fun DesktopReportsTable(
 fun MobileReportsList(
     reports: List<ReportEntity>,
     onOpenPdf: (String) -> Unit,
-    onSharePdf: (String) -> Unit
+    onSharePdf: (String) -> Unit,
+    onDeleteReport: (ReportEntity) -> Unit
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(reports) { report ->
@@ -350,8 +351,7 @@ fun MobileReportsList(
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(
-                                    text = { Text("Excluir", color = StatusNaoConforme) },
-                                    onClick = { expanded = false },
+                                    text = { Text("Excluir", color = StatusNaoConforme) },`n                                    onClick = { expanded = false; onDeleteReport(report) },
                                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
                                 )
                             }
@@ -385,3 +385,4 @@ fun StatusBadge(isFinal: Boolean) {
         }
     }
 }
+

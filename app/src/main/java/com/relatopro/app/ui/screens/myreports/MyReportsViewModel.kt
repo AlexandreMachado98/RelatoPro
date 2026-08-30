@@ -30,4 +30,10 @@ class MyReportsViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteReport(report: ReportEntity) {
+        viewModelScope.launch {
+            reportRepository.deleteReport(report)
+        }
+    }
 }

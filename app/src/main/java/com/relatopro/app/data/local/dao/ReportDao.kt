@@ -39,4 +39,7 @@ interface ReportDao {
 
     @Query("SELECT * FROM signatures WHERE reportId = :reportId LIMIT 1")
     suspend fun getSignature(reportId: Long): SignatureEntity?
+
+    @androidx.room.Delete
+    suspend fun deleteReport(report: ReportEntity)
 }

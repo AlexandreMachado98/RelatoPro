@@ -56,19 +56,19 @@ class MainActivity : ComponentActivity() {
                             startDestination = "splash",
                             enterTransition = {
                                 androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(220)) +
-                                androidx.compose.animation.slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start, androidx.compose.animation.core.tween(240))
+                                androidx.compose.animation.slideInHorizontally(animationSpec = androidx.compose.animation.core.tween(240)) { width -> width / 4 }
                             },
                             exitTransition = {
                                 androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) +
-                                androidx.compose.animation.slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start, androidx.compose.animation.core.tween(240))
+                                androidx.compose.animation.slideOutHorizontally(animationSpec = androidx.compose.animation.core.tween(240)) { width -> -width / 4 }
                             },
                             popEnterTransition = {
                                 androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(220)) +
-                                androidx.compose.animation.slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End, androidx.compose.animation.core.tween(240))
+                                androidx.compose.animation.slideInHorizontally(animationSpec = androidx.compose.animation.core.tween(240)) { width -> -width / 4 }
                             },
                             popExitTransition = {
                                 androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) +
-                                androidx.compose.animation.slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End, androidx.compose.animation.core.tween(240))
+                                androidx.compose.animation.slideOutHorizontally(animationSpec = androidx.compose.animation.core.tween(240)) { width -> width / 4 }
                             }
                         ) {
                             composable("splash") {

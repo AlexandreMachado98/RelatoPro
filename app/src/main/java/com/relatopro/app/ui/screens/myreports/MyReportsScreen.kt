@@ -315,7 +315,7 @@ fun MobileReportsList(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ListAlt,
+                    Icons.Default.Description,
                     contentDescription = null,
                     modifier = Modifier.size(56.dp),
                     tint = TextSecondary.copy(alpha = 0.4f)

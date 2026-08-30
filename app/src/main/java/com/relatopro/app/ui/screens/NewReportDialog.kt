@@ -1,63 +1,75 @@
 package com.relatopro.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.data.local.entity.TemplateEntity
+import com.relatopro.app.ui.theme.BackgroundLight
 import com.relatopro.app.ui.theme.PrimaryBlue
+import com.relatopro.app.ui.theme.SurfaceWhite
+import com.relatopro.app.ui.theme.TextPrimary
+import com.relatopro.app.ui.theme.TextSecondary
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewReportDialog(
     templates: List<TemplateEntity>,
     onDismiss: () -> Unit,
     onTemplateSelected: (Long) -> Unit
 ) {
-    ModalBottomSheet(
+    AlertDialog(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-        ) {
-            Text(
-                text = "Novo Relatório",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Selecione um modelo base para iniciar:",
-                fontSize = 14.sp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            if (templates.isEmpty()) {
-                Text("Nenhum modelo disponível. Crie um modelo primeiro.")
-            } else {
-                templates.forEach { template ->
-                    Card(
-                        onClick = { onTemplateSelected(template.id) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(template.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("${template.version}", fontSize = 12.sp)
+        title = { Text("Novo Relatório", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Selecione o modelo de checklist a ser utilizado:", fontSize = 13.sp, color = TextSecondary)
+                Spacer(modifier = Modifier.height(4.dp))
+                if (templates.isEmpty()) {
+                    Text("Nenhum modelo cadastrado.", color = TextSecondary)
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
+                        items(templates.size) { index ->
+                            val template = templates[index]
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onTemplateSelected(template.id) }
+                                    .padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = BackgroundLight),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                                        Text(template.description, fontSize = 11.sp, color = TextSecondary)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = TextSecondary)
+            }
+        },
+        containerColor = SurfaceWhite
+    )
 }

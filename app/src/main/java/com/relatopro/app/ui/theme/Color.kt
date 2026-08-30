@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 // Modern SaaS Palette (Tailwind-inspired)
 val PrimaryBlue = Color(0xFF2563EB) // Blue 600
 val PrimaryDark = Color(0xFF1E3A8A) // Blue 900
+val SidebarDark = Color(0xFF0F172A) // Very Dark Slate
 val BackgroundLight = Color(0xFFF8FAFC) // Slate 50
 val SurfaceWhite = Color(0xFFFFFFFF)
 val BorderColor = Color(0xFFE2E8F0) // Slate 200

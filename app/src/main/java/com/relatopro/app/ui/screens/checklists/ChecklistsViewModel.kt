@@ -37,10 +37,13 @@ class ChecklistsViewModel @Inject constructor(
         _searchQuery
     ) { list, tab, query ->
         val filtered = list.filter { t ->
+            val isOfficial = t.isGlobal && t.userId.isBlank() && t.id <= 3L
+            val isUserChecklist = !isOfficial
+
             val matchesTab = when (tab) {
-                "MEUS_CHECKLISTS" -> !t.isGlobal && (t.userId == currentUserEmail || t.userId.isBlank())
-                "MODELOS" -> t.isGlobal
-                else -> t.isGlobal || t.userId == currentUserEmail || t.userId.isBlank()
+                "MEUS_CHECKLISTS" -> isUserChecklist
+                "MODELOS" -> isOfficial
+                else -> true
             }
             val matchesQuery = query.isBlank() ||
                     t.name.contains(query, ignoreCase = true) ||

@@ -2,7 +2,7 @@ package com.relatopro.app.ui.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 // Brand Colors (From UI Kit)
@@ -114,10 +114,21 @@ val DarkAppColors = AppColors(
     cyanAccent = CyanAccent
 )
 
-val LocalAppColors = staticCompositionLocalOf { LightAppColors }
+// compositionLocalOf ensures only reading composables recompose, rather than invalidating the entire hierarchy
+val LocalAppColors = compositionLocalOf { LightAppColors }
+val LocalThemeIsDark = compositionLocalOf { false }
+val LocalThemeMode = compositionLocalOf { "SYSTEM" }
 
 object AppTheme {
     val colors: AppColors
         @Composable
         get() = LocalAppColors.current
+
+    val isDark: Boolean
+        @Composable
+        get() = LocalThemeIsDark.current
+
+    val currentMode: String
+        @Composable
+        get() = LocalThemeMode.current
 }

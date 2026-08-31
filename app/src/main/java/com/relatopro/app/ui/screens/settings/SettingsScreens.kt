@@ -366,8 +366,6 @@ fun SettingsScreen(
     val prefs = context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE)
     val colors = AppTheme.colors
 
-    var currentThemeMode by remember { mutableStateOf(prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM") }
-
     var pageNumbersEnabled by remember { mutableStateOf(prefs.getBoolean("pdf_page_numbers", true)) }
     var summaryEnabled by remember { mutableStateOf(prefs.getBoolean("pdf_summary_table", true)) }
     var observationsEnabled by remember { mutableStateOf(prefs.getBoolean("pdf_observations", true)) }
@@ -422,8 +420,9 @@ fun SettingsScreen(
                             Triple("SYSTEM", "Automático (Padrão do Sistema)", Icons.Default.SettingsBrightness)
                         )
 
+                        val currentMode = AppTheme.currentMode
                         themeOptions.forEach { (modeKey, modeTitle, modeIcon) ->
-                            val isSelected = currentThemeMode == modeKey
+                            val isSelected = currentMode == modeKey
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -431,8 +430,7 @@ fun SettingsScreen(
                                     .background(if (isSelected) colors.primary.copy(alpha = 0.1f) else Color.Transparent)
                                     .border(1.dp, if (isSelected) colors.primary else colors.border, RoundedCornerShape(8.dp))
                                     .clickable {
-                                        currentThemeMode = modeKey
-                                        prefs.edit().putString("app_theme_mode", modeKey).apply()
+                                        com.relatopro.app.ui.theme.ThemeManager.setThemeMode(context, modeKey)
                                     }
                                     .padding(horizontal = 12.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -454,8 +452,7 @@ fun SettingsScreen(
                                 RadioButton(
                                     selected = isSelected,
                                     onClick = {
-                                        currentThemeMode = modeKey
-                                        prefs.edit().putString("app_theme_mode", modeKey).apply()
+                                        com.relatopro.app.ui.theme.ThemeManager.setThemeMode(context, modeKey)
                                     },
                                     colors = RadioButtonDefaults.colors(
                                         selectedColor = colors.primary,

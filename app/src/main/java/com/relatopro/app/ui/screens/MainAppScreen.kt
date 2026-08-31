@@ -121,26 +121,7 @@ fun MainAppScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-    var currentThemeMode by remember { mutableStateOf(prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM") }
-    val isDark = when (currentThemeMode) {
-        "DARK" -> true
-        "LIGHT" -> false
-        else -> isSystemDark
-    }
-
-    DisposableEffect(prefs) {
-        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "app_theme_mode") {
-                currentThemeMode = prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM"
-            }
-        }
-        prefs.registerOnSharedPreferenceChangeListener(listener)
-        onDispose {
-            prefs.unregisterOnSharedPreferenceChangeListener(listener)
-        }
-    }
+    val isDark = AppTheme.isDark
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -206,8 +187,7 @@ fun MainAppScreen(
                         actions = {
                             IconButton(
                                 onClick = {
-                                    val nextMode = if (isDark) "LIGHT" else "DARK"
-                                    prefs.edit().putString("app_theme_mode", nextMode).apply()
+                                    com.relatopro.app.ui.theme.ThemeManager.toggleTheme(context, isDark)
                                 }
                             ) {
                                 Icon(
@@ -240,26 +220,7 @@ fun MainAppScreen(
 @Composable
 private fun DesktopTopBar(currentRoute: String?) {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
-    var currentThemeMode by remember { mutableStateOf(prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM") }
-    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val isDark = when (currentThemeMode) {
-        "DARK" -> true
-        "LIGHT" -> false
-        else -> isSystemDark
-    }
-
-    DisposableEffect(prefs) {
-        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "app_theme_mode") {
-                currentThemeMode = prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM"
-            }
-        }
-        prefs.registerOnSharedPreferenceChangeListener(listener)
-        onDispose {
-            prefs.unregisterOnSharedPreferenceChangeListener(listener)
-        }
-    }
+    val isDark = AppTheme.isDark
 
     val colors = AppTheme.colors
     val title = when {
@@ -294,8 +255,7 @@ private fun DesktopTopBar(currentRoute: String?) {
             // Theme Toggle Button
             OutlinedButton(
                 onClick = {
-                    val nextMode = if (isDark) "LIGHT" else "DARK"
-                    prefs.edit().putString("app_theme_mode", nextMode).apply()
+                    com.relatopro.app.ui.theme.ThemeManager.toggleTheme(context, isDark)
                 },
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -439,20 +399,13 @@ private fun PermanentSidebar(
             
             item { SidebarCategory("CONFIGURAÇÕES") }
             item {
-                val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-                val currentTheme = prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM"
-                val isDark = when (currentTheme) {
-                    "DARK" -> true
-                    "LIGHT" -> false
-                    else -> isSystemDark
-                }
+                val isDark = AppTheme.isDark
                 SidebarItem(
                     icon = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
                     title = if (isDark) "Ativar Modo Claro" else "Ativar Modo Escuro",
                     selected = false
                 ) {
-                    val nextMode = if (isDark) "LIGHT" else "DARK"
-                    prefs.edit().putString("app_theme_mode", nextMode).apply()
+                    com.relatopro.app.ui.theme.ThemeManager.toggleTheme(context, isDark)
                 }
             }
             item { SidebarItem(Icons.Default.Person, "Meu Perfil", currentRoute == "profile") { 

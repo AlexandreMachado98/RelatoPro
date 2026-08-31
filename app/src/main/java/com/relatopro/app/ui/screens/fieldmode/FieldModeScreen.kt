@@ -770,19 +770,83 @@ fun ChecklistStepContent(
     if (showBottomSheet && selectedFieldId != null) {
         val field = fields.find { it.id == selectedFieldId }
         val currentAnswer = answers[selectedFieldId]
-        
+        var obsText by remember { mutableStateOf(currentAnswer?.observation ?: "") }
+
+        val speechLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                val matches = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                val spoken = matches?.firstOrNull()
+                if (!spoken.isNullOrBlank()) {
+                    obsText = if (obsText.isBlank()) spoken else "$obsText. $spoken"
+                }
+            }
+        }
+
+        val launchSpeech = {
+            try {
+                val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
+                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Fale a observação técnica...")
+                }
+                speechLauncher.launch(intent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
             containerColor = SurfaceWhite
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
-                Text("Observações do Item", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Observações do Item", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    IconButton(onClick = launchSpeech) {
+                        Icon(Icons.Default.Mic, contentDescription = "Ditar por Voz", tint = PrimaryBlue, modifier = Modifier.size(24.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(field?.label ?: "", fontSize = 13.sp, color = TextSecondary, lineHeight = 16.sp)
                 
-                Spacer(modifier = Modifier.height(20.dp))
-                
-                var obsText by remember { mutableStateOf(currentAnswer?.observation ?: "") }
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Quick Suggestion Chips
+                Text("Sugestões Rápidas de Campo:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val suggestions = listOf(
+                        "Substituição imediata",
+                        "Recarga / Manutenção",
+                        "Sinalização ausente",
+                        "Obstruído / Bloqueado",
+                        "Conforme norma técnica"
+                    )
+                    suggestions.forEach { chipText ->
+                        Box(
+                            modifier = Modifier
+                                .background(BackgroundLight, RoundedCornerShape(16.dp))
+                                .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                                .clickable {
+                                    obsText = if (obsText.isBlank()) chipText else "$obsText. $chipText"
+                                }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(chipText, fontSize = 11.sp, color = TextPrimary)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
                 
                 OutlinedTextField(
                     value = obsText,
@@ -790,13 +854,18 @@ fun ChecklistStepContent(
                     modifier = Modifier.fillMaxWidth().height(120.dp),
                     placeholder = { Text("Descreva anomalias, motivos ou ações corretivas...", fontSize = 13.sp) },
                     shape = RoundedCornerShape(8.dp),
+                    trailingIcon = {
+                        IconButton(onClick = launchSpeech) {
+                            Icon(Icons.Default.Mic, contentDescription = "Ditar", tint = PrimaryBlue)
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryBlue,
                         unfocusedBorderColor = BorderColor
                     )
                 )
                 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
                 
                 Button(
                     onClick = {
@@ -958,12 +1027,79 @@ fun ObservationsStepContent(
 ) {
     var obsText by remember(observations) { mutableStateOf(observations) }
 
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val matches = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            val spoken = matches?.firstOrNull()
+            if (!spoken.isNullOrBlank()) {
+                obsText = if (obsText.isBlank()) spoken else "$obsText. $spoken"
+                onObservationsChanged(obsText)
+            }
+        }
+    }
+
+    val launchSpeech = {
+        try {
+            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
+                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Fale as conclusões e recomendações...")
+            }
+            speechLauncher.launch(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        Text("Observações Finais", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text("Adicione recomendações técnicas, prazos de adequação ou observações finais para o relatório.", fontSize = 13.sp, color = TextSecondary, lineHeight = 17.sp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Observações Finais", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text("Recomendações técnicas e prazos de adequação.", fontSize = 12.sp, color = TextSecondary)
+            }
+            IconButton(onClick = launchSpeech) {
+                Icon(Icons.Default.Mic, contentDescription = "Ditar Observações", tint = PrimaryBlue, modifier = Modifier.size(24.dp))
+            }
+        }
         
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Quick Recommendation Chips
+        Text("Modelos de Parecer Rápido:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val conclusions = listOf(
+                "Instalações conformes com a legislação",
+                "Prazo de 30 dias para adequações",
+                "Interdição preventiva recomendada",
+                "Sem não conformidades críticas detectadas"
+            )
+            conclusions.forEach { chipText ->
+                Box(
+                    modifier = Modifier
+                        .background(SurfaceWhite, RoundedCornerShape(16.dp))
+                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                        .clickable {
+                            obsText = if (obsText.isBlank()) chipText else "$obsText\n• $chipText"
+                            onObservationsChanged(obsText)
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(chipText, fontSize = 11.sp, color = TextPrimary)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
         
         OutlinedTextField(
             value = obsText,
@@ -976,6 +1112,11 @@ fun ObservationsStepContent(
                 .weight(1f),
             placeholder = { Text("Digite suas considerações e conclusões técnicas aqui...", fontSize = 14.sp) },
             shape = RoundedCornerShape(12.dp),
+            trailingIcon = {
+                IconButton(onClick = launchSpeech) {
+                    Icon(Icons.Default.Mic, contentDescription = "Ditar", tint = PrimaryBlue)
+                }
+            },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = PrimaryBlue,
                 unfocusedBorderColor = BorderColor,

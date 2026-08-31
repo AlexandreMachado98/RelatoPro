@@ -157,11 +157,14 @@ class PdfGenerator(private val context: Context) {
             isAntiAlias = true
         }
 
-        canvas.drawText("RELATO PRO", margin + 18f, margin + 30f, whiteTitle.apply { textSize = 14f; color = Color.parseColor("#93C5FD") })
+        val prefs = context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE)
+        val companyName = prefs.getString("user_company", "")?.ifBlank { "RELATO PRO" } ?: "RELATO PRO"
+
+        canvas.drawText(companyName.uppercase(Locale.getDefault()), margin + 18f, margin + 30f, whiteTitle.apply { textSize = 13f; color = Color.parseColor("#93C5FD") })
         whiteTitle.color = Color.WHITE
-        whiteTitle.textSize = 18f
-        canvas.drawText(report.title.ifEmpty { "RELATÓRIO DE INSPEÇÃO TÉCNICA" }.uppercase(Locale.getDefault()), margin + 18f, margin + 55f, whiteTitle)
-        canvas.drawText("Documento Oficial de Vistoria e Conformidade • Nº ${report.reportNumber.ifEmpty { "#${report.id}" }}", margin + 18f, margin + 78f, whiteSub)
+        whiteTitle.textSize = 17f
+        canvas.drawText(report.title.ifEmpty { "RELATÓRIO DE INSPEÇÃO TÉCNICA" }.uppercase(Locale.getDefault()), margin + 18f, margin + 54f, whiteTitle)
+        canvas.drawText("Documento Oficial de Vistoria e Conformidade • Nº ${report.reportNumber.ifEmpty { "#${report.id}" }}", margin + 18f, margin + 76f, whiteSub)
 
         currentY = margin + 110f
 
@@ -179,10 +182,10 @@ class PdfGenerator(private val context: Context) {
             canvas.drawText(value, x, y + 12f, headerPaint)
         }
 
-        drawMetaItem(colA, currentY + 20f, "EMPRESA / LOCAL:", report.location.ifEmpty { "Local da Inspeção" })
-        drawMetaItem(colA, currentY + 50f, "RESPONSÁVEL TÉCNICO:", report.responsible.ifEmpty { "Inspetor Técnico" })
+        drawMetaItem(colA, currentY + 20f, "EMPRESA / LOCAL DA VISTORIA:", report.location.ifEmpty { "Local da Inspeção" })
+        drawMetaItem(colA, currentY + 50f, "RESPONSÁVEL TÉCNICO:", report.responsible.ifEmpty { "Alexandre Machado" })
         drawMetaItem(colB, currentY + 20f, "DATA E HORA DA VISTORIA:", dateStr)
-        drawMetaItem(colB, currentY + 50f, "STATUS DO LAUDO:", "EMITIDO")
+        drawMetaItem(colB, currentY + 50f, "EMITIDO POR:", companyName)
 
         currentY += infoCardHeight + 20f
 

@@ -46,7 +46,10 @@ fun SplashScreen(
             Image(
                 painter = painterResource(id = com.relatopro.app.R.drawable.logo),
                 contentDescription = "Logo Relato Pro",
-                modifier = Modifier.size(88.dp)
+                modifier = Modifier
+                    .size(92.dp)
+                    .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.CircleShape),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
             Spacer(modifier = Modifier.height(18.dp))
             Text(

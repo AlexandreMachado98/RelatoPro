@@ -44,16 +44,18 @@ class FieldModeViewModel @Inject constructor(
 
     fun initializeReportFromTemplate(templateId: Long, location: String, responsible: String) {
         viewModelScope.launch {
-            val templateFields = templateRepository.getTemplateFields(templateId).first()
+            val template = templateRepository.getTemplateById(templateId)
+            val templateFields = templateRepository.getTemplateFieldsList(templateId)
             _fields.value = templateFields
             
+            val templateName = template?.name ?: "Vistoria Técnica"
             val newReport = ReportEntity(
                 templateId = templateId,
-                title = "Inspeção " + SimpleDateFormatUtil.currentDateFormatted(),
+                title = "$templateName - " + SimpleDateFormatUtil.currentDateFormatted(),
                 reportNumber = "REP-${System.currentTimeMillis().toString().takeLast(6)}",
                 date = System.currentTimeMillis(),
-                responsible = responsible.ifEmpty { "João da Silva" },
-                location = location.ifEmpty { "Indústria ABC Lda." },
+                responsible = responsible.ifBlank { "Alexandre Machado" },
+                location = location.ifBlank { "Unidade Operacional" },
                 lat = null,
                 lng = null,
                 status = "DRAFT",

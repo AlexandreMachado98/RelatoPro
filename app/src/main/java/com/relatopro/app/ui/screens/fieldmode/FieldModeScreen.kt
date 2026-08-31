@@ -63,8 +63,12 @@ fun FieldModeScreen(
     val answers by viewModel.answers.collectAsState()
     val photos by viewModel.photos.collectAsState()
 
+    val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
+    val loggedInName = remember { prefs.getString("user_name", "")?.ifBlank { "Alexandre Machado" } ?: "Alexandre Machado" }
+    val loggedInCompany = remember { prefs.getString("user_company", "") ?: "" }
+
     LaunchedEffect(templateId) {
-        viewModel.initializeReportFromTemplate(templateId, "Indústria ABC Lda.", "João da Silva")
+        viewModel.initializeReportFromTemplate(templateId, loggedInCompany, loggedInName)
     }
 
     var currentPhotoFile by remember { mutableStateOf<File?>(null) }

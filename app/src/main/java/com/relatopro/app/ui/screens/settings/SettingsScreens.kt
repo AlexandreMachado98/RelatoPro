@@ -507,17 +507,27 @@ fun SettingsScreen(
 
             // FOOTER
             item {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(id = com.relatopro.app.R.drawable.logo),
+                        contentDescription = "Logo Relato Pro",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = "Relato Pro • Versão 1.0",
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = TextSecondary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Bold
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Aplicativo Oficial de Vistorias e Relatórios Técnicos",
                         fontSize = 11.sp,
@@ -698,7 +708,22 @@ private fun ProfileInfoRow(label: String, value: String) {
 private fun InfoDialog(title: String, content: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary) },
+        title = {
+            Column(horizontalAlignment = if (title == "Sobre o Relato Pro") Alignment.CenterHorizontally else Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+                if (title == "Sobre o Relato Pro") {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(id = com.relatopro.app.R.drawable.logo),
+                        contentDescription = "Logo",
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+            }
+        },
         text = {
             Text(content, fontSize = 13.sp, color = TextSecondary, lineHeight = 19.sp)
         },

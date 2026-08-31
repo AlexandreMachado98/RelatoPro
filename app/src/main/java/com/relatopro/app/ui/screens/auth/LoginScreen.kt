@@ -159,7 +159,10 @@ fun LoginScreen(
             Image(
                 painter = painterResource(id = R.drawable.logo),
                 contentDescription = "Logo Relato Pro",
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier
+                    .size(80.dp)
+                    .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.CircleShape),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
 
             Spacer(modifier = Modifier.height(20.dp))

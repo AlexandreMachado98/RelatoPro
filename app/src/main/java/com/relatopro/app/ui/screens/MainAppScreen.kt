@@ -163,7 +163,10 @@ fun MainAppScreen(
                                 Image(
                                     painter = painterResource(id = com.relatopro.app.R.drawable.logo),
                                     contentDescription = "Logo",
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.CircleShape),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Relato Pro", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
@@ -262,7 +265,14 @@ private fun PermanentSidebar(
             modifier = Modifier.padding(24.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(painterResource(id = com.relatopro.app.R.drawable.logo), contentDescription = "Logo", modifier = Modifier.size(28.dp))
+            Image(
+                painter = painterResource(id = com.relatopro.app.R.drawable.logo),
+                contentDescription = "Logo",
+                modifier = Modifier
+                    .size(32.dp)
+                    .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.CircleShape),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Text("Relato Pro", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }

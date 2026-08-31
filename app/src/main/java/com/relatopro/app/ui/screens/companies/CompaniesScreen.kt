@@ -137,17 +137,6 @@ fun CompaniesScreen(
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             lineHeight = 18.sp
                         )
-                        if (searchQuery.isBlank()) {
-                            Spacer(Modifier.height(20.dp))
-                            Button(
-                                onClick = { showAddDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Cadastrar Primeira Empresa", fontWeight = FontWeight.Bold)
-                            }
-                        }
                     }
                 }
             } else {

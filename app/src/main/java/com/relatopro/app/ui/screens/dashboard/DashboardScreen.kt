@@ -36,7 +36,8 @@ fun DashboardScreen(
     viewModel: DashboardViewModel,
     @Suppress("UNUSED_PARAMETER") onNavigateToTemplateBuilder: () -> Unit,
     onNavigateToFieldMode: (Long) -> Unit,
-    onNavigateToMyReports: () -> Unit
+    onNavigateToMyReports: () -> Unit,
+    onNavigateToIndicators: () -> Unit = {}
 ) {
     val templates by viewModel.templates.collectAsState()
     var showTemplateSelector by remember { mutableStateOf(false) }
@@ -109,12 +110,12 @@ fun DashboardScreen(
                 val paddingH = 24.dp
                 if (isDesktop) {
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        QuickActionsCard(Modifier.weight(1f), { showTemplateSelector = true }, onNavigateToTemplateBuilder, onNavigateToMyReports)
+                        QuickActionsCard(Modifier.weight(1f), { showTemplateSelector = true }, onNavigateToTemplateBuilder, onNavigateToMyReports, onNavigateToIndicators)
                         Spacer(modifier = Modifier.weight(1.2f))
                     }
                 } else {
                     Column(modifier = Modifier.padding(horizontal = paddingH), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                        QuickActionsCard(Modifier.fillMaxWidth(), { showTemplateSelector = true }, onNavigateToTemplateBuilder, onNavigateToMyReports)
+                        QuickActionsCard(Modifier.fillMaxWidth(), { showTemplateSelector = true }, onNavigateToTemplateBuilder, onNavigateToMyReports, onNavigateToIndicators)
                     }
                 }
             }
@@ -321,7 +322,8 @@ fun QuickActionsCard(
     modifier: Modifier,
     onNewReport: () -> Unit,
     onTemplateBuilder: () -> Unit,
-    onMyReports: () -> Unit
+    onMyReports: () -> Unit,
+    onIndicators: () -> Unit = {}
 ) {
     Card(
         modifier = modifier.height(180.dp),
@@ -335,8 +337,9 @@ fun QuickActionsCard(
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 QuickActionItem(Icons.Default.Add, "Novo\nRelatório", onNewReport)
-                QuickActionItem(Icons.AutoMirrored.Filled.Assignment, "Modelos\nChecklist", onTemplateBuilder)
+                QuickActionItem(Icons.AutoMirrored.Filled.Assignment, "Meus\nChecklists", onTemplateBuilder)
                 QuickActionItem(Icons.AutoMirrored.Filled.ListAlt, "Meus\nRelatórios", onMyReports)
+                QuickActionItem(Icons.Default.Analytics, "Ver\nIndicadores", onIndicators)
             }
         }
     }

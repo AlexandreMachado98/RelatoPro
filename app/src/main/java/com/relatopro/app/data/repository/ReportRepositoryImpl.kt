@@ -24,6 +24,12 @@ class ReportRepositoryImpl @Inject constructor(
 
     override fun getReportAnswers(reportId: Long): Flow<List<ReportAnswerEntity>> = dao.getReportAnswers(reportId)
 
+    override suspend fun getReportAnswersSync(reportId: Long): List<ReportAnswerEntity> = dao.getReportAnswersSync(reportId)
+
+    override fun getAllAnswers(): Flow<List<ReportAnswerEntity>> = dao.getAllAnswers()
+
+    override suspend fun getAllAnswersSync(): List<ReportAnswerEntity> = dao.getAllAnswersSync()
+
     override suspend fun savePhoto(photo: PhotoEntity): Long = dao.insertPhoto(photo)
     
     override fun getReportPhotos(reportId: Long): Flow<List<PhotoEntity>> = dao.getReportPhotos(reportId)

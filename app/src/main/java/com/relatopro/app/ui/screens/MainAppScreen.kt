@@ -48,6 +48,7 @@ fun MainAppScreen(
     val isMainRoute = currentRoute?.startsWith("dashboard") == true ||
                       currentRoute?.startsWith("my_reports") == true ||
                       currentRoute?.startsWith("history") == true ||
+                      currentRoute?.startsWith("indicators") == true ||
                       currentRoute?.startsWith("checklists") == true ||
                       currentRoute?.startsWith("template_builder") == true ||
                       currentRoute?.startsWith("settings") == true ||
@@ -203,6 +204,7 @@ private fun DesktopTopBar(currentRoute: String?) {
         currentRoute?.startsWith("dashboard") == true -> "Dashboard"
         currentRoute?.startsWith("my_reports") == true -> "Meus Relatórios"
         currentRoute?.startsWith("history") == true -> "Histórico de Relatórios"
+        currentRoute?.startsWith("indicators") == true -> "Indicadores & Estatísticas"
         currentRoute?.startsWith("checklists") == true -> "Checklists & Modelos"
         currentRoute?.startsWith("template_builder") == true -> "Criar/Editar Checklist"
         currentRoute?.startsWith("profile") == true -> "Meu Perfil"
@@ -311,7 +313,11 @@ private fun PermanentSidebar(
             } }
             item { SidebarItem(Icons.Default.History, "Histórico Mensal", currentRoute == "history") { 
                 navController.navigate("history") { popUpTo("dashboard") } 
-                onItemClick()
+                onItemClick() 
+            } }
+            item { SidebarItem(Icons.Default.Analytics, "Indicadores & Estatísticas", currentRoute == "indicators") { 
+                navController.navigate("indicators") { popUpTo("dashboard") } 
+                onItemClick() 
             } }
             item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { navController.navigate("my_reports?filter=Rascunhos") { popUpTo("dashboard") }; onItemClick() } }
             item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) { navController.navigate("my_reports?filter=Enviados") { popUpTo("dashboard") }; onItemClick() } }

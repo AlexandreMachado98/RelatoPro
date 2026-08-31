@@ -100,7 +100,8 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel,
                                     onNavigateToTemplateBuilder = { navController.navigate("checklists") },
                                     onNavigateToFieldMode = { templateId -> navController.navigate("field_mode/$templateId") },
-                                    onNavigateToMyReports = { navController.navigate("my_reports") }
+                                    onNavigateToMyReports = { navController.navigate("my_reports") },
+                                    onNavigateToIndicators = { navController.navigate("indicators") }
                                 )
                             }
                             composable("checklists") {
@@ -137,7 +138,9 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable("indicators") {
+                                val viewModel = hiltViewModel<com.relatopro.app.ui.screens.dashboard.IndicatorsViewModel>()
                                 IndicatorsScreen(
+                                    viewModel = viewModel,
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }

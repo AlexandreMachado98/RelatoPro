@@ -13,6 +13,9 @@ interface ReportRepository {
     suspend fun updateReport(report: ReportEntity)
     suspend fun saveAnswer(answer: ReportAnswerEntity): Long
     fun getReportAnswers(reportId: Long): Flow<List<ReportAnswerEntity>>
+    suspend fun getReportAnswersSync(reportId: Long): List<ReportAnswerEntity>
+    fun getAllAnswers(): Flow<List<ReportAnswerEntity>>
+    suspend fun getAllAnswersSync(): List<ReportAnswerEntity>
     suspend fun savePhoto(photo: PhotoEntity): Long
     fun getReportPhotos(reportId: Long): Flow<List<PhotoEntity>>
     fun getAllPhotos(): Flow<List<PhotoEntity>>

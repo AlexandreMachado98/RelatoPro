@@ -187,26 +187,58 @@ class PdfGenerator(private val context: Context) {
         currentY += infoCardHeight + 20f
 
         // ==========================================
-        // 2. RESUMO DE CONFORMIDADES (COMPLIANCE STATS)
+        // 2. RESUMO E INDICADORES DA INSPEÇÃO
         // ==========================================
         var conformeCount = 0
         var naoConformeCount = 0
         var naCount = 0
 
+        val categoryStats = mutableMapOf<String, Triple<Int, Int, Int>>() // Category -> (C, NC, NA)
+
         for (field in fields) {
             val answer = answers.find { it.templateFieldId == field.id }
-            when (normalizeAnswer(answer?.answerValue)) {
-                "C" -> conformeCount++
-                "NC" -> naoConformeCount++
-                else -> naCount++
+            val norm = normalizeAnswer(answer?.answerValue)
+            val cat = field.category.ifBlank { "Geral" }
+            val current = categoryStats[cat] ?: Triple(0, 0, 0)
+            
+            when (norm) {
+                "C" -> {
+                    conformeCount++
+                    categoryStats[cat] = current.copy(first = current.first + 1)
+                }
+                "NC" -> {
+                    naoConformeCount++
+                    categoryStats[cat] = current.copy(second = current.second + 1)
+                }
+                else -> {
+                    naCount++
+                    categoryStats[cat] = current.copy(third = current.third + 1)
+                }
             }
         }
         val totalCount = fields.size
-        val complianceRate = if (totalCount > 0) ((conformeCount.toFloat() / totalCount.toFloat()) * 100).toInt() else 100
+        val applicableCount = conformeCount + naoConformeCount
+        val compliancePercent = if (applicableCount > 0) (conformeCount.toFloat() / applicableCount.toFloat() * 100f) else 100f
+        val ncPercent = if (applicableCount > 0) (naoConformeCount.toFloat() / applicableCount.toFloat() * 100f) else 0f
+        val complianceFormatted = String.format(Locale.getDefault(), "%.1f%%", compliancePercent)
 
-        canvas.drawText("1. RESUMO DA INSPEÇÃO", margin, currentY, sectionTitlePaint)
+        val statusLabel = when {
+            compliancePercent >= 90f -> "EXCELENTE"
+            compliancePercent >= 80f -> "BOM"
+            compliancePercent >= 70f -> "ATENÇÃO"
+            else -> "CRÍTICO"
+        }
+        val statusBgColor = when {
+            compliancePercent >= 90f -> colorConforme
+            compliancePercent >= 80f -> primaryBlue
+            compliancePercent >= 70f -> Color.parseColor("#F59E0B")
+            else -> colorNaoConforme
+        }
+
+        canvas.drawText("1. INDICADORES E RESULTADOS DA INSPEÇÃO", margin, currentY, sectionTitlePaint)
         currentY += 12f
 
+        // Top 4 Stat Cards
         val summaryCardHeight = 44f
         bgPaint.color = Color.WHITE
         canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + summaryCardHeight), 6f, 6f, bgPaint)
@@ -214,28 +246,95 @@ class PdfGenerator(private val context: Context) {
 
         val statWidth = usableWidth / 4f
 
-        fun drawStatBox(index: Int, label: String, count: Int, color: Int) {
+        fun drawStatBox(index: Int, label: String, countText: String, color: Int) {
             val startX = margin + (index * statWidth)
             if (index > 0) {
                 canvas.drawLine(startX, currentY + 8f, startX, currentY + summaryCardHeight - 8f, linePaint)
             }
-            val numText = count.toString()
             val statPaint = TextPaint().apply {
                 this.color = color
                 textSize = 15f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 isAntiAlias = true
             }
-            canvas.drawText(numText, startX + 14f, currentY + 22f, statPaint)
+            canvas.drawText(countText, startX + 14f, currentY + 22f, statPaint)
             canvas.drawText(label, startX + 14f, currentY + 36f, bodyMutedPaint)
         }
 
-        drawStatBox(0, "Total de Itens", totalCount, primaryDark)
-        drawStatBox(1, "Conformes", conformeCount, colorConforme)
-        drawStatBox(2, "Não Conformes", naoConformeCount, colorNaoConforme)
-        drawStatBox(3, "Taxa de Conformidade", complianceRate, primaryBlue)
+        drawStatBox(0, "Total Itens", totalCount.toString(), primaryDark)
+        drawStatBox(1, "Conformes (C)", conformeCount.toString(), colorConforme)
+        drawStatBox(2, "Não Conf. (NC)", naoConformeCount.toString(), colorNaoConforme)
+        drawStatBox(3, "Não Aplicáveis (NA)", naCount.toString(), colorNA)
 
-        currentY += summaryCardHeight + 22f
+        currentY += summaryCardHeight + 10f
+
+        // Visual Compliance Progress Bar Card
+        val barCardHeight = 48f
+        bgPaint.color = bgLight
+        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + barCardHeight), 6f, 6f, bgPaint)
+        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + barCardHeight), 6f, 6f, linePaint)
+
+        // Text summary
+        val complianceLabelPaint = TextPaint().apply {
+            color = textDark
+            textSize = 10f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        canvas.drawText("Conformidade Geral: $complianceFormatted (C: $conformeCount | NC: $naoConformeCount)", margin + 12f, currentY + 18f, complianceLabelPaint)
+
+        // Status pill
+        bgPaint.color = statusBgColor
+        val statusPillWidth = 64f
+        val statusPillHeight = 14f
+        val pillX = pageWidth - margin - statusPillWidth - 12f
+        canvas.drawRoundRect(RectF(pillX, currentY + 7f, pillX + statusPillWidth, currentY + 7f + statusPillHeight), 7f, 7f, bgPaint)
+        
+        val statusTextPaint = TextPaint().apply {
+            color = Color.WHITE
+            textSize = 7.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText(statusLabel, pillX + (statusPillWidth / 2), currentY + 17.5f, statusTextPaint)
+
+        // Segmented Visual Bar
+        val barX = margin + 12f
+        val barY = currentY + 28f
+        val barW = usableWidth - 24f
+        val barH = 10f
+
+        // Total segments
+        val cFrac = if (totalCount > 0) (conformeCount.toFloat() / totalCount.toFloat()) else 0f
+        val ncFrac = if (totalCount > 0) (naoConformeCount.toFloat() / totalCount.toFloat()) else 0f
+        val naFrac = if (totalCount > 0) (naCount.toFloat() / totalCount.toFloat()) else 0f
+
+        val cW = barW * cFrac
+        val ncW = barW * ncFrac
+        val naW = barW * naFrac
+
+        // Draw background track
+        bgPaint.color = Color.parseColor("#E2E8F0")
+        canvas.drawRoundRect(RectF(barX, barY, barX + barW, barY + barH), 4f, 4f, bgPaint)
+
+        var curBarX = barX
+        if (cW > 0f) {
+            bgPaint.color = colorConforme
+            canvas.drawRect(curBarX, barY, curBarX + cW, barY + barH, bgPaint)
+            curBarX += cW
+        }
+        if (ncW > 0f) {
+            bgPaint.color = colorNaoConforme
+            canvas.drawRect(curBarX, barY, curBarX + ncW, barY + barH, bgPaint)
+            curBarX += ncW
+        }
+        if (naW > 0f) {
+            bgPaint.color = colorNA
+            canvas.drawRect(curBarX, barY, curBarX + naW, barY + barH, bgPaint)
+        }
+
+        currentY += barCardHeight + 20f
 
         // ==========================================
         // 3. TABELA DO CHECKLIST

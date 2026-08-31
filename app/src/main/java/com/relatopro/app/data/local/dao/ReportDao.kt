@@ -31,6 +31,15 @@ interface ReportDao {
     @Query("SELECT * FROM report_answers WHERE reportId = :reportId")
     fun getReportAnswers(reportId: Long): Flow<List<ReportAnswerEntity>>
 
+    @Query("SELECT * FROM report_answers WHERE reportId = :reportId")
+    suspend fun getReportAnswersSync(reportId: Long): List<ReportAnswerEntity>
+
+    @Query("SELECT * FROM report_answers")
+    fun getAllAnswers(): Flow<List<ReportAnswerEntity>>
+
+    @Query("SELECT * FROM report_answers")
+    suspend fun getAllAnswersSync(): List<ReportAnswerEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPhoto(photo: PhotoEntity): Long
 

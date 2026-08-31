@@ -36,6 +36,7 @@ class MyReportsViewModel @Inject constructor(
             reportRepository.deleteReport(report)
         }
     }
+
     fun markAsSent(reportId: Long) {
         viewModelScope.launch {
             val report = _reports.value.find { it.id == reportId }
@@ -44,6 +45,14 @@ class MyReportsViewModel @Inject constructor(
                 reportRepository.updateReport(updated)
                 // The flow from repository will automatically update _reports
             }
+        }
+    }
+
+    fun exportReportsCsv(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
+        viewModelScope.launch {
+            val allAnswers = reportRepository.getAllAnswersSync()
+            val file = com.relatopro.app.utils.ReportExportUtil.generateReportsCsv(context, _reports.value, allAnswers)
+            onComplete(file)
         }
     }
 }

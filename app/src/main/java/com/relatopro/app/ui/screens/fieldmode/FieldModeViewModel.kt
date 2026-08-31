@@ -120,6 +120,28 @@ class FieldModeViewModel @Inject constructor(
         }
     }
 
+    fun markAllConforme() {
+        val reportId = _currentReport.value?.id ?: return
+        val currentFields = _fields.value
+        viewModelScope.launch {
+            val updatedMap = _answers.value.toMutableMap()
+            for (field in currentFields) {
+                val existing = updatedMap[field.id]
+                val newAnswer = ReportAnswerEntity(
+                    id = existing?.id ?: 0,
+                    reportId = reportId,
+                    templateFieldId = field.id,
+                    answerValue = "C",
+                    observation = existing?.observation ?: "",
+                    status = "VALID"
+                )
+                reportRepository.saveAnswer(newAnswer)
+                updatedMap[field.id] = newAnswer
+            }
+            _answers.value = updatedMap
+        }
+    }
+
     fun savePhoto(fieldId: Long?, localPath: String, description: String = "") {
         val reportId = _currentReport.value?.id ?: return
         viewModelScope.launch {

@@ -93,14 +93,41 @@ fun MyReportsScreen(
                 .padding(24.dp)
         ) {
             // Header
+            var isExporting by remember { mutableStateOf(false) }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Meus Relatórios", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Text("Gerencie e compartilhe suas inspeções.", fontSize = 14.sp, color = TextSecondary)
+                }
+                Button(
+                    onClick = {
+                        if (!isExporting && reports.isNotEmpty()) {
+                            isExporting = true
+                            viewModel.exportReportsCsv(context) { file ->
+                                isExporting = false
+                                if (file != null) {
+                                    com.relatopro.app.utils.ReportExportUtil.shareCsvFile(context, file)
+                                }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    if (isExporting) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.TableChart, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Exportar CSV", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
             

@@ -15,7 +15,11 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.RESTRICT
         )
     ],
-    indices = [Index("templateId")]
+    indices = [
+        Index("templateId"),
+        Index("date"),
+        Index("status")
+    ]
 )
 data class ReportEntity(
     @PrimaryKey(autoGenerate = true)

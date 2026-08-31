@@ -215,22 +215,34 @@ fun TemplateBuilderScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                                     Box(
                                         modifier = Modifier.size(40.dp).background(BackgroundLight, RoundedCornerShape(8.dp)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(icon, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
                                     }
-                                    Spacer(Modifier.width(16.dp))
-                                    Column {
+                                    Spacer(Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(text = field.label, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(text = typeLabel, fontSize = 12.sp, color = TextSecondary)
                                     }
                                 }
-                                IconButton(onClick = { viewModel.removeField(index) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Remover", tint = TextSecondary)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (index > 0) {
+                                        IconButton(onClick = { viewModel.moveFieldUp(index) }, modifier = Modifier.size(32.dp)) {
+                                            Icon(Icons.Default.ArrowUpward, contentDescription = "Subir", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                    if (index < fields.lastIndex) {
+                                        IconButton(onClick = { viewModel.moveFieldDown(index) }, modifier = Modifier.size(32.dp)) {
+                                            Icon(Icons.Default.ArrowDownward, contentDescription = "Descer", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                    IconButton(onClick = { viewModel.removeField(index) }, modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Remover", tint = StatusNaoConforme, modifier = Modifier.size(18.dp))
+                                    }
                                 }
                             }
                         }

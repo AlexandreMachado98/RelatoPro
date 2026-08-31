@@ -90,6 +90,27 @@ class TemplateBuilderViewModel @Inject constructor(
         }
     }
 
+    fun moveFieldUp(index: Int) {
+        if (index <= 0) return
+        val currentList = _fields.value.toMutableList()
+        if (index in currentList.indices) {
+            val item = currentList.removeAt(index)
+            currentList.add(index - 1, item)
+            val reordered = currentList.mapIndexed { i, field -> field.copy(orderIndex = i) }
+            _fields.value = reordered
+        }
+    }
+
+    fun moveFieldDown(index: Int) {
+        val currentList = _fields.value.toMutableList()
+        if (index in 0 until currentList.lastIndex) {
+            val item = currentList.removeAt(index)
+            currentList.add(index + 1, item)
+            val reordered = currentList.mapIndexed { i, field -> field.copy(orderIndex = i) }
+            _fields.value = reordered
+        }
+    }
+
     fun saveTemplate(onComplete: () -> Unit) {
         if (_templateName.value.isBlank() || _isSaving.value) return
         _isSaving.value = true

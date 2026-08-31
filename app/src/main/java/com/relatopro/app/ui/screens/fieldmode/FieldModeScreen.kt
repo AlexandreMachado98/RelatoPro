@@ -272,7 +272,8 @@ fun FieldModeScreen(
                             onUpdateAnswer = { fieldId, answerValue, obs ->
                                 viewModel.updateAnswer(fieldId, answerValue, obs)
                             },
-                            onLaunchCamera = { fieldId -> launchCamera(fieldId) }
+                            onLaunchCamera = { fieldId -> launchCamera(fieldId) },
+                            onMarkAllConforme = { viewModel.markAllConforme() }
                         )
                         2 -> PhotosStepContent(
                             photos = photos,
@@ -607,7 +608,8 @@ fun ChecklistStepContent(
     fields: List<TemplateFieldEntity>,
     answers: Map<Long, com.relatopro.app.data.local.entity.ReportAnswerEntity>,
     onUpdateAnswer: (fieldId: Long, answerValue: String?, observation: String?) -> Unit,
-    onLaunchCamera: (fieldId: Long) -> Unit
+    onLaunchCamera: (fieldId: Long) -> Unit,
+    onMarkAllConforme: () -> Unit = {}
 ) {
     var selectedFieldId by remember { mutableStateOf<Long?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -636,16 +638,29 @@ fun ChecklistStepContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Itens de Verificação", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
                     Text("$answeredCount de ${fields.size} respondidos", fontSize = 12.sp, color = TextSecondary)
                 }
-                Box(
-                    modifier = Modifier
-                        .background(PrimaryBlue.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text("${(answeredCount * 100) / fields.size}%", color = PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onMarkAllConforme,
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusConforme.copy(alpha = 0.12f), contentColor = StatusConforme),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Todos C", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .background(PrimaryBlue.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text("${(answeredCount * 100) / fields.size}%", color = PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))

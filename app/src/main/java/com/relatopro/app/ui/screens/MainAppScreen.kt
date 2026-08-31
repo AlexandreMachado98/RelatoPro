@@ -165,7 +165,7 @@ fun MainAppScreen(
                                     contentDescription = "Logo",
                                     modifier = Modifier
                                         .size(26.dp)
-                                        .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.CircleShape),
+                                        .clip(CircleShape),
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -270,7 +270,7 @@ private fun PermanentSidebar(
                 contentDescription = "Logo",
                 modifier = Modifier
                     .size(32.dp)
-                    .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.CircleShape),
+                    .clip(CircleShape),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(12.dp))

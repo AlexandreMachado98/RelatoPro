@@ -26,12 +26,19 @@ object AppModule {
             }
         }
 
+        val migration23 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_reports_date ON reports(date)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_reports_status ON reports(status)")
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             RelatoProDatabase::class.java,
             "relatopro_db",
         )
-        .addMigrations(migration12)
+        .addMigrations(migration12, migration23)
         .fallbackToDestructiveMigration()
         .build()
     }

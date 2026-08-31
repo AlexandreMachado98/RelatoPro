@@ -22,7 +22,7 @@ import com.relatopro.app.data.local.entity.UserEntity
         PhotoEntity::class,
         SignatureEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class RelatoProDatabase : RoomDatabase() {

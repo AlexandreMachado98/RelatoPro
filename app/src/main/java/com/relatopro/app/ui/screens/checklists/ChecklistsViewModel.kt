@@ -57,7 +57,11 @@ class ChecklistsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.seedDefaultTemplatesIfEmpty()
+            val hasSeeded = prefs.getBoolean("has_seeded_initial_templates", false)
+            if (!hasSeeded) {
+                repository.seedDefaultTemplatesIfEmpty()
+                prefs.edit().putBoolean("has_seeded_initial_templates", true).apply()
+            }
         }
         
         viewModelScope.launch {

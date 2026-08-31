@@ -376,35 +376,31 @@ fun ChecklistCardItem(
                             },
                             leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = StatusConforme) }
                         )
-                        if (isUserCreated) {
-                            DropdownMenuItem(
-                                text = { Text("Editar") },
-                                onClick = {
-                                    menuExpanded = false
-                                    onEdit()
-                                },
-                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = PrimaryBlue) }
-                            )
-                        }
                         DropdownMenuItem(
-                            text = { Text(if (isUserCreated) "Duplicar" else "Usar Modelo (Criar Cópia)") },
+                            text = { Text("Editar") },
+                            onClick = {
+                                menuExpanded = false
+                                onEdit()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = PrimaryBlue) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Duplicar") },
                             onClick = {
                                 menuExpanded = false
                                 onDuplicate()
                             },
                             leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = PrimaryDark) }
                         )
-                        if (isUserCreated) {
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Excluir", color = StatusNaoConforme) },
-                                onClick = {
-                                    menuExpanded = false
-                                    onDelete()
-                                },
-                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
-                            )
-                        }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Excluir", color = StatusNaoConforme) },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
+                        )
                     }
                 }
             }

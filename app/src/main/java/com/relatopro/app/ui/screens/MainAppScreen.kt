@@ -63,6 +63,7 @@ fun MainAppScreen(
     val templates by dashboardViewModel.templates.collectAsState()
 
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
 
     if (showNewReportDialog) {
         NewReportDialog(
@@ -119,6 +120,26 @@ fun MainAppScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    var currentThemeMode by remember { mutableStateOf(prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM") }
+    val isDark = when (currentThemeMode) {
+        "DARK" -> true
+        "LIGHT" -> false
+        else -> isSystemDark
+    }
+
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "app_theme_mode") {
+                currentThemeMode = prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM"
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -181,6 +202,20 @@ fun MainAppScreen(
                                 Icon(Icons.Default.Menu, contentDescription = "Menu", tint = colors.textPrimary)
                             }
                         },
+                        actions = {
+                            IconButton(
+                                onClick = {
+                                    val nextMode = if (isDark) "LIGHT" else "DARK"
+                                    prefs.edit().putString("app_theme_mode", nextMode).apply()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                    contentDescription = if (isDark) "Modo Claro" else "Modo Escuro",
+                                    tint = if (isDark) Color(0xFFFBBF24) else colors.textPrimary
+                                )
+                            }
+                        },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
                     )
                 },
@@ -203,6 +238,28 @@ fun MainAppScreen(
 
 @Composable
 private fun DesktopTopBar(currentRoute: String?) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
+    var currentThemeMode by remember { mutableStateOf(prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM") }
+    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = when (currentThemeMode) {
+        "DARK" -> true
+        "LIGHT" -> false
+        else -> isSystemDark
+    }
+
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "app_theme_mode") {
+                currentThemeMode = prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM"
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
     val colors = AppTheme.colors
     val title = when {
         currentRoute?.startsWith("dashboard") == true -> "Dashboard"
@@ -232,7 +289,37 @@ private fun DesktopTopBar(currentRoute: String?) {
     ) {
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
         
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Theme Toggle Button
+            OutlinedButton(
+                onClick = {
+                    val nextMode = if (isDark) "LIGHT" else "DARK"
+                    prefs.edit().putString("app_theme_mode", nextMode).apply()
+                },
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = colors.surfaceVariant,
+                    contentColor = colors.textPrimary
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                    contentDescription = null,
+                    tint = if (isDark) Color(0xFFFBBF24) else colors.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = if (isDark) "Modo Claro" else "Modo Escuro",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
@@ -342,6 +429,23 @@ private fun PermanentSidebar(
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { SidebarCategory("CONFIGURAÇÕES") }
+            item {
+                val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+                val currentTheme = prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM"
+                val isDark = when (currentTheme) {
+                    "DARK" -> true
+                    "LIGHT" -> false
+                    else -> isSystemDark
+                }
+                SidebarItem(
+                    icon = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                    title = if (isDark) "Ativar Modo Claro" else "Ativar Modo Escuro",
+                    selected = false
+                ) {
+                    val nextMode = if (isDark) "LIGHT" else "DARK"
+                    prefs.edit().putString("app_theme_mode", nextMode).apply()
+                }
+            }
             item { SidebarItem(Icons.Default.Person, "Meu Perfil", currentRoute == "profile") { 
                 navController.navigate("profile") { popUpTo("dashboard") }
                 onItemClick() 

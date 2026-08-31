@@ -369,78 +369,120 @@ class PdfGenerator(private val context: Context) {
 
         currentY += thHeight + 4f
 
-        for ((index, field) in fields.withIndex()) {
-            val answer = answers.find { it.templateFieldId == field.id }
-            val normStatus = normalizeAnswer(answer?.answerValue)
-            val obsText = answer?.observation?.trim() ?: ""
-            val orderStr = String.format(Locale.getDefault(), "%02d", index + 1)
+        val groupedFields = fields.groupBy { it.category.ifBlank { "Geral" } }
+        var globalIndex = 0
 
-            @Suppress("DEPRECATION")
-            val questionLayout = StaticLayout(field.label, bodyPaint, 255, Layout.Alignment.ALIGN_NORMAL, 1.1f, 0.0f, false)
-            @Suppress("DEPRECATION")
-            val obsLayout = StaticLayout(if (obsText.isEmpty()) "—" else obsText, bodyMutedPaint, (usableWidth - 390).toInt(), Layout.Alignment.ALIGN_NORMAL, 1.1f, 0.0f, false)
-
-            val rowHeight = maxOf(questionLayout.height, obsLayout.height) + 14f
-
-            if (currentY + rowHeight > pageHeight - margin - 30f) {
+        for ((catName, catFields) in groupedFields) {
+            // Category Section Header
+            if (currentY + 30f > pageHeight - margin - 30f) {
                 startNewPage()
-                // Re-draw table header on new page
-                bgPaint.color = primaryDark
-                canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + thHeight), 4f, 4f, bgPaint)
-                canvas.drawText("Nº", c1, currentY + 15f, thTextPaint)
-                canvas.drawText("ITEM / DESCRIÇÃO", c2, currentY + 15f, thTextPaint)
-                canvas.drawText("STATUS", c3, currentY + 15f, thTextPaint)
-                canvas.drawText("OBSERVAÇÕES TÉCNICAS", c4, currentY + 15f, thTextPaint)
-                currentY += thHeight + 4f
             }
 
-            // Alternating row background
-            if (index % 2 == 1) {
-                bgPaint.color = bgLight
-                canvas.drawRect(margin, currentY, pageWidth - margin, currentY + rowHeight, bgPaint)
-            }
-
-            // Draw Nº
-            canvas.drawText(orderStr, c1, currentY + 12f, headerPaint)
-
-            // Draw Question
-            canvas.save()
-            canvas.translate(c2, currentY + 3f)
-            questionLayout.draw(canvas)
-            canvas.restore()
-
-            // Draw Status Badge
-            val badgeColor = when (normStatus) {
-                "C" -> colorConforme
-                "NC" -> colorNaoConforme
-                else -> colorNA
-            }
-            val badgeText = when (normStatus) {
-                "C" -> "CONFORME"
-                "NC" -> "NÃO CONF."
-                else -> "N/A"
-            }
-            bgPaint.color = badgeColor
-            val badgeWidth = 62f
-            canvas.drawRoundRect(RectF(c3, currentY + 2f, c3 + badgeWidth, currentY + 18f), 3f, 3f, bgPaint)
-            
-            val badgeTextPaint = TextPaint().apply {
-                color = Color.WHITE
-                textSize = 7.5f
+            bgPaint.color = Color.parseColor("#EBF2FF")
+            canvas.drawRoundRect(RectF(margin, currentY + 2f, pageWidth - margin, currentY + 20f), 3f, 3f, bgPaint)
+            val catHeaderPaint = TextPaint().apply {
+                color = primaryDark
+                textSize = 9.5f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 isAntiAlias = true
-                textAlign = Paint.Align.CENTER
             }
-            canvas.drawText(badgeText, c3 + (badgeWidth / 2), currentY + 13f, badgeTextPaint)
+            canvas.drawText("CATEGORIA: ${catName.uppercase(Locale.getDefault())}", margin + 8f, currentY + 14.5f, catHeaderPaint)
+            currentY += 24f
 
-            // Draw Obs
-            canvas.save()
-            canvas.translate(c4, currentY + 3f)
-            obsLayout.draw(canvas)
-            canvas.restore()
+            var catC = 0
+            var catNC = 0
+            var catNA = 0
 
-            currentY += rowHeight
-            canvas.drawLine(margin, currentY, pageWidth - margin, currentY, linePaint)
+            for (field in catFields) {
+                globalIndex++
+                val answer = answers.find { it.templateFieldId == field.id }
+                val normStatus = normalizeAnswer(answer?.answerValue)
+                val obsText = answer?.observation?.trim() ?: ""
+                val orderStr = String.format(Locale.getDefault(), "%02d", globalIndex)
+
+                when (normStatus) {
+                    "C" -> catC++
+                    "NC" -> catNC++
+                    else -> catNA++
+                }
+
+                @Suppress("DEPRECATION")
+                val questionLayout = StaticLayout(field.label, bodyPaint, 255, Layout.Alignment.ALIGN_NORMAL, 1.1f, 0.0f, false)
+                @Suppress("DEPRECATION")
+                val obsLayout = StaticLayout(if (obsText.isEmpty()) "—" else obsText, bodyMutedPaint, (usableWidth - 390).toInt(), Layout.Alignment.ALIGN_NORMAL, 1.1f, 0.0f, false)
+
+                val rowHeight = maxOf(questionLayout.height, obsLayout.height) + 14f
+
+                if (currentY + rowHeight > pageHeight - margin - 30f) {
+                    startNewPage()
+                    // Re-draw table header on new page
+                    bgPaint.color = primaryDark
+                    canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + thHeight), 4f, 4f, bgPaint)
+                    canvas.drawText("Nº", c1, currentY + 15f, thTextPaint)
+                    canvas.drawText("ITEM / DESCRIÇÃO", c2, currentY + 15f, thTextPaint)
+                    canvas.drawText("STATUS", c3, currentY + 15f, thTextPaint)
+                    canvas.drawText("OBSERVAÇÕES TÉCNICAS", c4, currentY + 15f, thTextPaint)
+                    currentY += thHeight + 4f
+                }
+
+                // Alternating row background
+                if (globalIndex % 2 == 1) {
+                    bgPaint.color = bgLight
+                    canvas.drawRect(margin, currentY, pageWidth - margin, currentY + rowHeight, bgPaint)
+                }
+
+                // Draw Nº
+                canvas.drawText(orderStr, c1, currentY + 12f, headerPaint)
+
+                // Draw Question
+                canvas.save()
+                canvas.translate(c2, currentY + 3f)
+                questionLayout.draw(canvas)
+                canvas.restore()
+
+                // Draw Status Badge
+                val badgeColor = when (normStatus) {
+                    "C" -> colorConforme
+                    "NC" -> colorNaoConforme
+                    else -> colorNA
+                }
+                val badgeText = when (normStatus) {
+                    "C" -> "CONFORME"
+                    "NC" -> "NÃO CONF."
+                    else -> "N/A"
+                }
+                bgPaint.color = badgeColor
+                val badgeWidth = 62f
+                canvas.drawRoundRect(RectF(c3, currentY + 2f, c3 + badgeWidth, currentY + 18f), 3f, 3f, bgPaint)
+                
+                val badgeTextPaint = TextPaint().apply {
+                    color = Color.WHITE
+                    textSize = 7.5f
+                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    isAntiAlias = true
+                    textAlign = Paint.Align.CENTER
+                }
+                canvas.drawText(badgeText, c3 + (badgeWidth / 2), currentY + 13f, badgeTextPaint)
+
+                // Draw Obs
+                canvas.save()
+                canvas.translate(c4, currentY + 3f)
+                obsLayout.draw(canvas)
+                canvas.restore()
+
+                currentY += rowHeight
+                canvas.drawLine(margin, currentY, pageWidth - margin, currentY, linePaint)
+            }
+
+            // Category Subtotal Footer
+            val catApp = catC + catNC
+            val catCompPct = if (catApp > 0) String.format(Locale.getDefault(), "%.1f%%", (catC.toFloat() / catApp.toFloat() * 100f)) else "100%"
+            val catSubtotalText = "Subtotal $catName: C: $catC | NC: $catNC | NA: $catNA | Conformidade: $catCompPct"
+            
+            bgPaint.color = Color.parseColor("#F8FAFC")
+            canvas.drawRect(margin, currentY, pageWidth - margin, currentY + 16f, bgPaint)
+            canvas.drawText(catSubtotalText, margin + 8f, currentY + 11.5f, bodyMutedPaint.apply { textSize = 8f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) })
+            currentY += 22f
         }
 
         currentY += 24f

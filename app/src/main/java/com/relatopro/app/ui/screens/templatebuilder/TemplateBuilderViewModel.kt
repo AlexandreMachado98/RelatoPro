@@ -34,6 +34,9 @@ class TemplateBuilderViewModel @Inject constructor(
     private val _templateDescription = MutableStateFlow("")
     val templateDescription: StateFlow<String> = _templateDescription.asStateFlow()
 
+    private val _categories = MutableStateFlow<List<String>>(listOf("Geral"))
+    val categories: StateFlow<List<String>> = _categories.asStateFlow()
+
     private val _fields = MutableStateFlow<List<TemplateFieldEntity>>(emptyList())
     val fields: StateFlow<List<TemplateFieldEntity>> = _fields.asStateFlow()
 
@@ -51,6 +54,9 @@ class TemplateBuilderViewModel @Inject constructor(
                 _templateDescription.value = template.description
                 val fieldsList = templateRepository.getTemplateFieldsList(templateId)
                 _fields.value = fieldsList
+
+                val distinctCats = fieldsList.map { it.category.ifBlank { "Geral" } }.distinct()
+                _categories.value = if (distinctCats.isNotEmpty()) distinctCats else listOf("Geral")
             }
         }
     }
@@ -67,46 +73,161 @@ class TemplateBuilderViewModel @Inject constructor(
         _templateDescription.value = desc
     }
 
-    fun addField(label: String, type: String, category: String = "Geral") {
+    // CATEGORY ACTIONS
+    fun addCategory(categoryName: String) {
+        val clean = categoryName.trim()
+        if (clean.isBlank()) return
+        if (!_categories.value.contains(clean)) {
+            _categories.value = _categories.value + clean
+        }
+    }
+
+    fun renameCategory(oldName: String, newName: String) {
+        val cleanNew = newName.trim()
+        if (cleanNew.isBlank() || oldName == cleanNew) return
+        val currentCats = _categories.value.toMutableList()
+        val idx = currentCats.indexOf(oldName)
+        if (idx != -1) {
+            currentCats[idx] = cleanNew
+            _categories.value = currentCats
+        }
+        val currentFields = _fields.value.map { field ->
+            if (field.category.equals(oldName, ignoreCase = true) || (oldName == "Geral" && field.category.isBlank())) {
+                field.copy(category = cleanNew)
+            } else {
+                field
+            }
+        }
+        _fields.value = currentFields
+    }
+
+    fun deleteCategory(categoryName: String) {
+        val currentCats = _categories.value.toMutableList()
+        currentCats.remove(categoryName)
+        _categories.value = currentCats
+        val filteredFields = _fields.value.filterNot { 
+            it.category.equals(categoryName, ignoreCase = true) || (categoryName == "Geral" && it.category.isBlank()) 
+        }
+        val reordered = filteredFields.mapIndexed { i, f -> f.copy(orderIndex = i) }
+        _fields.value = reordered
+    }
+
+    fun duplicateCategory(categoryName: String) {
+        val newCatName = "$categoryName (Cópia)"
+        _categories.value = _categories.value + newCatName
+        val fieldsToCopy = _fields.value.filter { 
+            it.category.equals(categoryName, ignoreCase = true) || (categoryName == "Geral" && it.category.isBlank()) 
+        }
+        val newCopiedFields = fieldsToCopy.map { f ->
+            f.copy(id = 0, category = newCatName)
+        }
+        val combined = _fields.value + newCopiedFields
+        val reordered = combined.mapIndexed { i, f -> f.copy(orderIndex = i) }
+        _fields.value = reordered
+    }
+
+    fun moveCategoryUp(categoryName: String) {
+        val currentCats = _categories.value.toMutableList()
+        val idx = currentCats.indexOf(categoryName)
+        if (idx > 0) {
+            val item = currentCats.removeAt(idx)
+            currentCats.add(idx - 1, item)
+            _categories.value = currentCats
+            reorderFieldsByCategories(currentCats)
+        }
+    }
+
+    fun moveCategoryDown(categoryName: String) {
+        val currentCats = _categories.value.toMutableList()
+        val idx = currentCats.indexOf(categoryName)
+        if (idx in 0 until currentCats.lastIndex) {
+            val item = currentCats.removeAt(idx)
+            currentCats.add(idx + 1, item)
+            _categories.value = currentCats
+            reorderFieldsByCategories(currentCats)
+        }
+    }
+
+    private fun reorderFieldsByCategories(categoryOrder: List<String>) {
+        val sortedFields = mutableListOf<TemplateFieldEntity>()
+        categoryOrder.forEach { cat ->
+            val catFields = _fields.value.filter { it.category.equals(cat, ignoreCase = true) || (cat == "Geral" && it.category.isBlank()) }
+            sortedFields.addAll(catFields)
+        }
+        val otherFields = _fields.value.filterNot { f ->
+            categoryOrder.any { cat -> f.category.equals(cat, ignoreCase = true) || (cat == "Geral" && f.category.isBlank()) }
+        }
+        sortedFields.addAll(otherFields)
+        val reordered = sortedFields.mapIndexed { i, f -> f.copy(orderIndex = i) }
+        _fields.value = reordered
+    }
+
+    // ITEM / QUESTION ACTIONS
+    fun addItemToCategory(categoryName: String, label: String, type: String = "C_NC_NA") {
+        val cleanLabel = label.trim()
+        if (cleanLabel.isBlank()) return
         val currentList = _fields.value.toMutableList()
         val newField = TemplateFieldEntity(
             templateId = editingTemplateId,
-            category = category,
-            label = label,
-            type = type, // e.g. "C_NC_NA", "TEXT", "PHOTO"
+            category = categoryName,
+            label = cleanLabel,
+            type = type,
             orderIndex = currentList.size,
-            isRequired = true,
+            isRequired = true
         )
         currentList.add(newField)
         _fields.value = currentList
+        if (!_categories.value.contains(categoryName)) {
+            _categories.value = _categories.value + categoryName
+        }
     }
 
-    fun removeField(index: Int) {
+    fun updateItem(globalIndex: Int, newLabel: String, newType: String) {
         val currentList = _fields.value.toMutableList()
-        if (index in currentList.indices) {
-            currentList.removeAt(index)
-            val reordered = currentList.mapIndexed { i, field -> field.copy(orderIndex = i) }
+        if (globalIndex in currentList.indices) {
+            val updated = currentList[globalIndex].copy(label = newLabel.trim(), type = newType)
+            currentList[globalIndex] = updated
+            _fields.value = currentList
+        }
+    }
+
+    fun duplicateItem(globalIndex: Int) {
+        val currentList = _fields.value.toMutableList()
+        if (globalIndex in currentList.indices) {
+            val original = currentList[globalIndex]
+            val copy = original.copy(id = 0, label = "${original.label} (Cópia)")
+            currentList.add(globalIndex + 1, copy)
+            val reordered = currentList.mapIndexed { i, f -> f.copy(orderIndex = i) }
             _fields.value = reordered
         }
     }
 
-    fun moveFieldUp(index: Int) {
-        if (index <= 0) return
+    fun removeItem(globalIndex: Int) {
         val currentList = _fields.value.toMutableList()
-        if (index in currentList.indices) {
-            val item = currentList.removeAt(index)
-            currentList.add(index - 1, item)
-            val reordered = currentList.mapIndexed { i, field -> field.copy(orderIndex = i) }
+        if (globalIndex in currentList.indices) {
+            currentList.removeAt(globalIndex)
+            val reordered = currentList.mapIndexed { i, f -> f.copy(orderIndex = i) }
             _fields.value = reordered
         }
     }
 
-    fun moveFieldDown(index: Int) {
+    fun moveItemUp(globalIndex: Int) {
+        if (globalIndex <= 0) return
         val currentList = _fields.value.toMutableList()
-        if (index in 0 until currentList.lastIndex) {
-            val item = currentList.removeAt(index)
-            currentList.add(index + 1, item)
-            val reordered = currentList.mapIndexed { i, field -> field.copy(orderIndex = i) }
+        if (globalIndex in currentList.indices) {
+            val item = currentList.removeAt(globalIndex)
+            currentList.add(globalIndex - 1, item)
+            val reordered = currentList.mapIndexed { i, f -> f.copy(orderIndex = i) }
+            _fields.value = reordered
+        }
+    }
+
+    fun moveItemDown(globalIndex: Int) {
+        val currentList = _fields.value.toMutableList()
+        if (globalIndex in 0 until currentList.lastIndex) {
+            val item = currentList.removeAt(globalIndex)
+            currentList.add(globalIndex + 1, item)
+            val reordered = currentList.mapIndexed { i, f -> f.copy(orderIndex = i) }
             _fields.value = reordered
         }
     }

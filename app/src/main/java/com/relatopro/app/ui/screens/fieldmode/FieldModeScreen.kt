@@ -626,12 +626,27 @@ fun ChecklistStepContent(
     }
 
     val answeredCount = answers.values.count { !it.answerValue.isNullOrBlank() }
+    val categoriesGrouped = fields.groupBy { it.category.ifBlank { "Geral" } }
+
+    var totalC = 0
+    var totalNC = 0
+    var totalNA = 0
+    answers.values.forEach { ans ->
+        when (ans.answerValue?.trim()?.uppercase()) {
+            "C", "CONFORME", "TRUE", "SIM" -> totalC++
+            "NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO" -> totalNC++
+            "NA", "N/A", "NÃO APLICÁVEL", "NAO APLICAVEL" -> totalNA++
+        }
+    }
+    val applicable = totalC + totalNC
+    val generalComp = if (applicable > 0) (totalC.toFloat() / applicable.toFloat() * 100f) else null
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
+        // Top Toolbar
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -663,105 +678,167 @@ fun ChecklistStepContent(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
         }
 
-        items(fields.size) { index ->
-            val field = fields[index]
-            val answer = answers[field.id]
-            val answerValue = answer?.answerValue
-            
+        // Category Groups
+        categoriesGrouped.forEach { (catName, catFields) ->
+            var catC = 0
+            var catNC = 0
+            var catNA = 0
+            catFields.forEach { f ->
+                val ans = answers[f.id]
+                when (ans?.answerValue?.trim()?.uppercase()) {
+                    "C", "CONFORME", "TRUE", "SIM" -> catC++
+                    "NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO" -> catNC++
+                    "NA", "N/A", "NÃO APLICÁVEL", "NAO APLICAVEL" -> catNA++
+                }
+            }
+            val catApp = catC + catNC
+            val catCompPercent = if (catApp > 0) String.format(Locale.getDefault(), "%.0f%%", (catC.toFloat() / catApp.toFloat() * 100f)) else "—"
+
+            item(key = "cat_header_$catName") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = PrimaryDark.copy(alpha = 0.05f)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Folder, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(catName.uppercase(), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = PrimaryDark)
+                        }
+                        Text("C: $catC • NC: $catNC • Conf: $catCompPercent", fontSize = 11.sp, color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            items(catFields.size) { itemIndex ->
+                val field = catFields[itemIndex]
+                val answer = answers[field.id]
+                val answerValue = answer?.answerValue
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .background(BackgroundLight, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = String.format("%02d", itemIndex + 1),
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = field.label,
+                                fontWeight = FontWeight.Medium,
+                                color = TextPrimary,
+                                fontSize = 14.sp,
+                                modifier = Modifier.weight(1f),
+                                lineHeight = 18.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ComplianceChip("Conforme", "C", StatusConforme, answerValue?.uppercase() in listOf("C", "CONFORME", "TRUE", "SIM")) {
+                                    onUpdateAnswer(field.id, "C", answer?.observation)
+                                }
+                                ComplianceChip("Não Conforme", "NC", StatusNaoConforme, answerValue?.uppercase() in listOf("NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO")) {
+                                    onUpdateAnswer(field.id, "NC", answer?.observation)
+                                }
+                                ComplianceChip("N/A", "NA", StatusNaoAplicavel, answerValue?.uppercase() in listOf("NA", "N/A", "NÃO APLICÁVEL", "NAO APLICAVEL")) {
+                                    onUpdateAnswer(field.id, "NA", answer?.observation)
+                                }
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                IconButton(
+                                    onClick = { onLaunchCamera(field.id) },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.CameraAlt, contentDescription = "Foto", tint = PrimaryBlue, modifier = Modifier.size(18.dp))
+                                }
+                                IconButton(
+                                    onClick = {
+                                        selectedFieldId = field.id
+                                        showBottomSheet = true
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.ChatBubbleOutline,
+                                        contentDescription = "Comentário",
+                                        tint = if (answer?.observation.isNullOrBlank()) TextSecondary else PrimaryBlue,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (!answer?.observation.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(BackgroundLight, RoundedCornerShape(6.dp))
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = "Obs: ${answer?.observation}",
+                                    fontSize = 12.sp,
+                                    color = TextSecondary,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom Inspection Summary Card
+        item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
                 border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                shape = RoundedCornerShape(10.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .background(BackgroundLight, RoundedCornerShape(4.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = String.format("%02d", index + 1),
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                                fontSize = 11.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = field.label,
-                            fontWeight = FontWeight.Medium,
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            modifier = Modifier.weight(1f),
-                            lineHeight = 18.sp
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(14.dp))
-                    
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ComplianceChip("Conforme", "C", StatusConforme, answerValue == "Conforme") {
-                                onUpdateAnswer(field.id, "Conforme", answer?.observation)
-                            }
-                            ComplianceChip("Não Conforme", "NC", StatusNaoConforme, answerValue == "Não Conforme") {
-                                onUpdateAnswer(field.id, "Não Conforme", answer?.observation)
-                            }
-                            ComplianceChip("N/A", "NA", StatusNaoAplicavel, answerValue == "N/A") {
-                                onUpdateAnswer(field.id, "N/A", answer?.observation)
-                            }
-                        }
-                        
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            IconButton(
-                                onClick = { onLaunchCamera(field.id) },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = "Foto", tint = PrimaryBlue, modifier = Modifier.size(18.dp))
-                            }
-                            IconButton(
-                                onClick = { 
-                                    selectedFieldId = field.id
-                                    showBottomSheet = true
-                                },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    Icons.Outlined.ChatBubbleOutline,
-                                    contentDescription = "Comentário",
-                                    tint = if (answer?.observation.isNullOrBlank()) TextSecondary else PrimaryBlue,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                        Text("Resultado Geral da Vistoria", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        if (generalComp != null) {
+                            Text("${String.format(Locale.getDefault(), "%.1f", generalComp)}% Conformidade", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (generalComp >= 80f) StatusConforme else StatusNaoConforme)
                         }
                     }
-
-                    if (!answer?.observation.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(BackgroundLight, RoundedCornerShape(6.dp))
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = "Obs: ${answer?.observation}",
-                                fontSize = 12.sp,
-                                color = TextSecondary,
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                            )
-                        }
-                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("Total: ${fields.size} itens • C: $totalC • NC: $totalNC • NA: $totalNA", fontSize = 12.sp, color = TextSecondary)
                 }
             }
         }

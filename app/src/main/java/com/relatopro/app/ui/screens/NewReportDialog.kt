@@ -14,11 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.data.local.entity.TemplateEntity
-import com.relatopro.app.ui.theme.BackgroundLight
-import com.relatopro.app.ui.theme.PrimaryBlue
-import com.relatopro.app.ui.theme.SurfaceWhite
-import com.relatopro.app.ui.theme.TextPrimary
-import com.relatopro.app.ui.theme.TextSecondary
+import com.relatopro.app.ui.theme.AppTheme
 
 @Composable
 fun NewReportDialog(
@@ -26,15 +22,17 @@ fun NewReportDialog(
     onDismiss: () -> Unit,
     onTemplateSelected: (Long) -> Unit
 ) {
+    val colors = AppTheme.colors
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Novo Relatório", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary) },
+        title = { Text("Novo Relatório", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Selecione o modelo de checklist a ser utilizado:", fontSize = 13.sp, color = TextSecondary)
+                Text("Selecione o modelo de checklist a ser utilizado:", fontSize = 13.sp, color = colors.textSecondary)
                 Spacer(modifier = Modifier.height(4.dp))
                 if (templates.isEmpty()) {
-                    Text("Nenhum modelo cadastrado.", color = TextSecondary)
+                    Text("Nenhum modelo cadastrado.", color = colors.textSecondary)
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
                         items(templates.size) { index ->
@@ -45,14 +43,14 @@ fun NewReportDialog(
                                         .fillMaxWidth()
                                         .clickable { onTemplateSelected(template.id) }
                                         .padding(vertical = 4.dp),
-                                    colors = CardDefaults.cardColors(containerColor = BackgroundLight),
+                                    colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
+                                        Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Row(
@@ -60,13 +58,13 @@ fun NewReportDialog(
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary, modifier = Modifier.weight(1f))
+                                                Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary, modifier = Modifier.weight(1f))
                                                 if (!template.isGlobal) {
-                                                    Text("Meu Checklist", color = PrimaryBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                                    Text("Meu Checklist", color = colors.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                                 }
                                             }
                                             Spacer(Modifier.height(2.dp))
-                                            Text(template.category.ifBlank { template.description.ifBlank { "Checklist de Campo" } }, fontSize = 11.sp, color = TextSecondary)
+                                            Text(template.category.ifBlank { template.description.ifBlank { "Checklist de Campo" } }, fontSize = 11.sp, color = colors.textSecondary)
                                         }
                                     }
                                 }
@@ -79,9 +77,9 @@ fun NewReportDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = TextSecondary)
+                Text("Cancelar", color = colors.textSecondary)
             }
         },
-        containerColor = SurfaceWhite
+        containerColor = colors.surface
     )
 }

@@ -39,6 +39,7 @@ fun DashboardScreen(
     onNavigateToMyReports: () -> Unit,
     onNavigateToIndicators: () -> Unit = {}
 ) {
+    val colors = AppTheme.colors
     val templates by viewModel.templates.collectAsState()
     var showTemplateSelector by remember { mutableStateOf(false) }
 
@@ -51,7 +52,7 @@ fun DashboardScreen(
     val drafts = reportsList.count { it.status == "DRAFT" }
     val pendingReports = reportsList.count { it.syncStatus == "PENDING" && it.status == "FINALIZED" }
 
-    Box(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
+    Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp)
@@ -65,10 +66,10 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = paddingH),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        SummaryCard(Modifier.weight(1f), "Total de Relatórios", totalReports, "Todos os registros", Icons.AutoMirrored.Filled.ListAlt, PrimaryBlue)
-                        SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Finalizados", Icons.Default.CheckCircle, StatusConforme)
-                        SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, StatusWarning)
-                        SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, StatusNaoConforme)
+                        SummaryCard(Modifier.weight(1f), "Total de Relatórios", totalReports, "Todos os registros", Icons.AutoMirrored.Filled.ListAlt, colors.primary)
+                        SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Finalizados", Icons.Default.CheckCircle, colors.statusConforme)
+                        SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, colors.statusWarning)
+                        SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, colors.statusNaoConforme)
                     }
                 } else {
                     Column(
@@ -76,12 +77,12 @@ fun DashboardScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            SummaryCard(Modifier.weight(1f), "Total", totalReports, "Todos os registros", Icons.AutoMirrored.Filled.ListAlt, PrimaryBlue)
-                            SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Finalizados", Icons.Default.CheckCircle, StatusConforme)
+                            SummaryCard(Modifier.weight(1f), "Total", totalReports, "Todos os registros", Icons.AutoMirrored.Filled.ListAlt, colors.primary)
+                            SummaryCard(Modifier.weight(1f), "Concluídos", completedReports, "Finalizados", Icons.Default.CheckCircle, colors.statusConforme)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, StatusWarning)
-                            SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, StatusNaoConforme)
+                            SummaryCard(Modifier.weight(1f), "Rascunhos", drafts, "Em andamento", Icons.Default.Edit, colors.statusWarning)
+                            SummaryCard(Modifier.weight(1f), "Pendentes", pendingReports, "Aguardando envio", Icons.Default.Info, colors.statusNaoConforme)
                         }
                     }
                 }
@@ -125,67 +126,72 @@ fun DashboardScreen(
     if (showTemplateSelector) {
         AlertDialog(
             onDismissRequest = { showTemplateSelector = false },
-            title = { Text("Escolher Modelo") },
+            title = { Text("Escolher Modelo", fontWeight = FontWeight.Bold, color = colors.textPrimary) },
             text = {
                 if (templates.isEmpty()) {
-                    Text("Nenhum Modelo encontrado.")
+                    Text("Nenhum Modelo encontrado.", color = colors.textSecondary)
                 } else {
                     LazyColumn {
                         items(templates) { template ->
                             ListItem(
-                                headlineContent = { Text(template.name) },
+                                headlineContent = { Text(template.name, color = colors.textPrimary) },
                                 modifier = Modifier.clickable {
                                     showTemplateSelector = false
                                     onNavigateToFieldMode(template.id)
-                                }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = colors.surface)
                             )
                         }
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showTemplateSelector = false }) { Text("Cancelar") } }
+            confirmButton = { TextButton(onClick = { showTemplateSelector = false }) { Text("Cancelar", color = colors.textSecondary) } },
+            containerColor = colors.surface
         )
     }
 }
 
 @Composable
 fun SummaryCard(modifier: Modifier, title: String, value: Int, subtitle: String, icon: ImageVector, iconColor: Color) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier.height(110.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
     ) {
         Column(modifier = Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(title, color = colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Box(
-                    modifier = Modifier.size(24.dp).background(iconColor.copy(alpha = 0.1f), CircleShape),
+                    modifier = Modifier.size(24.dp).background(iconColor.copy(alpha = 0.15f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(14.dp))
                 }
             }
-            Text(value.toString(), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 32.sp)
-            Text(subtitle, color = TextSecondary, fontSize = 11.sp)
+            Text(value.toString(), color = colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+            Text(subtitle, color = colors.textSecondary, fontSize = 11.sp)
         }
     }
 }
 
 @Composable
 fun DonutChartCard(modifier: Modifier, total: Int, completed: Int, drafts: Int, pending: Int) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier.height(280.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxSize()) {
-            Text("Relatórios por Status", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            Text("Relatórios por Status", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
             Spacer(modifier = Modifier.weight(1f))
             
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.size(140.dp)) {
+                    val trackColor = colors.surfaceVariant
                     Canvas(modifier = Modifier.size(140.dp)) {
                         val strokeWidth = 36f
                         val t = if (total > 0) total.toFloat() else 1f
@@ -195,22 +201,24 @@ fun DonutChartCard(modifier: Modifier, total: Int, completed: Int, drafts: Int, 
                         
                         var currentAngle = -90f
                         
-                        // Green (Concluídos)
-                        drawArc(color = StatusConforme, startAngle = currentAngle, sweepAngle = if (total == 0) 360f else cAngle, useCenter = false, style = Stroke(strokeWidth))
-                        currentAngle += cAngle
-                        
-                        // Blue (Rascunhos)
-                        if (total > 0) {
-                            drawArc(color = PrimaryBlue, startAngle = currentAngle, sweepAngle = dAngle, useCenter = false, style = Stroke(strokeWidth))
+                        if (total == 0) {
+                            drawArc(color = trackColor, startAngle = 0f, sweepAngle = 360f, useCenter = false, style = Stroke(strokeWidth))
+                        } else {
+                            // Green (Concluídos)
+                            drawArc(color = colors.statusConforme, startAngle = currentAngle, sweepAngle = cAngle, useCenter = false, style = Stroke(strokeWidth))
+                            currentAngle += cAngle
+                            
+                            // Blue (Rascunhos)
+                            drawArc(color = colors.primary, startAngle = currentAngle, sweepAngle = dAngle, useCenter = false, style = Stroke(strokeWidth))
                             currentAngle += dAngle
                             
                             // Orange (Pendentes)
-                            drawArc(color = StatusWarning, startAngle = currentAngle, sweepAngle = pAngle, useCenter = false, style = Stroke(strokeWidth))
+                            drawArc(color = colors.statusWarning, startAngle = currentAngle, sweepAngle = pAngle, useCenter = false, style = Stroke(strokeWidth))
                         }
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(total.toString(), fontWeight = FontWeight.Bold, fontSize = 28.sp, color = TextPrimary)
-                        Text("Total", fontSize = 12.sp, color = TextSecondary)
+                        Text(total.toString(), fontWeight = FontWeight.Bold, fontSize = 28.sp, color = colors.textPrimary)
+                        Text("Total", fontSize = 12.sp, color = colors.textSecondary)
                     }
                 }
                 
@@ -218,9 +226,9 @@ fun DonutChartCard(modifier: Modifier, total: Int, completed: Int, drafts: Int, 
                 
                 // Legend
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LegendItem("Concluídos", "$completed", StatusConforme)
-                    LegendItem("Rascunhos", "$drafts", PrimaryBlue)
-                    LegendItem("Pendentes", "$pending", StatusWarning)
+                    LegendItem("Concluídos", "$completed", colors.statusConforme)
+                    LegendItem("Rascunhos", "$drafts", colors.primary)
+                    LegendItem("Pendentes", "$pending", colors.statusWarning)
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
@@ -230,31 +238,33 @@ fun DonutChartCard(modifier: Modifier, total: Int, completed: Int, drafts: Int, 
 
 @Composable
 fun LegendItem(label: String, value: String, color: Color) {
+    val colors = AppTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(label, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.width(70.dp))
-        Text(value, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text(label, color = colors.textSecondary, fontSize = 12.sp, modifier = Modifier.width(70.dp))
+        Text(value, color = colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
     }
 }
 
 @Composable
 fun RecentActivityCard(modifier: Modifier, reports: List<ReportEntity>) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier.height(280.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxSize()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Atividade Recente", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                Text("Atividade Recente", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
             }
             Spacer(modifier = Modifier.height(16.dp))
             
             if (reports.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nenhuma atividade registrada.", color = TextSecondary)
+                    Text("Nenhuma atividade registrada.", color = colors.textSecondary)
                 }
             } else {
                 val recentReports = reports.sortedByDescending { it.date }.take(4)
@@ -272,16 +282,16 @@ fun RecentActivityCard(modifier: Modifier, reports: List<ReportEntity>) {
                         }
                         
                         val statusColor = when(report.status) {
-                            "DRAFT" -> PrimaryBlue
-                            "FINALIZED" -> StatusConforme
-                            "SENT" -> StatusConforme
-                            else -> StatusWarning
+                            "DRAFT" -> colors.primary
+                            "FINALIZED" -> colors.statusConforme
+                            "SENT" -> colors.statusConforme
+                            else -> colors.statusWarning
                         }
                         
                         com.relatopro.app.ui.components.animation.AnimatedListItem(index = idx) {
                             RecentRow(report.title.ifEmpty { "Relatório #${report.id}" }, report.location, statusText, statusColor, dateStr)
                         }
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                     }
                 }
             }
@@ -291,28 +301,29 @@ fun RecentActivityCard(modifier: Modifier, reports: List<ReportEntity>) {
 
 @Composable
 fun RecentRow(title: String, subtitle: String, statusText: String, statusColor: Color, date: String) {
+    val colors = AppTheme.colors
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Description, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.Description, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Column {
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary, maxLines = 1)
-                Text(subtitle, fontSize = 11.sp, color = TextSecondary, maxLines = 1)
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary, maxLines = 1)
+                Text(subtitle, fontSize = 11.sp, color = colors.textSecondary, maxLines = 1)
             }
         }
         
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.background(statusColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 2.dp)
+                modifier = Modifier.background(statusColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
                 Text(statusText, color = statusColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Text(date, color = TextSecondary, fontSize = 11.sp, modifier = Modifier.width(90.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+            Text(date, color = colors.textSecondary, fontSize = 11.sp, modifier = Modifier.width(90.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
         }
     }
 }
@@ -325,14 +336,15 @@ fun QuickActionsCard(
     onMyReports: () -> Unit,
     onIndicators: () -> Unit = {}
 ) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier.height(180.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-            Text("Ações Rápidas", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            Text("Ações Rápidas", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
             Spacer(modifier = Modifier.weight(1f))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -347,6 +359,7 @@ fun QuickActionsCard(
 
 @Composable
 fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
+    val colors = AppTheme.colors
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable { onClick() }.width(80.dp)
@@ -354,12 +367,13 @@ fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .border(1.dp, BorderColor, RoundedCornerShape(12.dp)),
+                .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
+                .border(1.dp, colors.border, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = colors.primary, modifier = Modifier.size(24.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(label, color = TextPrimary, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = colors.textPrimary, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
     }
 }

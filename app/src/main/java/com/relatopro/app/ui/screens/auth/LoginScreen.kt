@@ -33,6 +33,7 @@ fun LoginScreen(
     onNavigateToDashboard: () -> Unit
 ) {
     val context = LocalContext.current
+    val colors = AppTheme.colors
     var isLoading by remember { mutableStateOf(false) }
 
     val completeGoogleLogin: (String, String, String?) -> Unit = { name, email, photoUrl ->
@@ -148,7 +149,7 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundLight)
+            .background(colors.background)
             .padding(24.dp)
     ) {
         Column(
@@ -174,7 +175,7 @@ fun LoginScreen(
                 text = "Relato Pro",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryDark
+                color = colors.textPrimary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -182,7 +183,7 @@ fun LoginScreen(
             Text(
                 text = "Relatórios profissionais\nde forma simples e eficiente.",
                 fontSize = 15.sp,
-                color = TextSecondary,
+                color = colors.textSecondary,
                 textAlign = TextAlign.Center,
                 lineHeight = 22.sp
             )
@@ -210,10 +211,10 @@ fun LoginScreen(
                     .height(52.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = SurfaceWhite,
-                    contentColor = TextPrimary
+                    containerColor = colors.surface,
+                    contentColor = colors.textPrimary
                 ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 4.dp)
             ) {
                 if (isLoading) {
@@ -221,11 +222,11 @@ fun LoginScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = PrimaryBlue)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = colors.primary)
                         Spacer(Modifier.width(10.dp))
                         Text(
                             text = "Conectando ao Google...",
-                            color = TextPrimary,
+                            color = colors.textPrimary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -243,7 +244,7 @@ fun LoginScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Continuar com o Google",
-                            color = TextPrimary,
+                            color = colors.textPrimary,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -256,7 +257,7 @@ fun LoginScreen(
             // Disclaimer / Terms
             Text(
                 text = "Ao continuar, você concorda com os Termos de Uso\ne com a Política de Privacidade do Relato Pro.",
-                color = TextSecondary.copy(alpha = 0.7f),
+                color = colors.textSecondary.copy(alpha = 0.7f),
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
                 lineHeight = 16.sp

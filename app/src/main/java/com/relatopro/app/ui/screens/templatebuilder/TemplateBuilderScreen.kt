@@ -30,6 +30,7 @@ fun TemplateBuilderScreen(
     viewModel: TemplateBuilderViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val colors = AppTheme.colors
     val name by viewModel.templateName.collectAsState()
     val description by viewModel.templateDescription.collectAsState()
     val categories by viewModel.categories.collectAsState()
@@ -50,7 +51,7 @@ fun TemplateBuilderScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = colors.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -58,19 +59,19 @@ fun TemplateBuilderScreen(
                         text = if (templateId > 0L) "Editar Checklist" else "Novo Checklist",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
                 actions = {
                     Button(
                         onClick = { viewModel.saveTemplate(onNavigateBack) },
                         enabled = name.isNotBlank() && !isSaving,
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
@@ -81,7 +82,7 @@ fun TemplateBuilderScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
             )
         }
     ) { paddingValues ->
@@ -96,12 +97,12 @@ fun TemplateBuilderScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Dados Gerais do Modelo", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+                        Text("Dados Gerais do Modelo", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.textPrimary)
                         
                         OutlinedTextField(
                             value = name,
@@ -112,8 +113,12 @@ fun TemplateBuilderScreen(
                             shape = RoundedCornerShape(8.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryBlue,
-                                unfocusedBorderColor = BorderColor
+                                focusedBorderColor = colors.primary,
+                                unfocusedBorderColor = colors.border,
+                                focusedContainerColor = colors.surface,
+                                unfocusedContainerColor = colors.surface,
+                                focusedTextColor = colors.textPrimary,
+                                unfocusedTextColor = colors.textPrimary
                             )
                         )
 
@@ -126,8 +131,12 @@ fun TemplateBuilderScreen(
                             shape = RoundedCornerShape(8.dp),
                             minLines = 2,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryBlue,
-                                unfocusedBorderColor = BorderColor
+                                focusedBorderColor = colors.primary,
+                                unfocusedBorderColor = colors.border,
+                                focusedContainerColor = colors.surface,
+                                unfocusedContainerColor = colors.surface,
+                                focusedTextColor = colors.textPrimary,
+                                unfocusedTextColor = colors.textPrimary
                             )
                         )
                     }
@@ -183,8 +192,8 @@ fun TemplateBuilderScreen(
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryBlue),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, PrimaryBlue)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, colors.primary)
                 ) {
                     Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
@@ -228,7 +237,7 @@ fun TemplateBuilderScreen(
         val count = fields.count { it.category.equals(cat, ignoreCase = true) || (cat == "Geral" && it.category.isBlank()) }
         AlertDialog(
             onDismissRequest = { categoryToDelete = null },
-            title = { Text("Excluir Categoria?", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            title = { Text("Excluir Categoria?", fontWeight = FontWeight.Bold, color = colors.textPrimary) },
             text = {
                 Text(
                     text = if (count > 0) {
@@ -237,7 +246,7 @@ fun TemplateBuilderScreen(
                         "Deseja excluir a categoria \"$cat\"?"
                     },
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = colors.textSecondary
                 )
             },
             confirmButton = {
@@ -246,17 +255,17 @@ fun TemplateBuilderScreen(
                         viewModel.deleteCategory(cat)
                         categoryToDelete = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusNaoConforme)
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.statusNaoConforme)
                 ) {
                     Text("Excluir", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { categoryToDelete = null }) {
-                    Text("Cancelar", color = TextSecondary)
+                    Text("Cancelar", color = colors.textSecondary)
                 }
             },
-            containerColor = SurfaceWhite
+            containerColor = colors.surface
         )
     }
 
@@ -313,10 +322,12 @@ fun CategoryCardBlock(
     onMoveItemDown: (TemplateFieldEntity) -> Unit,
     onRemoveItem: (TemplateFieldEntity) -> Unit
 ) {
+    val colors = AppTheme.colors
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
@@ -331,10 +342,10 @@ fun CategoryCardBlock(
                     Box(
                         modifier = Modifier
                             .size(34.dp)
-                            .background(PrimaryBlue.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
+                            .background(colors.primary.copy(alpha = 0.12f), RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Folder, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Folder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -342,13 +353,13 @@ fun CategoryCardBlock(
                             text = categoryName.uppercase(),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
-                            color = PrimaryDark,
+                            color = colors.textPrimary,
                             maxLines = 1
                         )
                         Text(
                             text = "${categoryFields.size} item(ns)",
                             fontSize = 11.sp,
-                            color = TextSecondary
+                            color = colors.textSecondary
                         )
                     }
                 }
@@ -357,38 +368,38 @@ fun CategoryCardBlock(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (catIndex > 0) {
                         IconButton(onClick = onMoveCategoryUp, modifier = Modifier.size(30.dp)) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir Categoria", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir Categoria", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                         }
                     }
                     if (catIndex < totalCategories - 1) {
                         IconButton(onClick = onMoveCategoryDown, modifier = Modifier.size(30.dp)) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer Categoria", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer Categoria", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                         }
                     }
                     IconButton(onClick = onDuplicateCategory, modifier = Modifier.size(30.dp)) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Duplicar Categoria", tint = PrimaryBlue, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.ContentCopy, contentDescription = "Duplicar Categoria", tint = colors.primary, modifier = Modifier.size(16.dp))
                     }
                     IconButton(onClick = onRenameCategory, modifier = Modifier.size(30.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Renomear Categoria", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, contentDescription = "Renomear Categoria", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
                     }
                     IconButton(onClick = onDeleteCategory, modifier = Modifier.size(30.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Excluir Categoria", tint = StatusNaoConforme, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, contentDescription = "Excluir Categoria", tint = colors.statusNaoConforme, modifier = Modifier.size(16.dp))
                     }
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = BorderColor.copy(alpha = 0.6f))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.border.copy(alpha = 0.6f))
 
             // Items List
             if (categoryFields.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(BackgroundLight, RoundedCornerShape(8.dp))
+                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Nenhum item cadastrado nesta categoria.", fontSize = 12.sp, color = TextSecondary)
+                    Text("Nenhum item cadastrado nesta categoria.", fontSize = 12.sp, color = colors.textSecondary)
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -412,7 +423,7 @@ fun CategoryCardBlock(
             // Add Item inside this category button
             Button(
                 onClick = onAddItem,
-                colors = ButtonDefaults.buttonColors(containerColor = BackgroundLight, contentColor = PrimaryBlue),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.surfaceVariant, contentColor = colors.primary),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth().height(38.dp),
                 contentPadding = PaddingValues(0.dp)
@@ -436,6 +447,7 @@ fun ItemRowCard(
     onMoveDown: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val colors = AppTheme.colors
     val typeBadge = when (field.type) {
         "TEXT" -> "Texto Livre"
         "PHOTO" -> "Foto"
@@ -445,8 +457,8 @@ fun ItemRowCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BackgroundLight, RoundedCornerShape(8.dp))
-            .border(1.dp, BorderColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+            .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
             .padding(10.dp)
     ) {
         Row(
@@ -458,10 +470,10 @@ fun ItemRowCard(
                 Box(
                     modifier = Modifier
                         .size(22.dp)
-                        .background(PrimaryDark.copy(alpha = 0.08f), RoundedCornerShape(4.dp)),
+                        .background(colors.primary.copy(alpha = 0.15f), RoundedCornerShape(4.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("${itemIndex + 1}", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = PrimaryDark)
+                    Text("${itemIndex + 1}", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = colors.primary)
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -469,13 +481,13 @@ fun ItemRowCard(
                         text = field.label,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = "Resposta: $typeBadge",
                         fontSize = 11.sp,
-                        color = PrimaryBlue,
+                        color = colors.primary,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -484,22 +496,22 @@ fun ItemRowCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (itemIndex > 0) {
                     IconButton(onClick = onMoveUp, modifier = Modifier.size(26.dp)) {
-                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
                     }
                 }
                 if (itemIndex < totalItemsInCategory - 1) {
                     IconButton(onClick = onMoveDown, modifier = Modifier.size(26.dp)) {
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
                     }
                 }
                 IconButton(onClick = onDuplicate, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Duplicar Item", tint = PrimaryBlue, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Duplicar Item", tint = colors.primary, modifier = Modifier.size(14.dp))
                 }
                 IconButton(onClick = onEdit, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar Item", tint = TextSecondary, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Edit, contentDescription = "Editar Item", tint = colors.textSecondary, modifier = Modifier.size(14.dp))
                 }
                 IconButton(onClick = onRemove, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Remover Item", tint = StatusNaoConforme, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Delete, contentDescription = "Remover Item", tint = colors.statusNaoConforme, modifier = Modifier.size(14.dp))
                 }
             }
         }
@@ -513,14 +525,15 @@ fun AddOrEditCategoryDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
+    val colors = AppTheme.colors
     var categoryName by remember { mutableStateOf(initialName) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 17.sp) },
+        title = { Text(title, fontWeight = FontWeight.Bold, color = colors.textPrimary, fontSize = 17.sp) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text("Título da Categoria", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+                Text("Título da Categoria", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textSecondary)
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
                     value = categoryName,
@@ -530,8 +543,12 @@ fun AddOrEditCategoryDialog(
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryBlue,
-                        unfocusedBorderColor = BorderColor
+                        focusedBorderColor = colors.primary,
+                        unfocusedBorderColor = colors.border,
+                        focusedContainerColor = colors.surface,
+                        unfocusedContainerColor = colors.surface,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
                     )
                 )
             }
@@ -540,17 +557,17 @@ fun AddOrEditCategoryDialog(
             Button(
                 onClick = { if (categoryName.isNotBlank()) onConfirm(categoryName.trim()) },
                 enabled = categoryName.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
             ) {
-                Text("Salvar Categoria", fontWeight = FontWeight.Bold)
+                Text("Salvar Categoria", fontWeight = FontWeight.Bold, color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = TextSecondary)
+                Text("Cancelar", color = colors.textSecondary)
             }
         },
-        containerColor = SurfaceWhite
+        containerColor = colors.surface
     )
 }
 
@@ -562,6 +579,7 @@ fun AddOrEditItemDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit
 ) {
+    val colors = AppTheme.colors
     var label by remember { mutableStateOf(initialLabel) }
     var type by remember { mutableStateOf(initialType) }
 
@@ -573,11 +591,11 @@ fun AddOrEditItemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(dialogTitle, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 17.sp) },
+        title = { Text(dialogTitle, fontWeight = FontWeight.Bold, color = colors.textPrimary, fontSize = 17.sp) },
         text = {
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column {
-                    Text("Título da Pergunta / Item *", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+                    Text("Título da Pergunta / Item *", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textSecondary)
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
                         value = label,
@@ -588,14 +606,18 @@ fun AddOrEditItemDialog(
                         maxLines = 3,
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryBlue,
-                            unfocusedBorderColor = BorderColor
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border,
+                            focusedContainerColor = colors.surface,
+                            unfocusedContainerColor = colors.surface,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
                         )
                     )
                 }
 
                 Column {
-                    Text("Tipo de Resposta", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+                    Text("Tipo de Resposta", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textSecondary)
                     Spacer(Modifier.height(6.dp))
                     types.forEach { (typeKey, typeTitle, typeIcon) ->
                         val isSelected = type == typeKey
@@ -603,15 +625,15 @@ fun AddOrEditItemDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) PrimaryBlue.copy(alpha = 0.08f) else Color.Transparent)
-                                .border(1.dp, if (isSelected) PrimaryBlue else BorderColor, RoundedCornerShape(8.dp))
+                                .background(if (isSelected) colors.primary.copy(alpha = 0.12f) else Color.Transparent)
+                                .border(1.dp, if (isSelected) colors.primary else colors.border, RoundedCornerShape(8.dp))
                                 .clickable { type = typeKey }
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(typeIcon, contentDescription = null, tint = if (isSelected) PrimaryBlue else TextSecondary, modifier = Modifier.size(18.dp))
+                            Icon(typeIcon, contentDescription = null, tint = if (isSelected) colors.primary else colors.textSecondary, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(10.dp))
-                            Text(typeTitle, fontSize = 12.sp, color = if (isSelected) PrimaryBlue else TextPrimary, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            Text(typeTitle, fontSize = 12.sp, color = if (isSelected) colors.primary else colors.textPrimary, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                         }
                         Spacer(Modifier.height(6.dp))
                     }
@@ -622,16 +644,16 @@ fun AddOrEditItemDialog(
             Button(
                 onClick = { if (label.isNotBlank()) onConfirm(label.trim(), type) },
                 enabled = label.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
             ) {
-                Text("Salvar Item", fontWeight = FontWeight.Bold)
+                Text("Salvar Item", fontWeight = FontWeight.Bold, color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = TextSecondary)
+                Text("Cancelar", color = colors.textSecondary)
             }
         },
-        containerColor = SurfaceWhite
+        containerColor = colors.surface
     )
 }

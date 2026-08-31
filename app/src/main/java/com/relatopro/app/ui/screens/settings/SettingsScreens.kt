@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,6 +43,7 @@ fun ProfileScreen(
 ) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE)
+    val colors = AppTheme.colors
 
     var userName by remember { mutableStateOf(prefs.getString("user_name", "")?.ifBlank { "Alexandre Machado" } ?: "Alexandre Machado") }
     val userEmail = prefs.getString("user_email", "usuario.relatopro@gmail.com") ?: "usuario.relatopro@gmail.com"
@@ -79,16 +81,16 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = colors.background,
         topBar = {
             TopAppBar(
-                title = { Text("Meu Perfil", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary) },
+                title = { Text("Meu Perfil", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
             )
         }
     ) { paddingValues ->
@@ -98,15 +100,15 @@ fun ProfileScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 20.dp),
             contentPadding = PaddingValues(top = 20.dp, bottom = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Profile Card Header with Real Photo & Alterar Foto
+            // Profile Card with Avatar
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                 ) {
                     Column(
                         modifier = Modifier
@@ -114,88 +116,93 @@ fun ProfileScreen(
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val activePhoto = userCustomPhotoPath ?: userGooglePhotoUrl
-
-                        Box(
-                            modifier = Modifier
-                                .size(96.dp)
-                                .clip(CircleShape)
-                                .background(PrimaryDark),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        // Avatar with Edit Badge
+                        Box(contentAlignment = Alignment.BottomEnd) {
+                            val activePhoto = userCustomPhotoPath ?: userGooglePhotoUrl
                             if (!activePhoto.isNullOrBlank()) {
                                 AsyncImage(
                                     model = activePhoto,
                                     contentDescription = "Foto de Perfil",
-                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                    modifier = Modifier
+                                        .size(96.dp)
+                                        .clip(CircleShape)
+                                        .border(2.dp, colors.primary, CircleShape),
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
-                                Text(
-                                    text = initials.ifEmpty { "RP" },
-                                    color = Color.White,
-                                    fontSize = 32.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            FilledTonalButton(
-                                onClick = { photoPickerLauncher.launch("image/*") },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = Color(0xFFE0E7FF),
-                                    contentColor = PrimaryBlue
-                                )
-                            ) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Alterar foto", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            }
-
-                            if (!userCustomPhotoPath.isNullOrBlank()) {
-                                TextButton(
-                                    onClick = {
-                                        userCustomPhotoPath = null
-                                        prefs.edit().remove("user_custom_photo_path").apply()
-                                    }
+                                Box(
+                                    modifier = Modifier
+                                        .size(96.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.primary),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text("Remover", color = StatusNaoConforme, fontSize = 12.sp)
+                                    Text(
+                                        text = initials.ifEmpty { "RP" },
+                                        color = Color.White,
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
+
+                            // Camera Edit Button
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.primary)
+                                    .clickable { photoPickerLauncher.launch("image/*") }
+                                    .padding(6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = "Alterar Foto",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = userName.ifBlank { "Não informado" },
+                            text = userName,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
-
                         Spacer(modifier = Modifier.height(4.dp))
-
                         Text(
-                            text = userEmail,
-                            fontSize = 13.sp,
-                            color = TextSecondary
+                            text = userRole,
+                            fontSize = 14.sp,
+                            color = colors.textSecondary
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Account Provider Badge
                         Box(
                             modifier = Modifier
-                                .background(Color(0xFFE0E7FF), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                .background(colors.surfaceVariant, RoundedCornerShape(16.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Text("Conta Google Autenticada", color = PrimaryBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.VerifiedUser,
+                                    contentDescription = null,
+                                    tint = colors.primary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "Conta Google Autenticada",
+                                    fontSize = 11.sp,
+                                    color = colors.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -205,9 +212,9 @@ fun ProfileScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
                     shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Row(
@@ -215,13 +222,13 @@ fun ProfileScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Informações Profissionais", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = PrimaryDark)
+                            Text("Informações Profissionais", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
                             TextButton(onClick = { showEditDialog = true }) {
-                                Text("Editar", color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                                Text("Editar", color = colors.primary, fontWeight = FontWeight.Bold)
                             }
                         }
 
-                        HorizontalDivider(color = BorderColor)
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.6f))
 
                         ProfileInfoRow("Nome Completo", userName.ifBlank { "Não informado" })
                         ProfileInfoRow("E-mail Google", userEmail)
@@ -240,8 +247,8 @@ fun ProfileScreen(
                         .fillMaxWidth()
                         .height(48.dp),
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusNaoConforme),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, StatusNaoConforme.copy(alpha = 0.5f))
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.statusNaoConforme),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.statusNaoConforme.copy(alpha = 0.5f))
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
@@ -259,37 +266,49 @@ fun ProfileScreen(
 
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Editar Perfil", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            title = { Text("Editar Perfil", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Nome do Inspetor", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Nome do Inspetor", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     OutlinedTextField(
                         value = tempName,
                         onValueChange = { tempName = it },
                         placeholder = { Text("Ex: Alexandre Machado") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border
+                        )
                     )
 
-                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     OutlinedTextField(
                         value = tempRole,
                         onValueChange = { tempRole = it },
                         placeholder = { Text("Ex: Eng. de Segurança") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border
+                        )
                     )
 
-                    Text("Empresa", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Empresa", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     OutlinedTextField(
                         value = tempCompany,
                         onValueChange = { tempCompany = it },
                         placeholder = { Text("Ex: Relato Pro Consultoria") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border
+                        )
                     )
                 }
             },
@@ -307,7 +326,7 @@ fun ProfileScreen(
                         showEditDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryBlue,
+                        containerColor = colors.primary,
                         contentColor = Color.White
                     )
                 ) {
@@ -316,10 +335,10 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Cancelar", color = TextSecondary)
+                    Text("Cancelar", color = colors.textSecondary)
                 }
             },
-            containerColor = SurfaceWhite
+            containerColor = colors.surface
         )
     }
 
@@ -345,6 +364,9 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE)
+    val colors = AppTheme.colors
+
+    var currentThemeMode by remember { mutableStateOf(prefs.getString("app_theme_mode", "SYSTEM") ?: "SYSTEM") }
 
     var pageNumbersEnabled by remember { mutableStateOf(prefs.getBoolean("pdf_page_numbers", true)) }
     var summaryEnabled by remember { mutableStateOf(prefs.getBoolean("pdf_summary_table", true)) }
@@ -358,16 +380,16 @@ fun SettingsScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = colors.background,
         topBar = {
             TopAppBar(
-                title = { Text("Configurações", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary) },
+                title = { Text("Configurações", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
             )
         }
     ) { paddingValues ->
@@ -379,14 +401,81 @@ fun SettingsScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // SEÇÃO 1: CONTA
+            // SEÇÃO 1: APARÊNCIA & TEMA
+            item {
+                SettingsSectionHeader("APARÊNCIA & TEMA")
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Tema do Aplicativo", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                        Text("Selecione entre o modo claro, escuro ou acompanhe o sistema Android.", fontSize = 12.sp, color = colors.textSecondary)
+
+                        Spacer(Modifier.height(4.dp))
+
+                        val themeOptions = listOf(
+                            Triple("LIGHT", "Modo Claro", Icons.Default.LightMode),
+                            Triple("DARK", "Modo Escuro", Icons.Default.DarkMode),
+                            Triple("SYSTEM", "Automático (Padrão do Sistema)", Icons.Default.SettingsBrightness)
+                        )
+
+                        themeOptions.forEach { (modeKey, modeTitle, modeIcon) ->
+                            val isSelected = currentThemeMode == modeKey
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) colors.primary.copy(alpha = 0.1f) else Color.Transparent)
+                                    .border(1.dp, if (isSelected) colors.primary else colors.border, RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        currentThemeMode = modeKey
+                                        prefs.edit().putString("app_theme_mode", modeKey).apply()
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    modeIcon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) colors.primary else colors.textSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    modeTitle,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) colors.primary else colors.textPrimary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        currentThemeMode = modeKey
+                                        prefs.edit().putString("app_theme_mode", modeKey).apply()
+                                    },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = colors.primary,
+                                        unselectedColor = colors.textSecondary
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // SEÇÃO 2: CONTA
             item {
                 SettingsSectionHeader("CONTA DO USUÁRIO")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
                     shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                 ) {
                     Column {
                         SettingsClickableRow(
@@ -395,26 +484,26 @@ fun SettingsScreen(
                             subtitle = "Visualizar dados da conta Google, foto e credenciais",
                             onClick = onNavigateToProfile
                         )
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                         SettingsClickableRow(
                             icon = Icons.AutoMirrored.Outlined.ExitToApp,
                             title = "Sair da Conta",
                             subtitle = "Encerrar sessão no Relato Pro",
-                            titleColor = StatusNaoConforme,
+                            titleColor = colors.statusNaoConforme,
                             onClick = { showLogoutDialog = true }
                         )
                     }
                 }
             }
 
-            // SEÇÃO 2: RELATÓRIOS E PDF
+            // SEÇÃO 3: RELATÓRIOS E PDF
             item {
                 SettingsSectionHeader("PREFERÊNCIAS DE RELATÓRIO E PDF")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
                     shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                 ) {
                     Column {
                         SettingsToggleRow(
@@ -427,7 +516,7 @@ fun SettingsScreen(
                                 prefs.edit().putBoolean("pdf_page_numbers", it).apply()
                             }
                         )
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                         SettingsToggleRow(
                             icon = Icons.Outlined.Checklist,
                             title = "Resumo de Conformidades no Laudo",
@@ -438,7 +527,7 @@ fun SettingsScreen(
                                 prefs.edit().putBoolean("pdf_summary_table", it).apply()
                             }
                         )
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                         SettingsToggleRow(
                             icon = Icons.Outlined.Notes,
                             title = "Observações Finais no Laudo",
@@ -449,7 +538,7 @@ fun SettingsScreen(
                                 prefs.edit().putBoolean("pdf_observations", it).apply()
                             }
                         )
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                         SettingsToggleRow(
                             icon = Icons.Outlined.Save,
                             title = "Salvamento Automático",
@@ -464,14 +553,14 @@ fun SettingsScreen(
                 }
             }
 
-            // SEÇÃO 3: SISTEMA E AJUDA
+            // SEÇÃO 4: SISTEMA E AJUDA
             item {
                 SettingsSectionHeader("SISTEMA & SOBRE")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
                     shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                 ) {
                     Column {
                         SettingsClickableRow(
@@ -480,21 +569,21 @@ fun SettingsScreen(
                             subtitle = "Versão 1.0 • Informações do aplicativo",
                             onClick = { showAboutDialog = true }
                         )
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                         SettingsClickableRow(
                             icon = Icons.Outlined.HelpOutline,
                             title = "Ajuda e Instruções",
                             subtitle = "Como criar relatórios e exportar laudos",
                             onClick = { showHelpDialog = true }
                         )
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                         SettingsClickableRow(
                             icon = Icons.Outlined.Description,
                             title = "Termos de Uso",
                             subtitle = "Condições e termos de serviço",
                             onClick = { showTermsDialog = true }
                         )
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                         SettingsClickableRow(
                             icon = Icons.Outlined.Security,
                             title = "Política de Privacidade",
@@ -524,14 +613,14 @@ fun SettingsScreen(
                     Text(
                         text = "Relato Pro • Versão 1.0",
                         fontSize = 13.sp,
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Aplicativo Oficial de Vistorias e Relatórios Técnicos",
                         fontSize = 11.sp,
-                        color = TextSecondary.copy(alpha = 0.6f)
+                        color = colors.textSecondary.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -586,17 +675,19 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpScreen(onNavigateBack: () -> Unit) {
+    val colors = AppTheme.colors
+
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = colors.background,
         topBar = {
             TopAppBar(
-                title = { Text("Ajuda e Suporte", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary) },
+                title = { Text("Ajuda e Suporte", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
             )
         }
     ) { paddingValues ->
@@ -608,16 +699,16 @@ fun HelpScreen(onNavigateBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
                 shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Central de Ajuda Relato Pro", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = PrimaryDark)
+                    Text("Central de Ajuda Relato Pro", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
                     Text(
                         "Dúvidas frequentes sobre preenchimento, coleta de evidências e emissão de laudos técnicos em PDF.",
                         fontSize = 13.sp,
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         lineHeight = 18.sp
                     )
                 }
@@ -628,11 +719,12 @@ fun HelpScreen(onNavigateBack: () -> Unit) {
 
 @Composable
 private fun SettingsSectionHeader(title: String) {
+    val colors = AppTheme.colors
     Text(
         text = title,
         fontSize = 12.sp,
         fontWeight = FontWeight.Bold,
-        color = TextSecondary,
+        color = colors.textSecondary,
         modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
     )
 }
@@ -642,9 +734,13 @@ private fun SettingsClickableRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    titleColor: Color = TextPrimary,
+    titleColor: Color = AppTheme.colors.textPrimary,
     onClick: () -> Unit
 ) {
+    val colors = AppTheme.colors
+    val effectiveTitleColor = if (titleColor == AppTheme.colors.textPrimary) colors.textPrimary else titleColor
+    val iconTint = if (titleColor != AppTheme.colors.textPrimary) titleColor else colors.primary
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -652,13 +748,13 @@ private fun SettingsClickableRow(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = if (titleColor != TextPrimary) titleColor else PrimaryBlue, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = titleColor)
-            Text(subtitle, fontSize = 12.sp, color = TextSecondary)
+            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = effectiveTitleColor)
+            Text(subtitle, fontSize = 12.sp, color = colors.textSecondary)
         }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = colors.textSecondary.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
     }
 }
 
@@ -670,26 +766,28 @@ private fun SettingsToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val colors = AppTheme.colors
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription = null, tint = colors.primary, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextPrimary)
-            Text(subtitle, fontSize = 12.sp, color = TextSecondary)
+            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = colors.textPrimary)
+            Text(subtitle, fontSize = 12.sp, color = colors.textSecondary)
         }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = PrimaryBlue,
+                checkedTrackColor = colors.primary,
                 uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = BorderColor
+                uncheckedTrackColor = colors.border
             )
         )
     }
@@ -697,15 +795,17 @@ private fun SettingsToggleRow(
 
 @Composable
 private fun ProfileInfoRow(label: String, value: String) {
+    val colors = AppTheme.colors
     Column {
-        Text(label, fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+        Text(label, fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(2.dp))
-        Text(value, fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+        Text(value, fontSize = 14.sp, color = colors.textPrimary, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 private fun InfoDialog(title: String, content: String, onDismiss: () -> Unit) {
+    val colors = AppTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -721,46 +821,47 @@ private fun InfoDialog(title: String, content: String, onDismiss: () -> Unit) {
                     )
                     Spacer(Modifier.height(12.dp))
                 }
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
             }
         },
         text = {
-            Text(content, fontSize = 13.sp, color = TextSecondary, lineHeight = 19.sp)
+            Text(content, fontSize = 13.sp, color = colors.textSecondary, lineHeight = 19.sp)
         },
         confirmButton = {
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryBlue,
+                    containerColor = colors.primary,
                     contentColor = Color.White
                 )
             ) {
                 Text("Fechar", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
-        containerColor = SurfaceWhite
+        containerColor = colors.surface
     )
 }
 
 @Composable
 private fun LogoutConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val colors = AppTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = StatusNaoConforme)
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = colors.statusNaoConforme)
                 Spacer(Modifier.width(8.dp))
-                Text("Sair do Relato Pro?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text("Sair do Relato Pro?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
             }
         },
         text = {
-            Text("Você precisará entrar novamente com sua conta Google para acessar o aplicativo.\n\nSeus relatórios permanecerão salvos com segurança.", fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp)
+            Text("Você precisará entrar novamente com sua conta Google para acessar o aplicativo.\n\nSeus relatórios permanecerão salvos com segurança.", fontSize = 13.sp, color = colors.textSecondary, lineHeight = 18.sp)
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = StatusNaoConforme,
+                    containerColor = colors.statusNaoConforme,
                     contentColor = Color.White
                 )
             ) {
@@ -769,9 +870,9 @@ private fun LogoutConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Uni
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = TextSecondary)
+                Text("Cancelar", color = colors.textSecondary)
             }
         },
-        containerColor = SurfaceWhite
+        containerColor = colors.surface
     )
 }

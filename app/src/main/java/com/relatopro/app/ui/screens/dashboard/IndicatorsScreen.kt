@@ -38,24 +38,25 @@ fun IndicatorsScreen(
     viewModel: IndicatorsViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val colors = AppTheme.colors
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = colors.background,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Indicadores & Estatísticas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                        Text("Métricas de conformidade e segurança técnica", fontSize = 12.sp, color = TextSecondary)
+                        Text("Indicadores & Estatísticas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                        Text("Métricas de conformidade e segurança técnica", fontSize = 12.sp, color = colors.textSecondary)
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
             )
         }
     ) { paddingValues ->
@@ -70,7 +71,7 @@ fun IndicatorsScreen(
                 onSelectPeriod = viewModel::setPeriod
             )
 
-            HorizontalDivider(color = BorderColor.copy(alpha = 0.7f))
+            HorizontalDivider(color = colors.border.copy(alpha = 0.7f))
 
             if (uiState.totalReports == 0 && !uiState.isLoading) {
                 // Empty State
@@ -84,25 +85,25 @@ fun IndicatorsScreen(
                         Box(
                             modifier = Modifier
                                 .size(64.dp)
-                                .background(PrimaryBlue.copy(alpha = 0.1f), CircleShape),
+                                .background(colors.primary.copy(alpha = 0.1f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Analytics, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(32.dp))
+                            Icon(Icons.Default.Analytics, contentDescription = null, tint = colors.primary, modifier = Modifier.size(32.dp))
                         }
                         Spacer(Modifier.height(16.dp))
-                        Text("Sem dados no período selecionado", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                        Text("Sem dados no período selecionado", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
                         Spacer(Modifier.height(6.dp))
                         Text(
                             "Realize ou finalize vistorias e laudos no aplicativo para acompanhar os indicadores de conformidade.",
                             fontSize = 13.sp,
-                            color = TextSecondary,
+                            color = colors.textSecondary,
                             textAlign = TextAlign.Center,
                             lineHeight = 18.sp
                         )
                         Spacer(Modifier.height(20.dp))
                         Button(
                             onClick = { viewModel.setPeriod("TODOS") },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
                         ) {
                             Text("Ver Todo o Histórico", fontWeight = FontWeight.Bold)
                         }
@@ -160,6 +161,7 @@ fun PeriodFilterRow(
     selectedPeriod: String,
     onSelectPeriod: (String) -> Unit
 ) {
+    val colors = AppTheme.colors
     val periods = listOf(
         "HOJE" to "Hoje",
         "7_DIAS" to "Últimos 7 dias",
@@ -171,15 +173,15 @@ fun PeriodFilterRow(
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceWhite)
+            .background(colors.surface)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(periods) { (code, label) ->
             val isSelected = selectedPeriod == code
-            val bgColor = if (isSelected) PrimaryBlue else BackgroundLight
-            val textColor = if (isSelected) Color.White else TextPrimary
-            val borderColor = if (isSelected) PrimaryBlue else BorderColor
+            val bgColor = if (isSelected) colors.primary else colors.surfaceVariant
+            val textColor = if (isSelected) Color.White else colors.textPrimary
+            val borderColor = if (isSelected) colors.primary else colors.border
 
             Box(
                 modifier = Modifier
@@ -202,22 +204,23 @@ fun PeriodFilterRow(
 
 @Composable
 fun OverallComplianceBanner(uiState: IndicatorsUiState) {
+    val colors = AppTheme.colors
     val compliance = uiState.compliancePercent
     val complianceStr = if (compliance != null) String.format(Locale.getDefault(), "%.1f%%", compliance) else "N/A"
     
     val statusColor = when (uiState.generalStatus) {
-        "Excelente" -> StatusConforme
-        "Bom" -> PrimaryBlue
-        "Atenção" -> Color(0xFFF59E0B)
-        "Crítico" -> StatusNaoConforme
-        else -> TextSecondary
+        "Excelente" -> colors.statusConforme
+        "Bom" -> colors.primary
+        "Atenção" -> colors.statusWarning
+        "Crítico" -> colors.statusNaoConforme
+        else -> colors.textSecondary
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
@@ -232,7 +235,7 @@ fun OverallComplianceBanner(uiState: IndicatorsUiState) {
                     text = "ÍNDICE GERAL DE CONFORMIDADE",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextSecondary,
+                    color = colors.textSecondary,
                     letterSpacing = 0.5.sp
                 )
                 Spacer(Modifier.height(6.dp))
@@ -241,13 +244,13 @@ fun OverallComplianceBanner(uiState: IndicatorsUiState) {
                         text = complianceStr,
                         fontSize = 34.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
                     Spacer(Modifier.width(10.dp))
                     Box(
                         modifier = Modifier
                             .padding(bottom = 6.dp)
-                            .background(statusColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                            .background(statusColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -262,7 +265,7 @@ fun OverallComplianceBanner(uiState: IndicatorsUiState) {
                 Text(
                     text = if (compliance != null) "Cálculo: C / (C + NC) × 100 • ${uiState.totalEvaluatedItems} itens analisados" else "Sem dados suficientes para cálculo",
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = colors.textSecondary
                 )
             }
         }
@@ -271,6 +274,7 @@ fun OverallComplianceBanner(uiState: IndicatorsUiState) {
 
 @Composable
 fun MetricsGrid(uiState: IndicatorsUiState) {
+    val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MetricStatCard(
@@ -279,7 +283,7 @@ fun MetricsGrid(uiState: IndicatorsUiState) {
                 value = uiState.totalReports.toString(),
                 subText = "${uiState.completedReports} concluídos • ${uiState.draftReports} rascunhos",
                 icon = Icons.Default.Description,
-                iconColor = PrimaryBlue
+                iconColor = colors.primary
             )
             MetricStatCard(
                 modifier = Modifier.weight(1f),
@@ -287,7 +291,7 @@ fun MetricsGrid(uiState: IndicatorsUiState) {
                 value = uiState.totalEvaluatedItems.toString(),
                 subText = "Em todas as vistorias",
                 icon = Icons.Default.Checklist,
-                iconColor = PrimaryDark
+                iconColor = colors.primary
             )
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -300,7 +304,7 @@ fun MetricsGrid(uiState: IndicatorsUiState) {
                 value = uiState.totalConforme.toString(),
                 subText = "$cPct de conformidade",
                 icon = Icons.Default.CheckCircle,
-                iconColor = StatusConforme
+                iconColor = colors.statusConforme
             )
             MetricStatCard(
                 modifier = Modifier.weight(1f),
@@ -308,7 +312,7 @@ fun MetricsGrid(uiState: IndicatorsUiState) {
                 value = uiState.totalNaoConforme.toString(),
                 subText = "$ncPct de não conformidade",
                 icon = Icons.Default.Cancel,
-                iconColor = StatusNaoConforme
+                iconColor = colors.statusNaoConforme
             )
         }
     }
@@ -323,11 +327,12 @@ fun MetricStatCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     iconColor: Color
 ) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -336,19 +341,20 @@ fun MetricStatCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                Text(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = colors.textSecondary)
                 Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.height(8.dp))
-            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
             Spacer(Modifier.height(2.dp))
-            Text(subText, fontSize = 11.sp, color = TextSecondary, maxLines = 1)
+            Text(subText, fontSize = 11.sp, color = colors.textSecondary, maxLines = 1)
         }
     }
 }
 
 @Composable
 fun DistributionBarCard(uiState: IndicatorsUiState) {
+    val colors = AppTheme.colors
     val total = uiState.totalEvaluatedItems
     val c = uiState.totalConforme
     val nc = uiState.totalNaoConforme
@@ -360,13 +366,13 @@ fun DistributionBarCard(uiState: IndicatorsUiState) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Distribuição das Respostas", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+            Text("Distribuição das Respostas", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
             Spacer(Modifier.height(12.dp))
 
             // Multi-segment progress bar
@@ -375,19 +381,19 @@ fun DistributionBarCard(uiState: IndicatorsUiState) {
                     .fillMaxWidth()
                     .height(14.dp)
                     .clip(RoundedCornerShape(7.dp))
-                    .background(BackgroundLight)
+                    .background(colors.surfaceVariant)
             ) {
                 if (cFrac > 0f) {
-                    Box(modifier = Modifier.weight(cFrac).fillMaxHeight().background(StatusConforme))
+                    Box(modifier = Modifier.weight(cFrac).fillMaxHeight().background(colors.statusConforme))
                 }
                 if (ncFrac > 0f) {
-                    Box(modifier = Modifier.weight(ncFrac).fillMaxHeight().background(StatusNaoConforme))
+                    Box(modifier = Modifier.weight(ncFrac).fillMaxHeight().background(colors.statusNaoConforme))
                 }
                 if (naFrac > 0f) {
-                    Box(modifier = Modifier.weight(naFrac).fillMaxHeight().background(Color(0xFF94A3B8)))
+                    Box(modifier = Modifier.weight(naFrac).fillMaxHeight().background(colors.statusNaoAplicavel))
                 }
                 if (total == 0) {
-                    Box(modifier = Modifier.fillMaxSize().background(BorderColor))
+                    Box(modifier = Modifier.fillMaxSize().background(colors.border))
                 }
             }
 
@@ -395,9 +401,9 @@ fun DistributionBarCard(uiState: IndicatorsUiState) {
 
             // Legend
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                LegendItem(color = StatusConforme, label = "Conforme: $c")
-                LegendItem(color = StatusNaoConforme, label = "Não Conforme: $nc")
-                LegendItem(color = Color(0xFF94A3B8), label = "Não Aplicável: $na")
+                LegendItem(color = colors.statusConforme, label = "Conforme: $c")
+                LegendItem(color = colors.statusNaoConforme, label = "Não Conforme: $nc")
+                LegendItem(color = colors.statusNaoAplicavel, label = "Não Aplicável: $na")
             }
         }
     }
@@ -405,20 +411,22 @@ fun DistributionBarCard(uiState: IndicatorsUiState) {
 
 @Composable
 fun LegendItem(color: Color, label: String) {
+    val colors = AppTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
         Spacer(Modifier.width(6.dp))
-        Text(label, fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+        Text(label, fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 fun TemporalEvolutionCard(timePoints: List<TimePoint>) {
+    val colors = AppTheme.colors
     Card(
         modifier = Modifier.fillMaxWidth().height(240.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp).fillMaxSize()) {
@@ -427,10 +435,13 @@ fun TemporalEvolutionCard(timePoints: List<TimePoint>) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Evolução da Conformidade (%)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                Text("Histórico Real", fontSize = 11.sp, color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                Text("Evolução da Conformidade (%)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                Text("Histórico Real", fontSize = 11.sp, color = colors.primary, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(16.dp))
+
+            val lineColor = colors.primary
+            val dotCenterColor = colors.surface
 
             Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
@@ -438,12 +449,12 @@ fun TemporalEvolutionCard(timePoints: List<TimePoint>) {
                         val singlePoint = timePoints.firstOrNull()?.compliancePercent ?: 100f
                         val y = size.height - (singlePoint / 100f * size.height)
                         drawLine(
-                            color = PrimaryBlue,
+                            color = lineColor,
                             start = Offset(0f, y),
                             end = Offset(size.width, y),
                             strokeWidth = 2.dp.toPx()
                         )
-                        drawCircle(color = PrimaryBlue, radius = 5.dp.toPx(), center = Offset(size.width / 2, y))
+                        drawCircle(color = lineColor, radius = 5.dp.toPx(), center = Offset(size.width / 2, y))
                         return@Canvas
                     }
 
@@ -469,14 +480,14 @@ fun TemporalEvolutionCard(timePoints: List<TimePoint>) {
                         }
                     }
 
-                    drawPath(path = fillPath, color = PrimaryBlue.copy(alpha = 0.08f), style = Fill)
-                    drawPath(path = path, color = PrimaryBlue, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
+                    drawPath(path = fillPath, color = lineColor.copy(alpha = 0.12f), style = Fill)
+                    drawPath(path = path, color = lineColor, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
 
                     timePoints.forEachIndexed { index, pt ->
                         val x = index * stepX
                         val y = size.height - ((pt.compliancePercent.coerceIn(0f, 100f) / 100f) * size.height)
-                        drawCircle(color = SurfaceWhite, radius = 5.dp.toPx(), center = Offset(x, y))
-                        drawCircle(color = PrimaryBlue, radius = 3.5.dp.toPx(), center = Offset(x, y))
+                        drawCircle(color = dotCenterColor, radius = 5.dp.toPx(), center = Offset(x, y))
+                        drawCircle(color = lineColor, radius = 3.5.dp.toPx(), center = Offset(x, y))
                     }
                 }
             }
@@ -484,7 +495,7 @@ fun TemporalEvolutionCard(timePoints: List<TimePoint>) {
             Spacer(Modifier.height(10.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 timePoints.take(6).forEach { pt ->
-                    Text(pt.label, color = TextSecondary, fontSize = 10.sp)
+                    Text(pt.label, color = colors.textSecondary, fontSize = 10.sp)
                 }
             }
         }
@@ -493,15 +504,16 @@ fun TemporalEvolutionCard(timePoints: List<TimePoint>) {
 
 @Composable
 fun CategoryBreakdownSection(categories: List<CategoryIndicator>) {
+    val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Indicadores por Categoria", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+        Text("Indicadores por Categoria", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.textPrimary)
 
         categories.forEach { cat ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
                 shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -510,13 +522,13 @@ fun CategoryBreakdownSection(categories: List<CategoryIndicator>) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(cat.categoryName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                        Text(cat.categoryName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
                         val compStr = String.format(Locale.getDefault(), "%.1f%%", cat.compliancePercent)
                         Text(
                             text = "$compStr Conf.",
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
-                            color = if (cat.compliancePercent >= 80f) StatusConforme else StatusNaoConforme
+                            color = if (cat.compliancePercent >= 80f) colors.statusConforme else colors.statusNaoConforme
                         )
                     }
                     Spacer(Modifier.height(8.dp))
@@ -529,10 +541,10 @@ fun CategoryBreakdownSection(categories: List<CategoryIndicator>) {
                             .fillMaxWidth()
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp))
-                            .background(BackgroundLight)
+                            .background(colors.surfaceVariant)
                     ) {
-                        Box(modifier = Modifier.weight(frac.coerceAtLeast(0.01f)).fillMaxHeight().background(StatusConforme))
-                        Box(modifier = Modifier.weight((1f - frac).coerceAtLeast(0.01f)).fillMaxHeight().background(StatusNaoConforme))
+                        Box(modifier = Modifier.weight(frac.coerceAtLeast(0.01f)).fillMaxHeight().background(colors.statusConforme))
+                        Box(modifier = Modifier.weight((1f - frac).coerceAtLeast(0.01f)).fillMaxHeight().background(colors.statusNaoConforme))
                     }
                     Spacer(Modifier.height(6.dp))
 
@@ -540,8 +552,8 @@ fun CategoryBreakdownSection(categories: List<CategoryIndicator>) {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("C: ${cat.conformeCount} • NC: ${cat.naoConformeCount} • NA: ${cat.naCount}", fontSize = 11.sp, color = TextSecondary)
-                        Text("Total: ${cat.totalItems} itens", fontSize = 11.sp, color = TextSecondary)
+                        Text("C: ${cat.conformeCount} • NC: ${cat.naoConformeCount} • NA: ${cat.naCount}", fontSize = 11.sp, color = colors.textSecondary)
+                        Text("Total: ${cat.totalItems} itens", fontSize = 11.sp, color = colors.textSecondary)
                     }
                 }
             }
@@ -551,14 +563,15 @@ fun CategoryBreakdownSection(categories: List<CategoryIndicator>) {
 
 @Composable
 fun TopNonConformitiesRankingSection(ranking: List<NonConformityItem>) {
+    val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Principais Não Conformidades", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+        Text("Principais Não Conformidades", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.textPrimary)
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+            colors = CardDefaults.cardColors(containerColor = colors.surface),
             shape = RoundedCornerShape(12.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+            border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -570,27 +583,27 @@ fun TopNonConformitiesRankingSection(ranking: List<NonConformityItem>) {
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .background(StatusNaoConforme.copy(alpha = 0.1f), CircleShape),
+                                .background(colors.statusNaoConforme.copy(alpha = 0.15f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("${index + 1}", color = StatusNaoConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("${index + 1}", color = colors.statusNaoConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
                         Spacer(Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(item.title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = TextPrimary, maxLines = 1)
-                            Text(item.category, fontSize = 10.sp, color = TextSecondary)
+                            Text(item.title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = colors.textPrimary, maxLines = 1)
+                            Text(item.category, fontSize = 10.sp, color = colors.textSecondary)
                         }
                         Spacer(Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
-                                .background(StatusNaoConforme.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                                .background(colors.statusNaoConforme.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
-                            Text("${item.count} NC", color = StatusNaoConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("${item.count} NC", color = colors.statusNaoConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
                     }
                     if (index < ranking.lastIndex) {
-                        HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                     }
                 }
             }

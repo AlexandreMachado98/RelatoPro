@@ -38,6 +38,7 @@ fun MyReportsScreen(
     initialFilter: String = "Todos",
     onNavigateBack: () -> Unit
 ) {
+    val colors = AppTheme.colors
     val reports by viewModel.reports.collectAsState()
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
@@ -86,7 +87,7 @@ fun MyReportsScreen(
         matchesQuery && matchesStatus
     }.sortedByDescending { it.date }
 
-    Box(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
+    Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -101,8 +102,8 @@ fun MyReportsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Meus Relatórios", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text("Gerencie e compartilhe suas inspeções.", fontSize = 14.sp, color = TextSecondary)
+                    Text("Meus Relatórios", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                    Text("Gerencie e compartilhe suas inspeções.", fontSize = 14.sp, color = colors.textSecondary)
                 }
                 Button(
                     onClick = {
@@ -116,7 +117,7 @@ fun MyReportsScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                     modifier = Modifier.height(38.dp)
@@ -148,34 +149,40 @@ fun MyReportsScreen(
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Pesquisar por título, ID ou local...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Pesquisar") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Pesquisar", tint = colors.textSecondary) },
                     shape = RoundedCornerShape(8.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryBlue,
-                        unfocusedBorderColor = BorderColor,
-                        focusedContainerColor = SurfaceWhite,
-                        unfocusedContainerColor = SurfaceWhite
+                        focusedBorderColor = colors.primary,
+                        unfocusedBorderColor = colors.border,
+                        focusedContainerColor = colors.surface,
+                        unfocusedContainerColor = colors.surface,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
                     ),
                     singleLine = true
                 )
 
                 if (!isDesktop) {
                     Box(
-                        modifier = Modifier.size(56.dp).border(1.dp, BorderColor, RoundedCornerShape(8.dp)).background(SurfaceWhite, RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .size(56.dp)
+                            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
+                            .background(colors.surface, RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.FilterList, contentDescription = null, tint = TextSecondary)
+                        Icon(Icons.Default.FilterList, contentDescription = null, tint = colors.textSecondary)
                     }
                 } else {
                     OutlinedButton(
                         onClick = { },
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                         modifier = Modifier.height(56.dp)
                     ) {
                         Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Mais Filtros")
+                        Text("Mais Filtros", color = colors.textPrimary)
                     }
                 }
             }
@@ -198,9 +205,9 @@ fun MyReportsScreen(
             if (filteredReports.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = TextSecondary.copy(alpha = 0.5f))
+                        Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = colors.textSecondary.copy(alpha = 0.5f))
                         Spacer(Modifier.height(16.dp))
-                        Text("Nenhum relatório encontrado.", color = TextSecondary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("Nenhum relatório encontrado.", color = colors.textSecondary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             } else {
@@ -216,9 +223,10 @@ fun MyReportsScreen(
 
 @Composable
 fun FilterChipItem(title: String, count: Int, isSelected: Boolean, onClick: () -> Unit) {
-    val bgColor = if (isSelected) PrimaryBlue else Color.Transparent
-    val contentColor = if (isSelected) Color.White else TextSecondary
-    val borderColor = if (isSelected) PrimaryBlue else BorderColor
+    val colors = AppTheme.colors
+    val bgColor = if (isSelected) colors.primary else Color.Transparent
+    val contentColor = if (isSelected) Color.White else colors.textSecondary
+    val borderColor = if (isSelected) colors.primary else colors.border
     
     Box(
         modifier = Modifier
@@ -232,7 +240,7 @@ fun FilterChipItem(title: String, count: Int, isSelected: Boolean, onClick: () -
             Spacer(modifier = Modifier.width(6.dp))
             Box(
                 modifier = Modifier.background(
-                    if (isSelected) Color.White.copy(alpha = 0.2f) else BorderColor,
+                    if (isSelected) Color.White.copy(alpha = 0.25f) else colors.surfaceVariant,
                     RoundedCornerShape(10.dp)
                 ).padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
@@ -249,11 +257,13 @@ fun DesktopReportsTable(
     onSharePdf: (String, Long) -> Unit,
     onDeleteReport: (ReportEntity) -> Unit
 ) {
+    val colors = AppTheme.colors
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column {
@@ -261,18 +271,18 @@ fun DesktopReportsTable(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BackgroundLight)
+                    .background(colors.surfaceVariant)
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("ID", modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, color = TextSecondary, fontSize = 12.sp)
-                Text("TÍTULO", modifier = Modifier.weight(2f), fontWeight = FontWeight.Bold, color = TextSecondary, fontSize = 12.sp)
-                Text("LOCAL", modifier = Modifier.weight(2f), fontWeight = FontWeight.Bold, color = TextSecondary, fontSize = 12.sp)
-                Text("DATA", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = TextSecondary, fontSize = 12.sp)
-                Text("STATUS", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = TextSecondary, fontSize = 12.sp)
-                Spacer(modifier = Modifier.width(48.dp)) // Actions
+                Text("ID", modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
+                Text("TÍTULO", modifier = Modifier.weight(2f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
+                Text("LOCAL", modifier = Modifier.weight(2f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
+                Text("DATA", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
+                Text("STATUS", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
+                Spacer(modifier = Modifier.width(48.dp))
             }
-            HorizontalDivider(color = BorderColor)
+            HorizontalDivider(color = colors.border)
 
             // Table Rows
             LazyColumn {
@@ -287,10 +297,10 @@ fun DesktopReportsTable(
                             .padding(horizontal = 24.dp, vertical = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("#${report.id}", modifier = Modifier.width(60.dp), color = TextPrimary, fontSize = 14.sp)
-                        Text(report.title.ifEmpty { "Inspeção Padrão" }, modifier = Modifier.weight(2f), color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(report.location, modifier = Modifier.weight(2f), color = TextSecondary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(dateStr, modifier = Modifier.weight(1f), color = TextSecondary, fontSize = 14.sp)
+                        Text("#${report.id}", modifier = Modifier.width(60.dp), color = colors.textPrimary, fontSize = 14.sp)
+                        Text(report.title.ifEmpty { "Inspeção Padrão" }, modifier = Modifier.weight(2f), color = colors.textPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(report.location, modifier = Modifier.weight(2f), color = colors.textSecondary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(dateStr, modifier = Modifier.weight(1f), color = colors.textSecondary, fontSize = 14.sp)
                         
                         Box(modifier = Modifier.weight(1f)) {
                             StatusBadge(report.status)
@@ -299,29 +309,29 @@ fun DesktopReportsTable(
                         // Menu Contextual
                         Box(modifier = Modifier.width(48.dp), contentAlignment = Alignment.CenterEnd) {
                             IconButton(onClick = { expanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = TextSecondary)
+                                Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = colors.textSecondary)
                             }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(colors.surface)) {
                                 DropdownMenuItem(
-                                    text = { Text("Visualizar PDF") },
+                                    text = { Text("Visualizar PDF", color = colors.textPrimary) },
                                     onClick = { expanded = false; report.pdfLocalPath?.let { onOpenPdf(it) } },
-                                    leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) }
+                                    leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = colors.primary) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Compartilhar") },
+                                    text = { Text("Compartilhar", color = colors.textPrimary) },
                                     onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it, report.id) } },
-                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = colors.primary) }
                                 )
-                                HorizontalDivider()
+                                HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                                 DropdownMenuItem(
-                                    text = { Text("Excluir", color = StatusNaoConforme) },
+                                    text = { Text("Excluir", color = colors.statusNaoConforme) },
                                     onClick = { expanded = false; onDeleteReport(report) },
-                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
+                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = colors.statusNaoConforme) }
                                 )
                             }
                         }
                     }
-                    HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
+                    HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                 }
             }
         }
@@ -335,6 +345,8 @@ fun MobileReportsList(
     onSharePdf: (String, Long) -> Unit,
     onDeleteReport: (ReportEntity) -> Unit
 ) {
+    val colors = AppTheme.colors
+
     if (reports.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxWidth().height(260.dp),
@@ -345,12 +357,12 @@ fun MobileReportsList(
                     Icons.Default.Description,
                     contentDescription = null,
                     modifier = Modifier.size(56.dp),
-                    tint = TextSecondary.copy(alpha = 0.4f)
+                    tint = colors.textSecondary.copy(alpha = 0.4f)
                 )
                 Spacer(Modifier.height(12.dp))
-                Text("Nenhum relatório encontrado", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                Text("Nenhum relatório encontrado", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
                 Spacer(Modifier.height(4.dp))
-                Text("Crie seu primeiro relatório ou ajuste os filtros.", fontSize = 13.sp, color = TextSecondary)
+                Text("Crie seu primeiro relatório ou ajuste os filtros.", fontSize = 13.sp, color = colors.textSecondary)
             }
         }
     } else {
@@ -365,45 +377,45 @@ fun MobileReportsList(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { report.pdfLocalPath?.let { onOpenPdf(it) } },
-                        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        colors = CardDefaults.cardColors(containerColor = colors.surface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                         shape = RoundedCornerShape(12.dp),
                         elevation = CardDefaults.cardElevation(0.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(report.title.ifEmpty { "Relatório #${report.id}" }, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+                                    Text(report.title.ifEmpty { "Relatório #${report.id}" }, fontWeight = FontWeight.Bold, color = colors.textPrimary, fontSize = 16.sp)
                                     Spacer(Modifier.height(4.dp))
-                                    Text(report.location, color = TextSecondary, fontSize = 14.sp)
+                                    Text(report.location, color = colors.textSecondary, fontSize = 14.sp)
                                 }
                                 Box {
                                     IconButton(onClick = { expanded = true }) {
-                                        Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = TextSecondary)
+                                        Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = colors.textSecondary)
                                     }
-                                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(colors.surface)) {
                                         DropdownMenuItem(
-                                            text = { Text("Visualizar PDF") },
+                                            text = { Text("Visualizar PDF", color = colors.textPrimary) },
                                             onClick = { expanded = false; report.pdfLocalPath?.let { onOpenPdf(it) } },
-                                            leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) }
+                                            leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = colors.primary) }
                                         )
                                         DropdownMenuItem(
-                                            text = { Text("Compartilhar") },
+                                            text = { Text("Compartilhar", color = colors.textPrimary) },
                                             onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it, report.id) } },
-                                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+                                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = colors.primary) }
                                         )
-                                        HorizontalDivider()
+                                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                                         DropdownMenuItem(
-                                            text = { Text("Excluir", color = StatusNaoConforme) },
+                                            text = { Text("Excluir", color = colors.statusNaoConforme) },
                                             onClick = { expanded = false; onDeleteReport(report) },
-                                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
+                                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = colors.statusNaoConforme) }
                                         )
                                     }
                                 }
                             }
                             Spacer(Modifier.height(16.dp))
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text(dateStr, color = TextSecondary, fontSize = 12.sp)
+                                Text(dateStr, color = colors.textSecondary, fontSize = 12.sp)
                                 StatusBadge(report.status)
                             }
                         }
@@ -416,10 +428,11 @@ fun MobileReportsList(
 
 @Composable
 fun StatusBadge(status: String) {
+    val colors = AppTheme.colors
     val color = when(status) {
-        "FINALIZED", "SENT" -> StatusConforme
-        "DRAFT" -> PrimaryBlue
-        else -> StatusWarning
+        "FINALIZED", "SENT" -> colors.statusConforme
+        "DRAFT" -> colors.primary
+        else -> colors.statusWarning
     }
     val text = when(status) {
         "FINALIZED" -> "Concluído"
@@ -430,7 +443,7 @@ fun StatusBadge(status: String) {
     
     Box(
         modifier = Modifier
-            .background(color.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .background(color.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

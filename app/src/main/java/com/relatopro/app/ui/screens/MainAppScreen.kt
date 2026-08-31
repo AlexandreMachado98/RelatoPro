@@ -75,18 +75,20 @@ fun MainAppScreen(
         )
     }
 
+    val colors = AppTheme.colors
+
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = StatusNaoConforme)
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = colors.statusNaoConforme)
                     Spacer(Modifier.width(8.dp))
-                    Text("Sair do Relato Pro?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                    Text("Sair do Relato Pro?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
                 }
             },
             text = {
-                Text("Você precisará entrar novamente com sua conta Google para acessar o aplicativo.\n\nSeus relatórios permanecerão salvos.", fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp)
+                Text("Você precisará entrar novamente com sua conta Google para acessar o aplicativo.\n\nSeus relatórios permanecerão salvos.", fontSize = 13.sp, color = colors.textSecondary, lineHeight = 18.sp)
             },
             confirmButton = {
                 Button(
@@ -96,17 +98,17 @@ fun MainAppScreen(
                         prefs.edit().clear().apply()
                         onLogout()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusNaoConforme)
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.statusNaoConforme)
                 ) {
-                    Text("Sair", fontWeight = FontWeight.Bold)
+                    Text("Sair", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancelar", color = TextSecondary)
+                    Text("Cancelar", color = colors.textSecondary)
                 }
             },
-            containerColor = SurfaceWhite
+            containerColor = colors.surface
         )
     }
 
@@ -123,7 +125,7 @@ fun MainAppScreen(
         gesturesEnabled = !isDesktop,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = SidebarDark,
+                drawerContainerColor = colors.sidebar,
                 modifier = Modifier.width(280.dp)
             ) {
                 PermanentSidebar(
@@ -157,6 +159,7 @@ fun MainAppScreen(
             }
         } else {
             Scaffold(
+                containerColor = colors.background,
                 topBar = {
                     TopAppBar(
                         title = {
@@ -170,15 +173,15 @@ fun MainAppScreen(
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Relato Pro", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                                Text("Relato Pro", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
                             }
                         },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = TextPrimary)
+                                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = colors.textPrimary)
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
                     )
                 },
                 bottomBar = {
@@ -200,6 +203,7 @@ fun MainAppScreen(
 
 @Composable
 private fun DesktopTopBar(currentRoute: String?) {
+    val colors = AppTheme.colors
     val title = when {
         currentRoute?.startsWith("dashboard") == true -> "Dashboard"
         currentRoute?.startsWith("my_reports") == true -> "Meus Relatórios"
@@ -221,24 +225,24 @@ private fun DesktopTopBar(currentRoute: String?) {
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
-            .background(SurfaceWhite)
+            .background(colors.surface)
             .padding(horizontal = 24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
         
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(
                 modifier = Modifier
-                    .background(BackgroundLight, RoundedCornerShape(8.dp))
+                    .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Text(todayFormatted, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(todayFormatted, color = colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
-    HorizontalDivider(color = BorderColor, thickness = 1.dp)
+    HorizontalDivider(color = colors.border, thickness = 1.dp)
 }
 
 @Composable
@@ -435,12 +439,14 @@ private fun MobileBottomBar(
     onMenuClick: () -> Unit = {},
     onNewReportClick: () -> Unit = {}
 ) {
+    val colors = AppTheme.colors
+
     Box(
         modifier = Modifier.fillMaxWidth().height(80.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).background(SurfaceWhite),
+            modifier = Modifier.fillMaxWidth().height(64.dp).background(colors.surface),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -463,7 +469,7 @@ private fun MobileBottomBar(
                 .align(Alignment.TopCenter)
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(PrimaryBlue)
+                .background(colors.primary)
                 .clickable { onNewReportClick() },
             contentAlignment = Alignment.Center
         ) {
@@ -474,7 +480,8 @@ private fun MobileBottomBar(
 
 @Composable
 private fun BottomNavIcon(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
-    val color = if (selected) PrimaryBlue else TextSecondary
+    val colors = AppTheme.colors
+    val color = if (selected) colors.primary else colors.textSecondary
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable(onClick = onClick).padding(8.dp)

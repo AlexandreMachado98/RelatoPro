@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -232,12 +234,12 @@ fun TemplateBuilderScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (index > 0) {
                                         IconButton(onClick = { viewModel.moveFieldUp(index) }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Default.ArrowUpward, contentDescription = "Subir", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir", tint = TextSecondary, modifier = Modifier.size(22.dp))
                                         }
                                     }
                                     if (index < fields.lastIndex) {
                                         IconButton(onClick = { viewModel.moveFieldDown(index) }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Default.ArrowDownward, contentDescription = "Descer", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer", tint = TextSecondary, modifier = Modifier.size(22.dp))
                                         }
                                     }
                                     IconButton(onClick = { viewModel.removeField(index) }, modifier = Modifier.size(32.dp)) {

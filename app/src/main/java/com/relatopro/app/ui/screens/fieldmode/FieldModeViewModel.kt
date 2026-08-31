@@ -1,12 +1,16 @@
 package com.relatopro.app.ui.screens.fieldmode
 
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.relatopro.app.data.local.entity.CompanyEntity
 import com.relatopro.app.data.local.entity.PhotoEntity
 import com.relatopro.app.data.local.entity.ReportAnswerEntity
 import com.relatopro.app.data.local.entity.ReportEntity
 import com.relatopro.app.data.local.entity.SignatureEntity
 import com.relatopro.app.data.local.entity.TemplateFieldEntity
+import com.relatopro.app.domain.repository.CompanyRepository
 import com.relatopro.app.domain.repository.ReportRepository
 import com.relatopro.app.domain.repository.TemplateRepository
 import com.relatopro.app.pdf.PdfGenerator
@@ -21,8 +25,12 @@ import javax.inject.Inject
 class FieldModeViewModel @Inject constructor(
     private val reportRepository: ReportRepository,
     private val templateRepository: TemplateRepository,
+    private val companyRepository: CompanyRepository,
     private val pdfGenerator: PdfGenerator
 ) : ViewModel() {
+
+    val companies: StateFlow<List<CompanyEntity>> = companyRepository.getAllCompanies()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _currentReport = MutableStateFlow<ReportEntity?>(null)
     val currentReport: StateFlow<ReportEntity?> = _currentReport.asStateFlow()
@@ -42,20 +50,26 @@ class FieldModeViewModel @Inject constructor(
     private val _operationSignature = MutableStateFlow<SignatureEntity?>(null)
     val operationSignature: StateFlow<SignatureEntity?> = _operationSignature.asStateFlow()
 
-    fun initializeReportFromTemplate(templateId: Long, location: String, responsible: String) {
+    fun initializeReportFromTemplate(templateId: Long, userCompany: String, responsible: String) {
         viewModelScope.launch {
             val template = templateRepository.getTemplateById(templateId)
             val templateFields = templateRepository.getTemplateFieldsList(templateId)
             _fields.value = templateFields
             
+            val companyList = companyRepository.getAllCompaniesList()
+            val firstCompany = companyList.firstOrNull()
+
             val templateName = template?.name ?: "Vistoria Técnica"
             val newReport = ReportEntity(
                 templateId = templateId,
+                companyId = firstCompany?.id,
+                companyName = firstCompany?.name ?: "Empresa não informada",
+                unit = firstCompany?.units?.split(",")?.firstOrNull()?.trim() ?: "Matriz",
                 title = "$templateName - " + SimpleDateFormatUtil.currentDateFormatted(),
                 reportNumber = "REP-${System.currentTimeMillis().toString().takeLast(6)}",
                 date = System.currentTimeMillis(),
                 responsible = responsible.ifBlank { "Alexandre Machado" },
-                location = location.ifBlank { "Unidade Operacional" },
+                location = "Setor de Produção / Operação",
                 lat = null,
                 lng = null,
                 status = "DRAFT",
@@ -72,6 +86,41 @@ class FieldModeViewModel @Inject constructor(
             reportRepository.getReportPhotos(reportId).collect { photoList ->
                 _photos.value = photoList
             }
+        }
+    }
+
+    fun updateReportCompanyAndLocation(
+        companyId: Long?,
+        companyName: String,
+        unit: String,
+        location: String,
+        responsible: String,
+        title: String
+    ) {
+        val report = _currentReport.value ?: return
+        val updated = report.copy(
+            companyId = companyId,
+            companyName = companyName,
+            unit = unit,
+            location = location,
+            responsible = responsible,
+            title = title
+        )
+        _currentReport.value = updated
+        viewModelScope.launch {
+            reportRepository.updateReport(updated)
+        }
+    }
+
+    fun quickCreateCompany(name: String, unit: String, onCreated: (CompanyEntity) -> Unit) {
+        viewModelScope.launch {
+            val newCompany = CompanyEntity(
+                name = name.trim(),
+                units = unit.ifBlank { "Matriz" }
+            )
+            val id = companyRepository.createCompany(newCompany)
+            val created = newCompany.copy(id = id)
+            onCreated(created)
         }
     }
 
@@ -122,8 +171,8 @@ class FieldModeViewModel @Inject constructor(
 
     fun markAllConforme() {
         val reportId = _currentReport.value?.id ?: return
-        val currentFields = _fields.value
         viewModelScope.launch {
+            val currentFields = _fields.value
             val updatedMap = _answers.value.toMutableMap()
             for (field in currentFields) {
                 val existing = updatedMap[field.id]
@@ -142,55 +191,49 @@ class FieldModeViewModel @Inject constructor(
         }
     }
 
-    fun savePhoto(fieldId: Long?, localPath: String, description: String = "") {
+    fun savePhoto(templateFieldId: Long?, localPath: String) {
         val reportId = _currentReport.value?.id ?: return
         viewModelScope.launch {
-            val photoEntity = PhotoEntity(
+            val photo = PhotoEntity(
                 reportId = reportId,
-                templateFieldId = fieldId,
+                templateFieldId = templateFieldId,
                 localPath = localPath,
                 timestamp = System.currentTimeMillis(),
-                description = description,
+                description = null,
                 lat = null,
                 lng = null
             )
-            reportRepository.savePhoto(photoEntity)
+            reportRepository.savePhoto(photo)
         }
     }
 
     fun saveSignature(
-        bitmap: android.graphics.Bitmap,
-        context: android.content.Context,
-        name: String,
-        roleTag: String = "RESPONSAVEL_RELATORIO",
-        roleTitle: String = "Inspetor Técnico"
+        bitmap: Bitmap,
+        context: Context,
+        signerName: String,
+        roleTag: String,
+        signerRole: String
     ) {
         val reportId = _currentReport.value?.id ?: return
         viewModelScope.launch {
-            val file = File(context.filesDir, "signatures/sig_${roleTag}_${reportId}_${System.currentTimeMillis()}.png")
-            file.parentFile?.mkdirs()
-            FileOutputStream(file).use { out ->
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-            }
-            val finalName = name.ifBlank {
-                if (roleTag == "RESPONSAVEL_RELATORIO") (_currentReport.value?.responsible?.ifBlank { "Inspetor Técnico" } ?: "Inspetor Técnico")
-                else "Responsável no Local"
-            }
-            val finalRoleTitle = roleTitle.ifBlank {
-                if (roleTag == "RESPONSAVEL_RELATORIO") "Inspetor Técnico" else "Acompanhante / Supervisor"
-            }
-            val sigEntity = SignatureEntity(
+            val file = File(context.filesDir, "sig_${roleTag}_${reportId}.png")
+            val out = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            out.flush()
+            out.close()
+
+            val entity = SignatureEntity(
                 reportId = reportId,
-                name = finalName,
-                role = "${roleTag}#${finalRoleTitle}",
+                name = signerName,
+                role = roleTag,
                 localPath = file.absolutePath,
                 timestamp = System.currentTimeMillis()
             )
-            reportRepository.saveSignature(sigEntity)
+            reportRepository.saveSignature(entity)
             if (roleTag == "RESPONSAVEL_RELATORIO") {
-                _inspectorSignature.value = sigEntity
+                _inspectorSignature.value = entity
             } else {
-                _operationSignature.value = sigEntity
+                _operationSignature.value = entity
             }
         }
     }
@@ -220,6 +263,22 @@ class FieldModeViewModel @Inject constructor(
                     entry.value.map { it.localPath }
                 }.toMutableMap()
 
+            // Fetch previous reports of the same company for historical evolution
+            val allCompanyReports = if (report.companyId != null) {
+                reportRepository.getAllReports().first().filter { 
+                    it.companyId == report.companyId && it.id != report.id && it.status == "FINALIZED" 
+                }.sortedByDescending { it.date }
+            } else {
+                emptyList()
+            }
+
+            val previousReport = allCompanyReports.firstOrNull()
+            val previousAnswers = if (previousReport != null) {
+                reportRepository.getReportAnswersSync(previousReport.id)
+            } else {
+                emptyList()
+            }
+
             val reportToGenerate = report.copy(status = "FINALIZED")
             val pdfFile = try {
                 pdfGenerator.generateReportPdf(
@@ -228,7 +287,9 @@ class FieldModeViewModel @Inject constructor(
                     answers = _answers.value.values.toList(),
                     photos = photosMap,
                     signatures = signaturesList,
-                    photoEntities = photosList
+                    photoEntities = photosList,
+                    previousReport = previousReport,
+                    previousAnswers = previousAnswers
                 )
             } catch (e: Exception) {
                 e.printStackTrace()

@@ -1,6 +1,7 @@
 package com.relatopro.app.ui.screens.fieldmode
 
 import android.content.Context
+import com.relatopro.app.data.local.entity.CompanyEntity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -260,12 +261,19 @@ fun FieldModeScreen(
                         .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
                     when (step) {
-                        0 -> InfoStepForm(
-                            report = currentReport,
-                            onUpdateInfo = { title, location, responsible ->
-                                viewModel.updateReportInfo(title, location, responsible)
-                            }
-                        )
+                        0 -> {
+                            val companyList by viewModel.companies.collectAsState()
+                            InfoStepForm(
+                                report = currentReport,
+                                companies = companyList,
+                                onQuickCreateCompany = { name, unit, onCreated ->
+                                    viewModel.quickCreateCompany(name, unit, onCreated)
+                                },
+                                onUpdateCompanyAndLocation = { companyId, companyName, unit, location, responsible, title ->
+                                    viewModel.updateReportCompanyAndLocation(companyId, companyName, unit, location, responsible, title)
+                                }
+                            )
+                        }
                         1 -> ChecklistStepContent(
                             fields = fields,
                             answers = answers,
@@ -442,17 +450,34 @@ fun DynamicStepper(
 }
 
 // ----------------------------------------------------
-// ETAPA 1: INFORMAÇÕES GERAIS
+// ETAPA 1: INFORMAÇÕES GERAIS (EMPRESA -> UNIDADE -> LOCAL)
 // ----------------------------------------------------
 @Composable
 fun InfoStepForm(
     report: ReportEntity?,
-    onUpdateInfo: (title: String, location: String, responsible: String) -> Unit
+    companies: List<CompanyEntity>,
+    onQuickCreateCompany: (name: String, unit: String, onCreated: (CompanyEntity) -> Unit) -> Unit,
+    onUpdateCompanyAndLocation: (
+        companyId: Long?,
+        companyName: String,
+        unit: String,
+        location: String,
+        responsible: String,
+        title: String
+    ) -> Unit
 ) {
+    val colors = AppTheme.colors
+
     var title by remember(report?.title) { mutableStateOf(report?.title ?: "Inspeção de Segurança") }
-    var location by remember(report?.location) { mutableStateOf(report?.location ?: "Indústria ABC Lda.") }
+    var selectedCompanyId by remember(report?.companyId) { mutableStateOf(report?.companyId) }
+    var selectedCompanyName by remember(report?.companyName) { mutableStateOf(report?.companyName ?: "Empresa não informada") }
+    var selectedUnit by remember(report?.unit) { mutableStateOf(report?.unit ?: "Matriz") }
+    var location by remember(report?.location) { mutableStateOf(report?.location ?: "Setor de Produção") }
     var responsible by remember(report?.responsible) { mutableStateOf(report?.responsible ?: "João da Silva") }
-    
+
+    var showCompanySelectorModal by remember { mutableStateOf(false) }
+    var showQuickCreateModal by remember { mutableStateOf(false) }
+
     val dateFormatted = remember(report?.date) {
         val d = if (report != null && report.date > 0) Date(report.date) else Date()
         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(d)
@@ -462,45 +487,160 @@ fun InfoStepForm(
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(d)
     }
 
+    val selectedCompany = companies.find { it.id == selectedCompanyId }
+    val availableUnits = remember(selectedCompany) {
+        selectedCompany?.units?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: listOf("Matriz")
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
-            Text("Informações Gerais", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+            Text("Identificação da Inspeção", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Defina o título, local e o responsável pela vistoria.", fontSize = 13.sp, color = TextSecondary)
+            Text("Vincule a empresa inspecionada, unidade, setor e dados do laudo.", fontSize = 13.sp, color = colors.textSecondary)
         }
 
+        // 1. Bloco de Empresa Inspecionada & Unidade
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Header Empresa Inspecionada
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Business, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Empresa Inspecionada *", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                        }
+                        TextButton(onClick = { showCompanySelectorModal = true }) {
+                            Text(if (selectedCompanyId != null) "Trocar Empresa" else "Selecionar", color = colors.primary, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Card da Empresa Selecionada
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(colors.surfaceVariant)
+                            .border(1.dp, if (selectedCompanyId != null) colors.primary.copy(alpha = 0.5f) else colors.border, RoundedCornerShape(8.dp))
+                            .clickable { showCompanySelectorModal = true }
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = selectedCompanyName.ifBlank { "Clique para selecionar a empresa inspecionada" },
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = if (selectedCompanyId != null) colors.textPrimary else colors.textSecondary
+                            )
+                            if (selectedCompany != null && selectedCompany.cnpj.isNotBlank()) {
+                                Spacer(Modifier.height(2.dp))
+                                Text("CNPJ: ${selectedCompany.cnpj} • ${selectedCompany.segment.ifBlank { "Geral" }}", fontSize = 11.sp, color = colors.textSecondary)
+                            }
+                        }
+                    }
+
+                    // Seletor de Unidade
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Unidade / Filial *", color = colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        var unitMenuExpanded by remember { mutableStateOf(false) }
+
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = selectedUnit,
+                                onValueChange = {
+                                    selectedUnit = it
+                                    onUpdateCompanyAndLocation(selectedCompanyId, selectedCompanyName, selectedUnit, location, responsible, title)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("Ex: Matriz, Unidade Brasilândia...") },
+                                singleLine = true,
+                                trailingIcon = {
+                                    IconButton(onClick = { unitMenuExpanded = true }) {
+                                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Selecionar Unidade", tint = colors.textSecondary)
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    unfocusedBorderColor = colors.border,
+                                    focusedBorderColor = colors.primary,
+                                    unfocusedContainerColor = colors.surface,
+                                    focusedContainerColor = colors.surface,
+                                    unfocusedTextColor = colors.textPrimary,
+                                    focusedTextColor = colors.textPrimary
+                                )
+                            )
+
+                            DropdownMenu(
+                                expanded = unitMenuExpanded,
+                                onDismissRequest = { unitMenuExpanded = false },
+                                modifier = Modifier.background(colors.surface)
+                            ) {
+                                availableUnits.forEach { unitItem ->
+                                    DropdownMenuItem(
+                                        text = { Text(unitItem, color = colors.textPrimary) },
+                                        onClick = {
+                                            selectedUnit = unitItem
+                                            unitMenuExpanded = false
+                                            onUpdateCompanyAndLocation(selectedCompanyId, selectedCompanyName, selectedUnit, location, responsible, title)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Local / Setor
+                    EditableField(
+                        label = "Local / Setor da Inspeção",
+                        value = location,
+                        onValueChange = {
+                            location = it
+                            onUpdateCompanyAndLocation(selectedCompanyId, selectedCompanyName, selectedUnit, location, responsible, title)
+                        },
+                        placeholder = "Ex: Setor de Produção, Galpão B, Linha 2"
+                    )
+                }
+            }
+        }
+
+        // 2. Bloco de Dados do Laudo & Responsável
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     EditableField(
                         label = "Título do Relatório",
                         value = title,
                         onValueChange = {
                             title = it
-                            onUpdateInfo(title, location, responsible)
+                            onUpdateCompanyAndLocation(selectedCompanyId, selectedCompanyName, selectedUnit, location, responsible, title)
                         },
                         placeholder = "Ex: Inspeção de Segurança Industrial"
-                    )
-
-                    EditableField(
-                        label = "Local / Empresa",
-                        value = location,
-                        onValueChange = {
-                            location = it
-                            onUpdateInfo(title, location, responsible)
-                        },
-                        placeholder = "Ex: Galpão A - Indústria ABC"
                     )
 
                     EditableField(
@@ -508,16 +648,17 @@ fun InfoStepForm(
                         value = responsible,
                         onValueChange = {
                             responsible = it
-                            onUpdateInfo(title, location, responsible)
+                            onUpdateCompanyAndLocation(selectedCompanyId, selectedCompanyName, selectedUnit, location, responsible, title)
                         },
-                        placeholder = "Ex: João da Silva - Eng. Segurança"
+                        placeholder = "Ex: Alexandre Machado - Eng. Segurança"
                     )
                 }
             }
         }
 
+        // 3. Bloco de Data e Horário
         item {
-            Text("Data e Horário", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            Text("Data e Horário", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -538,6 +679,199 @@ fun InfoStepForm(
             }
         }
     }
+
+    // Modal: Company Selector
+    if (showCompanySelectorModal) {
+        var query by remember { mutableStateOf("") }
+        val filtered = companies.filter {
+            it.name.contains(query, ignoreCase = true) ||
+            it.tradeName.contains(query, ignoreCase = true) ||
+            it.cnpj.contains(query)
+        }
+
+        AlertDialog(
+            onDismissRequest = { showCompanySelectorModal = false },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Selecionar Empresa", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = colors.textPrimary)
+                    TextButton(onClick = {
+                        showCompanySelectorModal = false
+                        showQuickCreateModal = true
+                    }) {
+                        Text("+ Nova", fontWeight = FontWeight.Bold, color = colors.primary)
+                    }
+                }
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = { Text("Buscar por nome ou CNPJ...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = colors.textSecondary) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border,
+                            focusedContainerColor = colors.surface,
+                            unfocusedContainerColor = colors.surface,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
+                        )
+                    )
+
+                    if (filtered.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Nenhuma empresa encontrada.", fontSize = 13.sp, color = colors.textSecondary)
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        showCompanySelectorModal = false
+                                        showQuickCreateModal = true
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                                ) {
+                                    Text("Cadastrar Nova Empresa", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn(modifier = Modifier.heightIn(max = 280.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(filtered.size) { idx ->
+                                val comp = filtered[idx]
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedCompanyId = comp.id
+                                            selectedCompanyName = comp.name
+                                            val firstUnit = comp.units.split(",").firstOrNull()?.trim() ?: "Matriz"
+                                            selectedUnit = firstUnit
+                                            onUpdateCompanyAndLocation(comp.id, comp.name, selectedUnit, location, responsible, title)
+                                            showCompanySelectorModal = false
+                                        },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (selectedCompanyId == comp.id) colors.primary.copy(alpha = 0.12f) else colors.surfaceVariant
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (selectedCompanyId == comp.id) colors.primary else colors.border
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Business, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
+                                        Spacer(Modifier.width(10.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(comp.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
+                                            if (comp.cnpj.isNotBlank()) {
+                                                Text("CNPJ: ${comp.cnpj}", fontSize = 11.sp, color = colors.textSecondary)
+                                            }
+                                        }
+                                        if (selectedCompanyId == comp.id) {
+                                            Icon(Icons.Default.Check, contentDescription = "Selecionada", tint = colors.primary, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showCompanySelectorModal = false }) {
+                    Text("Fechar", color = colors.textSecondary)
+                }
+            },
+            containerColor = colors.surface
+        )
+    }
+
+    // Modal: Quick Create Company
+    if (showQuickCreateModal) {
+        var newName by remember { mutableStateOf("") }
+        var newUnit by remember { mutableStateOf("Matriz") }
+
+        AlertDialog(
+            onDismissRequest = { showQuickCreateModal = false },
+            title = { Text("Cadastro Rápido de Empresa", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = colors.textPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Razão Social / Nome da Empresa *", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        placeholder = { Text("Ex: Indústria XYZ Ltda.") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border,
+                            focusedContainerColor = colors.surface,
+                            unfocusedContainerColor = colors.surface,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
+                        )
+                    )
+
+                    Text("Unidade Inicial", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                    OutlinedTextField(
+                        value = newUnit,
+                        onValueChange = { newUnit = it },
+                        placeholder = { Text("Ex: Matriz, Planta 1") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border,
+                            focusedContainerColor = colors.surface,
+                            unfocusedContainerColor = colors.surface,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newName.isNotBlank()) {
+                            onQuickCreateCompany(newName.trim(), newUnit.trim()) { created ->
+                                selectedCompanyId = created.id
+                                selectedCompanyName = created.name
+                                selectedUnit = newUnit.trim().ifBlank { "Matriz" }
+                                onUpdateCompanyAndLocation(created.id, created.name, selectedUnit, location, responsible, title)
+                                showQuickCreateModal = false
+                            }
+                        }
+                    },
+                    enabled = newName.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                ) {
+                    Text("Cadastrar e Vincular", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQuickCreateModal = false }) {
+                    Text("Cancelar", color = colors.textSecondary)
+                }
+            },
+            containerColor = colors.surface
+        )
+    }
 }
 
 @Composable
@@ -547,26 +881,27 @@ fun EditableField(
     onValueChange: (String) -> Unit,
     placeholder: String
 ) {
+    val colors = AppTheme.colors
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text(" *", color = StatusNaoConforme, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(" *", color = colors.statusNaoConforme, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholder, fontSize = 14.sp, color = TextSecondary.copy(alpha = 0.6f)) },
+            placeholder = { Text(placeholder, fontSize = 14.sp, color = colors.textSecondary.copy(alpha = 0.6f)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = BorderColor,
-                focusedBorderColor = PrimaryBlue,
-                unfocusedContainerColor = SurfaceWhite,
-                focusedContainerColor = SurfaceWhite,
-                unfocusedTextColor = TextPrimary,
-                focusedTextColor = TextPrimary
+                unfocusedBorderColor = colors.border,
+                focusedBorderColor = colors.primary,
+                unfocusedContainerColor = colors.surface,
+                focusedContainerColor = colors.surface,
+                unfocusedTextColor = colors.textPrimary,
+                focusedTextColor = colors.textPrimary
             )
         )
     }

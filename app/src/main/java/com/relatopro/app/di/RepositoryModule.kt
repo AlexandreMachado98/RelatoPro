@@ -1,7 +1,9 @@
 package com.relatopro.app.di
 
+import com.relatopro.app.data.repository.CompanyRepositoryImpl
 import com.relatopro.app.data.repository.ReportRepositoryImpl
 import com.relatopro.app.data.repository.TemplateRepositoryImpl
+import com.relatopro.app.domain.repository.CompanyRepository
 import com.relatopro.app.domain.repository.ReportRepository
 import com.relatopro.app.domain.repository.TemplateRepository
 import dagger.Binds
@@ -25,4 +27,10 @@ abstract class RepositoryModule {
     abstract fun bindReportRepository(
         reportRepositoryImpl: ReportRepositoryImpl,
     ): ReportRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCompanyRepository(
+        companyRepositoryImpl: CompanyRepositoryImpl,
+    ): CompanyRepository
 }

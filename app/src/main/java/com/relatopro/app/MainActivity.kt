@@ -131,6 +131,13 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToStartReport = { templateId -> navController.navigate("field_mode/$templateId") }
                                 )
                             }
+                            composable("companies") {
+                                val viewModel = hiltViewModel<com.relatopro.app.ui.screens.companies.CompaniesViewModel>()
+                                com.relatopro.app.ui.screens.companies.CompaniesScreen(
+                                    viewModel = viewModel,
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
                             composable(
                                 route = "template_builder?templateId={templateId}",
                                 arguments = listOf(navArgument("templateId") { type = NavType.LongType; defaultValue = 0L })

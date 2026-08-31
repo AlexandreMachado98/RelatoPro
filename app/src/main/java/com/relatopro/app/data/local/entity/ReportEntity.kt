@@ -17,6 +17,7 @@ import androidx.room.PrimaryKey
     ],
     indices = [
         Index("templateId"),
+        Index("companyId"),
         Index("date"),
         Index("status")
     ]
@@ -25,15 +26,18 @@ data class ReportEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val templateId: Long,
+    val companyId: Long? = null,
+    val companyName: String = "Empresa não informada",
+    val unit: String = "Matriz",
     val title: String,
     val reportNumber: String,
     val date: Long,
     val responsible: String,
     val location: String,
-    val lat: Double?,
-    val lng: Double?,
-    val status: String, // DRAFT, FINALIZED, SYNCED
-    val generalObservations: String?,
-    val pdfLocalPath: String?,
-    val syncStatus: String // PENDING, SYNCED, FAILED
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val status: String = "DRAFT", // DRAFT, FINALIZED, SENT
+    val generalObservations: String? = null,
+    val pdfLocalPath: String? = null,
+    val syncStatus: String = "PENDING" // PENDING, SYNCED, FAILED
 )

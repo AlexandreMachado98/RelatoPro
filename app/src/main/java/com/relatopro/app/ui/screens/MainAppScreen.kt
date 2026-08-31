@@ -50,6 +50,7 @@ fun MainAppScreen(
                       currentRoute?.startsWith("history") == true ||
                       currentRoute?.startsWith("indicators") == true ||
                       currentRoute?.startsWith("checklists") == true ||
+                      currentRoute?.startsWith("companies") == true ||
                       currentRoute?.startsWith("template_builder") == true ||
                       currentRoute?.startsWith("settings") == true ||
                       currentRoute?.startsWith("profile") == true ||
@@ -413,6 +414,14 @@ private fun PermanentSidebar(
             item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { navController.navigate("my_reports?filter=Rascunhos") { popUpTo("dashboard") }; onItemClick() } }
             item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) { navController.navigate("my_reports?filter=Enviados") { popUpTo("dashboard") }; onItemClick() } }
             item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) { navController.navigate("my_reports?filter=Concluídos") { popUpTo("dashboard") }; onItemClick() } }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+            
+            item { SidebarCategory("EMPRESAS & CLIENTES") }
+            item { SidebarItem(Icons.Default.Business, "Empresas Inspecionadas", currentRoute?.startsWith("companies") == true) { 
+                navController.navigate("companies") { popUpTo("dashboard") }
+                onItemClick() 
+            } }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
             

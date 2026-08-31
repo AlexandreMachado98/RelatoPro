@@ -44,7 +44,9 @@ class PdfGenerator(private val context: Context) {
         answers: List<ReportAnswerEntity>,
         photos: Map<Long, List<String>>,
         signatures: List<SignatureEntity> = emptyList(),
-        photoEntities: List<PhotoEntity> = emptyList()
+        photoEntities: List<PhotoEntity> = emptyList(),
+        previousReport: ReportEntity? = null,
+        previousAnswers: List<ReportAnswerEntity> = emptyList()
     ): File? = withContext(Dispatchers.IO) {
         val document = PdfDocument()
 
@@ -158,18 +160,18 @@ class PdfGenerator(private val context: Context) {
         }
 
         val prefs = context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE)
-        val companyName = prefs.getString("user_company", "")?.ifBlank { "RELATO PRO" } ?: "RELATO PRO"
+        val issuerCompany = prefs.getString("user_company", "")?.ifBlank { "RELATO PRO CONSULTORIA" } ?: "RELATO PRO CONSULTORIA"
 
-        canvas.drawText(companyName.uppercase(Locale.getDefault()), margin + 18f, margin + 30f, whiteTitle.apply { textSize = 13f; color = Color.parseColor("#93C5FD") })
+        canvas.drawText(issuerCompany.uppercase(Locale.getDefault()), margin + 18f, margin + 30f, whiteTitle.apply { textSize = 12f; color = Color.parseColor("#93C5FD") })
         whiteTitle.color = Color.WHITE
-        whiteTitle.textSize = 17f
+        whiteTitle.textSize = 16f
         canvas.drawText(report.title.ifEmpty { "RELATÓRIO DE INSPEÇÃO TÉCNICA" }.uppercase(Locale.getDefault()), margin + 18f, margin + 54f, whiteTitle)
-        canvas.drawText("Documento Oficial de Vistoria e Conformidade • Nº ${report.reportNumber.ifEmpty { "#${report.id}" }}", margin + 18f, margin + 76f, whiteSub)
+        canvas.drawText("Documento Oficial de Vistoria • Nº ${report.reportNumber.ifEmpty { "#${report.id}" }} • Unidade: ${report.unit}", margin + 18f, margin + 76f, whiteSub)
 
-        currentY = margin + 110f
+        currentY = margin + 105f
 
-        // Informações Gerais Card
-        val infoCardHeight = 75f
+        // Informações Gerais Card (3 Rows)
+        val infoCardHeight = 88f
         bgPaint.color = bgLight
         canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + infoCardHeight), 6f, 6f, bgPaint)
         canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + infoCardHeight), 6f, 6f, linePaint)
@@ -182,12 +184,16 @@ class PdfGenerator(private val context: Context) {
             canvas.drawText(value, x, y + 12f, headerPaint)
         }
 
-        drawMetaItem(colA, currentY + 20f, "EMPRESA / LOCAL DA VISTORIA:", report.location.ifEmpty { "Local da Inspeção" })
-        drawMetaItem(colA, currentY + 50f, "RESPONSÁVEL TÉCNICO:", report.responsible.ifEmpty { "Alexandre Machado" })
-        drawMetaItem(colB, currentY + 20f, "DATA E HORA DA VISTORIA:", dateStr)
-        drawMetaItem(colB, currentY + 50f, "EMITIDO POR:", companyName)
+        drawMetaItem(colA, currentY + 18f, "EMPRESA INSPECIONADA:", report.companyName.ifEmpty { "Empresa não informada" })
+        drawMetaItem(colB, currentY + 18f, "UNIDADE / FILIAL:", report.unit.ifEmpty { "Matriz" })
 
-        currentY += infoCardHeight + 20f
+        drawMetaItem(colA, currentY + 46f, "LOCAL / SETOR DA INSPEÇÃO:", report.location.ifEmpty { "Setor de Produção" })
+        drawMetaItem(colB, currentY + 46f, "DATA E HORA DA VISTORIA:", dateStr)
+
+        drawMetaItem(colA, currentY + 74f, "RESPONSÁVEL TÉCNICO:", report.responsible.ifEmpty { "Alexandre Machado" })
+        drawMetaItem(colB, currentY + 74f, "EMITIDO POR:", issuerCompany)
+
+        currentY += infoCardHeight + 14f
 
         // ==========================================
         // 2. RESUMO E INDICADORES DA INSPEÇÃO
@@ -337,7 +343,70 @@ class PdfGenerator(private val context: Context) {
             canvas.drawRect(curBarX, barY, curBarX + naW, barY + barH, bgPaint)
         }
 
-        currentY += barCardHeight + 20f
+        currentY += barCardHeight + 10f
+
+        // Quadro de Histórico e Evolução da Empresa (se houver inspeção anterior)
+        if (previousReport != null) {
+            var prevC = 0
+            var prevNC = 0
+            for (pAns in previousAnswers) {
+                when (normalizeAnswer(pAns.answerValue)) {
+                    "C" -> prevC++
+                    "NC" -> prevNC++
+                }
+            }
+            val prevApp = prevC + prevNC
+            val prevComp = if (prevApp > 0) (prevC.toFloat() / prevApp.toFloat() * 100f) else 100f
+            val diffPp = compliancePercent - prevComp
+            val diffSign = if (diffPp > 0) "+" else ""
+            val diffFormatted = String.format(Locale.getDefault(), "%s%.1f pp", diffSign, diffPp)
+
+            val trendText = when {
+                diffPp >= 2.0f -> "MELHORIA (+$diffFormatted)"
+                diffPp <= -2.0f -> "PIORA ($diffFormatted)"
+                else -> "ESTÁVEL ($diffFormatted)"
+            }
+            val trendColor = when {
+                diffPp >= 2.0f -> colorConforme
+                diffPp <= -2.0f -> colorNaoConforme
+                else -> primaryBlue
+            }
+
+            val histCardHeight = 26f
+            bgPaint.color = Color.parseColor("#F1F5F9")
+            canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + histCardHeight), 4f, 4f, bgPaint)
+            canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + histCardHeight), 4f, 4f, linePaint)
+
+            val histTitlePaint = TextPaint().apply {
+                color = primaryDark
+                textSize = 8.5f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                isAntiAlias = true
+            }
+            val histBodyPaint = TextPaint().apply {
+                color = textDark
+                textSize = 8.5f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                isAntiAlias = true
+            }
+            val prevDateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(previousReport.date))
+
+            canvas.drawText("EVOLUÇÃO HISTÓRICA:", margin + 10f, currentY + 16f, histTitlePaint)
+            canvas.drawText("Anterior ($prevDateStr): ${String.format(Locale.getDefault(), "%.1f%%", prevComp)}  →  Atual: $complianceFormatted", margin + 115f, currentY + 16f, histBodyPaint)
+
+            val trendPaint = TextPaint().apply {
+                color = trendColor
+                textSize = 8.5f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                isAntiAlias = true
+            }
+            val trendWidth = trendPaint.measureText("Tendência: $trendText")
+            canvas.drawText("Tendência: $trendText", pageWidth - margin - 10f - trendWidth, currentY + 16f, trendPaint)
+
+            currentY += histCardHeight + 10f
+        } else {
+            currentY += 10f
+        }
 
         // ==========================================
         // 3. TABELA DO CHECKLIST

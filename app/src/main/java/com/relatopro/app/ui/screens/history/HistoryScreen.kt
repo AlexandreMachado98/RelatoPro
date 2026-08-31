@@ -3,23 +3,22 @@ package com.relatopro.app.ui.screens.history
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +39,7 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit
 ) {
+    val colors = AppTheme.colors
     val reports by viewModel.reports.collectAsState()
     val context = LocalContext.current
 
@@ -149,21 +149,21 @@ fun HistoryScreen(
     val sentCount = filteredReports.count { it.status == "SENT" }
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = colors.background,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Histórico de Relatórios", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                        Text("Consulta mensal e filtros avançados", fontSize = 12.sp, color = TextSecondary)
+                        Text("Histórico de Relatórios", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                        Text("Consulta mensal e filtros avançados", fontSize = 12.sp, color = colors.textSecondary)
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
             )
         }
     ) { paddingValues ->
@@ -181,10 +181,10 @@ fun HistoryScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    HistoryStatCard(Modifier.weight(1f), "Total", totalCount, PrimaryBlue)
-                    HistoryStatCard(Modifier.weight(1f), "Concluídos", completedCount, StatusConforme)
-                    HistoryStatCard(Modifier.weight(1f), "Rascunhos", draftCount, StatusWarning)
-                    HistoryStatCard(Modifier.weight(1f), "Enviados", sentCount, Color(0xFF06B6D4))
+                    HistoryStatCard(Modifier.weight(1f), "Total", totalCount, colors.primary)
+                    HistoryStatCard(Modifier.weight(1f), "Concluídos", completedCount, colors.statusConforme)
+                    HistoryStatCard(Modifier.weight(1f), "Rascunhos", draftCount, colors.statusWarning)
+                    HistoryStatCard(Modifier.weight(1f), "Enviados", sentCount, colors.cyanAccent)
                 }
             }
 
@@ -194,11 +194,11 @@ fun HistoryScreen(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     placeholder = { Text("Pesquisar por título, nº, empresa ou local...", fontSize = 13.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = colors.textSecondary) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Limpar", tint = TextSecondary)
+                                Icon(Icons.Default.Clear, contentDescription = "Limpar", tint = colors.textSecondary)
                             }
                         }
                     },
@@ -206,10 +206,12 @@ fun HistoryScreen(
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryBlue,
-                        unfocusedBorderColor = BorderColor,
-                        focusedContainerColor = SurfaceWhite,
-                        unfocusedContainerColor = SurfaceWhite
+                        focusedBorderColor = colors.primary,
+                        unfocusedBorderColor = colors.border,
+                        focusedContainerColor = colors.surface,
+                        unfocusedContainerColor = colors.surface,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
                     )
                 )
             }
@@ -217,7 +219,7 @@ fun HistoryScreen(
             // 3. MONTH CHIPS ROW
             item {
                 Column {
-                    Text("Filtrar por Mês", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Filtrar por Mês", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
@@ -233,13 +235,13 @@ fun HistoryScreen(
                                 onClick = { selectedMonth = mIndex },
                                 label = { Text(name, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = PrimaryBlue,
+                                    selectedContainerColor = colors.primary,
                                     selectedLabelColor = Color.White,
-                                    containerColor = SurfaceWhite,
-                                    labelColor = TextSecondary
+                                    containerColor = colors.surface,
+                                    labelColor = colors.textSecondary
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
-                                    borderColor = if (isSelected) PrimaryBlue else BorderColor,
+                                    borderColor = if (isSelected) colors.primary else colors.border,
                                     enabled = true,
                                     selected = isSelected
                                 )
@@ -262,8 +264,8 @@ fun HistoryScreen(
                         OutlinedButton(
                             onClick = { statusMenuExpanded = true },
                             shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = SurfaceWhite, contentColor = TextPrimary),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = colors.surface, contentColor = colors.textPrimary),
                             modifier = Modifier.height(40.dp)
                         ) {
                             val statusLabel = when (selectedStatus) {
@@ -276,11 +278,11 @@ fun HistoryScreen(
                             Spacer(Modifier.width(4.dp))
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
-                        DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
-                            DropdownMenuItem(text = { Text("Todos os Status") }, onClick = { selectedStatus = "TODOS"; statusMenuExpanded = false })
-                            DropdownMenuItem(text = { Text("Apenas Concluídos") }, onClick = { selectedStatus = "CONCLUIDOS"; statusMenuExpanded = false })
-                            DropdownMenuItem(text = { Text("Apenas Rascunhos") }, onClick = { selectedStatus = "RASCUNHOS"; statusMenuExpanded = false })
-                            DropdownMenuItem(text = { Text("Apenas Enviados") }, onClick = { selectedStatus = "ENVIADOS"; statusMenuExpanded = false })
+                        DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }, modifier = Modifier.background(colors.surface)) {
+                            DropdownMenuItem(text = { Text("Todos os Status", color = colors.textPrimary) }, onClick = { selectedStatus = "TODOS"; statusMenuExpanded = false })
+                            DropdownMenuItem(text = { Text("Apenas Concluídos", color = colors.textPrimary) }, onClick = { selectedStatus = "CONCLUIDOS"; statusMenuExpanded = false })
+                            DropdownMenuItem(text = { Text("Apenas Rascunhos", color = colors.textPrimary) }, onClick = { selectedStatus = "RASCUNHOS"; statusMenuExpanded = false })
+                            DropdownMenuItem(text = { Text("Apenas Enviados", color = colors.textPrimary) }, onClick = { selectedStatus = "ENVIADOS"; statusMenuExpanded = false })
                         }
                     }
 
@@ -291,8 +293,8 @@ fun HistoryScreen(
                             OutlinedButton(
                                 onClick = { yearMenuExpanded = true },
                                 shape = RoundedCornerShape(8.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                                colors = ButtonDefaults.outlinedButtonColors(containerColor = SurfaceWhite, contentColor = TextPrimary),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                                colors = ButtonDefaults.outlinedButtonColors(containerColor = colors.surface, contentColor = colors.textPrimary),
                                 modifier = Modifier.height(40.dp)
                             ) {
                                 val yearLabel = if (selectedYear == -1) "Ano: Todos" else selectedYear.toString()
@@ -300,10 +302,10 @@ fun HistoryScreen(
                                 Spacer(Modifier.width(4.dp))
                                 Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
-                            DropdownMenu(expanded = yearMenuExpanded, onDismissRequest = { yearMenuExpanded = false }) {
-                                DropdownMenuItem(text = { Text("Todos os Anos") }, onClick = { selectedYear = -1; yearMenuExpanded = false })
+                            DropdownMenu(expanded = yearMenuExpanded, onDismissRequest = { yearMenuExpanded = false }, modifier = Modifier.background(colors.surface)) {
+                                DropdownMenuItem(text = { Text("Todos os Anos", color = colors.textPrimary) }, onClick = { selectedYear = -1; yearMenuExpanded = false })
                                 availableYears.forEach { yr ->
-                                    DropdownMenuItem(text = { Text(yr.toString()) }, onClick = { selectedYear = yr; yearMenuExpanded = false })
+                                    DropdownMenuItem(text = { Text(yr.toString(), color = colors.textPrimary) }, onClick = { selectedYear = yr; yearMenuExpanded = false })
                                 }
                             }
                         }
@@ -315,12 +317,12 @@ fun HistoryScreen(
                     var sortMenuExpanded by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { sortMenuExpanded = true }) {
-                            Icon(Icons.Default.Sort, contentDescription = "Ordenar", tint = PrimaryBlue)
+                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordenar", tint = colors.primary)
                         }
-                        DropdownMenu(expanded = sortMenuExpanded, onDismissRequest = { sortMenuExpanded = false }) {
-                            DropdownMenuItem(text = { Text("Mais Recentes Primeiro") }, onClick = { sortOrder = "RECENTES"; sortMenuExpanded = false })
-                            DropdownMenuItem(text = { Text("Mais Antigos Primeiro") }, onClick = { sortOrder = "ANTIGOS"; sortMenuExpanded = false })
-                            DropdownMenuItem(text = { Text("Ordem Alfabética (A-Z)") }, onClick = { sortOrder = "ALFABETICO"; sortMenuExpanded = false })
+                        DropdownMenu(expanded = sortMenuExpanded, onDismissRequest = { sortMenuExpanded = false }, modifier = Modifier.background(colors.surface)) {
+                            DropdownMenuItem(text = { Text("Mais Recentes Primeiro", color = colors.textPrimary) }, onClick = { sortOrder = "RECENTES"; sortMenuExpanded = false })
+                            DropdownMenuItem(text = { Text("Mais Antigos Primeiro", color = colors.textPrimary) }, onClick = { sortOrder = "ANTIGOS"; sortMenuExpanded = false })
+                            DropdownMenuItem(text = { Text("Ordem Alfabética (A-Z)", color = colors.textPrimary) }, onClick = { sortOrder = "ALFABETICO"; sortMenuExpanded = false })
                         }
                     }
                 }
@@ -333,14 +335,15 @@ fun HistoryScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
-                            .background(SurfaceWhite, RoundedCornerShape(12.dp))
+                            .background(colors.surface, RoundedCornerShape(12.dp))
+                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = TextSecondary.copy(alpha = 0.5f))
+                            Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = colors.textSecondary.copy(alpha = 0.5f))
                             Spacer(Modifier.height(12.dp))
-                            Text("Nenhum relatório encontrado para os filtros selecionados.", textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = TextSecondary, fontSize = 14.sp)
+                            Text("Nenhum relatório encontrado para os filtros selecionados.", textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = colors.textSecondary, fontSize = 14.sp)
                         }
                     }
                 }
@@ -356,15 +359,15 @@ fun HistoryScreen(
                                 text = monthYearKey,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
-                                color = PrimaryDark
+                                color = colors.textPrimary
                             )
                             Text(
                                 text = "${reportsInMonth.size} ${if (reportsInMonth.size == 1) "relatório" else "relatórios"}",
                                 fontSize = 12.sp,
-                                color = TextSecondary
+                                color = colors.textSecondary
                             )
                         }
-                        HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 6.dp))
+                        HorizontalDivider(color = colors.border, modifier = Modifier.padding(vertical = 6.dp))
                     }
 
                     items(reportsInMonth.size) { rIdx ->
@@ -391,7 +394,7 @@ fun HistoryScreen(
         
         ModalBottomSheet(
             onDismissRequest = { selectedReportForDetails = null },
-            containerColor = SurfaceWhite
+            containerColor = colors.surface
         ) {
             Column(
                 modifier = Modifier
@@ -404,8 +407,8 @@ fun HistoryScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(rep.title.ifEmpty { "Relatório #${rep.id}" }, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                        Text(rep.reportNumber.ifEmpty { "#${rep.id}" }, fontSize = 12.sp, color = TextSecondary)
+                        Text(rep.title.ifEmpty { "Relatório #${rep.id}" }, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                        Text(rep.reportNumber.ifEmpty { "#${rep.id}" }, fontSize = 12.sp, color = colors.textSecondary)
                     }
                     HistoryStatusBadge(rep.status)
                 }
@@ -413,8 +416,9 @@ fun HistoryScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = BackgroundLight),
+                    colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
                     shape = RoundedCornerShape(10.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -439,7 +443,7 @@ fun HistoryScreen(
                                 openPdf(rep.pdfLocalPath)
                                 selectedReportForDetails = null
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1f).height(48.dp)
                         ) {
@@ -454,6 +458,8 @@ fun HistoryScreen(
                                 selectedReportForDetails = null
                             },
                             shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
                             modifier = Modifier.weight(1f).height(48.dp)
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -463,7 +469,7 @@ fun HistoryScreen(
                     } else {
                         Text(
                             "PDF deste relatório ainda não foi gerado.",
-                            color = TextSecondary,
+                            color = colors.textSecondary,
                             fontSize = 13.sp,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
@@ -478,16 +484,17 @@ fun HistoryScreen(
 
 @Composable
 fun HistoryStatCard(modifier: Modifier = Modifier, label: String, count: Int, color: Color) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(10.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Text(count.toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(label, fontSize = 11.sp, color = TextSecondary, maxLines = 1)
+            Text(label, fontSize = 11.sp, color = colors.textSecondary, maxLines = 1)
         }
     }
 }
@@ -500,6 +507,7 @@ fun HistoryReportCard(
     onSharePdf: (String, Long) -> Unit,
     onDelete: () -> Unit
 ) {
+    val colors = AppTheme.colors
     val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.date))
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -507,8 +515,8 @@ fun HistoryReportCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onCardClick),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -521,7 +529,7 @@ fun HistoryReportCard(
                     Text(
                         text = report.title.ifEmpty { "Relatório #${report.id}" },
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = colors.textPrimary,
                         fontSize = 15.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -529,7 +537,7 @@ fun HistoryReportCard(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = report.location,
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -538,35 +546,35 @@ fun HistoryReportCard(
 
                 Box {
                     IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                     }
-                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }, modifier = Modifier.background(colors.surface)) {
                         if (!report.pdfLocalPath.isNullOrBlank()) {
                             DropdownMenuItem(
-                                text = { Text("Visualizar PDF") },
+                                text = { Text("Visualizar PDF", color = colors.textPrimary) },
                                 onClick = {
                                     menuExpanded = false
                                     onOpenPdf(report.pdfLocalPath)
                                 },
-                                leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) }
+                                leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = colors.primary) }
                             )
                             DropdownMenuItem(
-                                text = { Text("Compartilhar") },
+                                text = { Text("Compartilhar", color = colors.textPrimary) },
                                 onClick = {
                                     menuExpanded = false
                                     onSharePdf(report.pdfLocalPath, report.id)
                                 },
-                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = colors.primary) }
                             )
-                            HorizontalDivider()
+                            HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
                         }
                         DropdownMenuItem(
-                            text = { Text("Excluir", color = StatusNaoConforme) },
+                            text = { Text("Excluir", color = colors.statusNaoConforme) },
                             onClick = {
                                 menuExpanded = false
                                 onDelete()
                             },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StatusNaoConforme) }
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = colors.statusNaoConforme) }
                         )
                     }
                 }
@@ -580,9 +588,9 @@ fun HistoryReportCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Schedule, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Schedule, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(dateStr, color = TextSecondary, fontSize = 11.sp)
+                    Text(dateStr, color = colors.textSecondary, fontSize = 11.sp)
                 }
 
                 HistoryStatusBadge(report.status)
@@ -593,11 +601,12 @@ fun HistoryReportCard(
 
 @Composable
 fun HistoryStatusBadge(status: String) {
+    val colors = AppTheme.colors
     val color = when (status) {
-        "FINALIZED" -> StatusConforme
-        "SENT" -> Color(0xFF06B6D4)
-        "DRAFT" -> PrimaryBlue
-        else -> StatusWarning
+        "FINALIZED" -> colors.statusConforme
+        "SENT" -> colors.cyanAccent
+        "DRAFT" -> colors.primary
+        else -> colors.statusWarning
     }
     val text = when (status) {
         "FINALIZED" -> "Concluído"
@@ -608,7 +617,7 @@ fun HistoryStatusBadge(status: String) {
 
     Box(
         modifier = Modifier
-            .background(color.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -621,8 +630,9 @@ fun HistoryStatusBadge(status: String) {
 
 @Composable
 fun DetailItemRow(label: String, value: String) {
+    val colors = AppTheme.colors
     Column {
-        Text(label, color = TextSecondary, fontSize = 11.sp)
-        Text(value, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = colors.textSecondary, fontSize = 11.sp)
+        Text(value, color = colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }

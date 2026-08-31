@@ -367,23 +367,52 @@ fun CategoryCardBlock(
                 // Category Actions
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (catIndex > 0) {
-                        IconButton(onClick = onMoveCategoryUp, modifier = Modifier.size(30.dp)) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir Categoria", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                        IconButton(onClick = onMoveCategoryUp, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir Categoria", tint = colors.textSecondary, modifier = Modifier.size(20.dp))
                         }
                     }
                     if (catIndex < totalCategories - 1) {
-                        IconButton(onClick = onMoveCategoryDown, modifier = Modifier.size(30.dp)) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer Categoria", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                        IconButton(onClick = onMoveCategoryDown, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer Categoria", tint = colors.textSecondary, modifier = Modifier.size(20.dp))
                         }
                     }
-                    IconButton(onClick = onDuplicateCategory, modifier = Modifier.size(30.dp)) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Duplicar Categoria", tint = colors.primary, modifier = Modifier.size(16.dp))
-                    }
-                    IconButton(onClick = onRenameCategory, modifier = Modifier.size(30.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Renomear Categoria", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
-                    }
-                    IconButton(onClick = onDeleteCategory, modifier = Modifier.size(30.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Excluir Categoria", tint = colors.statusNaoConforme, modifier = Modifier.size(16.dp))
+                    
+                    var catMenuExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { catMenuExpanded = true }, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Opções da Categoria", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                        }
+                        DropdownMenu(
+                            expanded = catMenuExpanded,
+                            onDismissRequest = { catMenuExpanded = false },
+                            modifier = Modifier.background(colors.surface)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Renomear Categoria", color = colors.textPrimary) },
+                                onClick = {
+                                    catMenuExpanded = false
+                                    onRenameCategory()
+                                },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = colors.primary) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Duplicar Categoria", color = colors.textPrimary) },
+                                onClick = {
+                                    catMenuExpanded = false
+                                    onDuplicateCategory()
+                                },
+                                leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = colors.primary) }
+                            )
+                            HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
+                            DropdownMenuItem(
+                                text = { Text("Excluir Categoria", color = colors.statusNaoConforme) },
+                                onClick = {
+                                    catMenuExpanded = false
+                                    onDeleteCategory()
+                                },
+                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = colors.statusNaoConforme) }
+                            )
+                        }
                     }
                 }
             }
@@ -448,6 +477,7 @@ fun ItemRowCard(
     onRemove: () -> Unit
 ) {
     val colors = AppTheme.colors
+    var itemMenuExpanded by remember { mutableStateOf(false) }
     val typeBadge = when (field.type) {
         "TEXT" -> "Texto Livre"
         "PHOTO" -> "Foto"
@@ -457,8 +487,10 @@ fun ItemRowCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
+            .background(colors.surfaceVariant)
             .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .clickable(onClick = onEdit)
             .padding(10.dp)
     ) {
         Row(
@@ -495,23 +527,50 @@ fun ItemRowCard(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (itemIndex > 0) {
-                    IconButton(onClick = onMoveUp, modifier = Modifier.size(26.dp)) {
-                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
+                    IconButton(onClick = onMoveUp, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                     }
                 }
                 if (itemIndex < totalItemsInCategory - 1) {
-                    IconButton(onClick = onMoveDown, modifier = Modifier.size(26.dp)) {
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
+                    IconButton(onClick = onMoveDown, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                     }
                 }
-                IconButton(onClick = onDuplicate, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Duplicar Item", tint = colors.primary, modifier = Modifier.size(14.dp))
-                }
-                IconButton(onClick = onEdit, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar Item", tint = colors.textSecondary, modifier = Modifier.size(14.dp))
-                }
-                IconButton(onClick = onRemove, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Remover Item", tint = colors.statusNaoConforme, modifier = Modifier.size(14.dp))
+                Box {
+                    IconButton(onClick = { itemMenuExpanded = true }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Opções do Item", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                    }
+                    DropdownMenu(
+                        expanded = itemMenuExpanded,
+                        onDismissRequest = { itemMenuExpanded = false },
+                        modifier = Modifier.background(colors.surface)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Editar Item", color = colors.textPrimary) },
+                            onClick = {
+                                itemMenuExpanded = false
+                                onEdit()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = colors.primary) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Duplicar Item", color = colors.textPrimary) },
+                            onClick = {
+                                itemMenuExpanded = false
+                                onDuplicate()
+                            },
+                            leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = colors.primary) }
+                        )
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
+                        DropdownMenuItem(
+                            text = { Text("Remover Item", color = colors.statusNaoConforme) },
+                            onClick = {
+                                itemMenuExpanded = false
+                                onRemove()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = colors.statusNaoConforme) }
+                        )
+                    }
                 }
             }
         }

@@ -57,11 +57,6 @@ fun ChecklistsScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
-                actions = {
-                    IconButton(onClick = onNavigateToCreate) {
-                        Icon(Icons.Default.Add, contentDescription = "Novo Checklist", tint = colors.primary)
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
             )
         },
@@ -374,14 +369,6 @@ fun ChecklistCardItem(
                         onDismissRequest = { menuExpanded = false },
                         modifier = Modifier.background(colors.surface)
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Iniciar Relatório", color = colors.textPrimary) },
-                            onClick = {
-                                menuExpanded = false
-                                onStartReport()
-                            },
-                            leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = colors.statusConforme) }
-                        )
                         DropdownMenuItem(
                             text = { Text("Editar", color = colors.textPrimary) },
                             onClick = {

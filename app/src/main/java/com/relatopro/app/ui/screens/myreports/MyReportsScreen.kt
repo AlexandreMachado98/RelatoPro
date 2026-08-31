@@ -139,53 +139,30 @@ fun MyReportsScreen(
             val completedCount = reports.count { it.status == "FINALIZED" }
             val sentCount = reports.count { it.status == "SENT" }
             
-            Row(
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Pesquisar por título, ID ou local...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Pesquisar", tint = colors.textSecondary) },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.primary,
-                        unfocusedBorderColor = colors.border,
-                        focusedContainerColor = colors.surface,
-                        unfocusedContainerColor = colors.surface,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    ),
-                    singleLine = true
-                )
-
-                if (!isDesktop) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
-                            .background(colors.surface, RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.FilterList, contentDescription = null, tint = colors.textSecondary)
+                placeholder = { Text("Pesquisar por título, ID ou local...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Pesquisar", tint = colors.textSecondary) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Limpar", tint = colors.textSecondary)
+                        }
                     }
-                } else {
-                    OutlinedButton(
-                        onClick = { },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
-                        modifier = Modifier.height(56.dp)
-                    ) {
-                        Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Mais Filtros", color = colors.textPrimary)
-                    }
-                }
-            }
+                },
+                shape = RoundedCornerShape(8.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.primary,
+                    unfocusedBorderColor = colors.border,
+                    focusedContainerColor = colors.surface,
+                    unfocusedContainerColor = colors.surface,
+                    focusedTextColor = colors.textPrimary,
+                    unfocusedTextColor = colors.textPrimary
+                ),
+                singleLine = true
+            )
             
             Spacer(modifier = Modifier.height(16.dp))
             // Row of Filter Chips

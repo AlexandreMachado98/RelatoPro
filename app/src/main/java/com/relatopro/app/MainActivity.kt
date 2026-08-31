@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
                                 val viewModel = hiltViewModel<DashboardViewModel>()
                                 DashboardScreen(
                                     viewModel = viewModel,
-                                    onNavigateToTemplateBuilder = { navController.navigate("checklists") },
+                                    onNavigateToChecklists = { navController.navigate("checklists") },
                                     onNavigateToFieldMode = { templateId -> navController.navigate("field_mode/$templateId") },
                                     onNavigateToMyReports = { navController.navigate("my_reports") },
                                     onNavigateToIndicators = { navController.navigate("indicators") }

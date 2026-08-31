@@ -54,11 +54,6 @@ fun CompaniesScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
-                actions = {
-                    IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.AddBusiness, contentDescription = "Nova Empresa", tint = colors.primary)
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
             )
         },

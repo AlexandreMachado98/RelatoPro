@@ -1,6 +1,8 @@
 package com.relatopro.app.ui.screens.fieldmode
 
 import android.content.Context
+import android.content.Intent
+import androidx.compose.ui.window.Dialog
 import com.relatopro.app.data.local.entity.CompanyEntity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +45,7 @@ import coil.compose.AsyncImage
 import com.relatopro.app.data.local.entity.PhotoEntity
 import com.relatopro.app.data.local.entity.ReportEntity
 import com.relatopro.app.data.local.entity.TemplateFieldEntity
+import com.relatopro.app.pdf.PdfGenerator
 import com.relatopro.app.ui.components.signature.SignaturePad
 import com.relatopro.app.ui.theme.*
 import com.relatopro.app.utils.ImageOptimizer
@@ -55,30 +58,42 @@ import java.util.Locale
 @Composable
 fun FieldModeScreen(
     templateId: Long,
+    reportId: Long = 0L,
     viewModel: FieldModeViewModel,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val colors = AppTheme.colors
     val currentReport by viewModel.currentReport.collectAsState()
     val fields by viewModel.fields.collectAsState()
     val answers by viewModel.answers.collectAsState()
     val photos by viewModel.photos.collectAsState()
+    val isAutoSaving by viewModel.isAutoSaving.collectAsState()
+    val lastSavedTime by viewModel.lastSavedTime.collectAsState()
 
     val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
     val loggedInName = remember { prefs.getString("user_name", "")?.ifBlank { "Alexandre Machado" } ?: "Alexandre Machado" }
     val loggedInCompany = remember { prefs.getString("user_company", "") ?: "" }
 
-    LaunchedEffect(templateId) {
-        viewModel.initializeReportFromTemplate(templateId, loggedInCompany, loggedInName)
+    LaunchedEffect(templateId, reportId) {
+        if (reportId > 0L) {
+            viewModel.loadExistingReport(reportId)
+        } else {
+            viewModel.initializeReportFromTemplate(templateId, loggedInCompany, loggedInName)
+        }
     }
 
     var currentPhotoFile by remember { mutableStateOf<File?>(null) }
     var activeFieldId by remember { mutableStateOf<Long?>(null) }
-    
+
     var selectedStep by remember { mutableIntStateOf(0) }
     val steps = listOf("Informações", "Checklist", "Evidências", "Observações", "Revisão")
 
     var isGeneratingPdf by remember { mutableStateOf(false) }
+    var pdfProgressStage by remember { mutableStateOf("Preparando...") }
+    var pdfProgressCurrent by remember { mutableIntStateOf(0) }
+    var pdfProgressTotal by remember { mutableIntStateOf(0) }
+    var pdfResultDialog by remember { mutableStateOf<PdfGenerator.PdfGenerationResult?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -104,7 +119,7 @@ fun FieldModeScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = colors.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -112,30 +127,48 @@ fun FieldModeScreen(
                         Text(
                             text = currentReport?.title ?: "Novo Relatório",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = TextPrimary,
+                            fontSize = 17.sp,
+                            color = colors.textPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Text(
-                            text = "Etapa ${selectedStep + 1} de ${steps.size} • ${steps[selectedStep]}",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Etapa ${selectedStep + 1}/${steps.size} • ${steps[selectedStep]}",
+                                fontSize = 11.sp,
+                                color = colors.textSecondary
+                            )
+                            if (isAutoSaving) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "• Salvando...",
+                                    fontSize = 11.sp,
+                                    color = colors.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else if (lastSavedTime > 0L) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "• Salvo automaticamente",
+                                    fontSize = 11.sp,
+                                    color = colors.statusConforme
+                                )
+                            }
+                        }
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface),
                 actions = {
                     TextButton(
                         onClick = onNavigateBack,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text("Salvar Rascunho", color = PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Salvar Rascunho", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             )
@@ -196,28 +229,36 @@ fun FieldModeScreen(
                         Button(
                             onClick = { 
                                 isGeneratingPdf = true
-                                viewModel.finalizeReport { 
-                                    isGeneratingPdf = false
-                                    onNavigateBack() 
-                                } 
+                                pdfProgressCurrent = 0
+                                pdfProgressTotal = 0
+                                pdfProgressStage = "Iniciando processamento das evidências..."
+                                viewModel.finalizeReport(
+                                    onProgress = { cur, tot, stg ->
+                                        pdfProgressCurrent = cur
+                                        pdfProgressTotal = tot
+                                        pdfProgressStage = stg
+                                    },
+                                    onPdfGenerated = { result ->
+                                        isGeneratingPdf = false
+                                        if (result != null) {
+                                            pdfResultDialog = result
+                                        } else {
+                                            onNavigateBack()
+                                        }
+                                    }
+                                )
                             },
                             enabled = !isGeneratingPdf,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = StatusConforme,
+                                containerColor = colors.statusConforme,
                                 contentColor = Color.White
                             ),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(48.dp).weight(1.5f)
                         ) {
-                            if (isGeneratingPdf) {
-                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Gerando PDF...", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Gerar Relatório", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Gerar Relatório", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }
@@ -304,6 +345,162 @@ fun FieldModeScreen(
                 }
             }
         }
+    }
+
+    // PDF GENERATION PROGRESS MODAL
+    if (isGeneratingPdf) {
+        Dialog(onDismissRequest = {}) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = colors.primary, strokeWidth = 3.dp, modifier = Modifier.size(48.dp))
+                    Text("Gerando Relatório Técnico...", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
+                    Text(pdfProgressStage, fontSize = 13.sp, color = colors.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontWeight = FontWeight.Medium)
+
+                    if (pdfProgressTotal > 0) {
+                        LinearProgressIndicator(
+                            progress = { if (pdfProgressTotal > 0) pdfProgressCurrent.toFloat() / pdfProgressTotal.toFloat() else 0f },
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                            color = colors.primary,
+                            trackColor = colors.surfaceVariant
+                        )
+                        Text(
+                            "$pdfProgressCurrent / $pdfProgressTotal fotos processadas",
+                            fontSize = 11.sp,
+                            color = colors.textSecondary
+                        )
+                    }
+
+                    Text(
+                        "Otimizando imagens e montando estrutura do PDF...",
+                        fontSize = 11.sp,
+                        color = colors.textSecondary,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+
+    // PDF GENERATION RESULT MODAL
+    val currentResult = pdfResultDialog
+    if (currentResult != null) {
+        val result = currentResult
+        val openPdf = {
+            val file = result.file
+            if (file.exists()) {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/pdf")
+                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+                context.startActivity(Intent.createChooser(intent, "Abrir PDF"))
+            }
+        }
+
+        val sharePdf = {
+            val file = result.file
+            if (file.exists()) {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+                context.startActivity(Intent.createChooser(intent, "Compartilhar Relatório"))
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = {
+                pdfResultDialog = null
+                onNavigateBack()
+            },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(36.dp).background(colors.statusConforme.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = colors.statusConforme, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text("PDF Gerado com Sucesso!", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = colors.textPrimary)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Tamanho do Arquivo:", fontSize = 12.sp, color = colors.textSecondary)
+                                Text(result.fileSizeFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Fotos Processadas:", fontSize = 12.sp, color = colors.textSecondary)
+                                Text("${result.photosCount}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                            }
+                        }
+                    }
+                    Text(
+                        "O documento foi comprimido e salvo com alta fidelidade visual no seu dispositivo.",
+                        fontSize = 12.sp,
+                        color = colors.textSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { openPdf() },
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.primary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary)
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Ver PDF", fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = {
+                            sharePdf()
+                            pdfResultDialog = null
+                            onNavigateBack()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Compartilhar", fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pdfResultDialog = null
+                    onNavigateBack()
+                }) {
+                    Text("Concluir", color = colors.textSecondary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
 

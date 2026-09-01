@@ -11,6 +11,8 @@ import com.relatopro.app.data.local.entity.ReportAnswerEntity
 import com.relatopro.app.data.local.entity.ReportEntity
 import com.relatopro.app.data.local.entity.SignatureEntity
 import com.relatopro.app.data.local.entity.TemplateFieldEntity
+import com.relatopro.app.utils.PhotoQuality
+import com.relatopro.app.utils.PreferenceUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -20,6 +22,13 @@ import java.util.Date
 import java.util.Locale
 
 class PdfGenerator(private val context: Context) {
+
+    data class PdfGenerationResult(
+        val file: File,
+        val fileSizeBytes: Long,
+        val fileSizeFormatted: String,
+        val photosCount: Int
+    )
 
     // A4 Portrait dimensions in PostScript points (595 x 842 pt)
     private val pageWidth = 595
@@ -46,8 +55,11 @@ class PdfGenerator(private val context: Context) {
         signatures: List<SignatureEntity> = emptyList(),
         photoEntities: List<PhotoEntity> = emptyList(),
         previousReport: ReportEntity? = null,
-        previousAnswers: List<ReportAnswerEntity> = emptyList()
-    ): File? = withContext(Dispatchers.IO) {
+        previousAnswers: List<ReportAnswerEntity> = emptyList(),
+        onProgress: ((current: Int, total: Int, stage: String) -> Unit)? = null
+    ): PdfGenerationResult? = withContext(Dispatchers.IO) {
+        onProgress?.invoke(0, 100, "Iniciando estruturação do relatório...")
+
         val document = PdfDocument()
 
         val titlePaint = TextPaint().apply {
@@ -106,10 +118,10 @@ class PdfGenerator(private val context: Context) {
                 // Top header line
                 bgPaint.color = primaryDark
                 canvas.drawRect(margin, margin - 15f, pageWidth - margin, margin - 13f, bgPaint)
-                
+
                 canvas.drawText("RELATO PRO • Relatório de Inspeção Técnica", margin, margin - 20f, sectionTitlePaint.apply { textSize = 9f })
                 sectionTitlePaint.textSize = 13f // restore
-                
+
                 val reportNumText = "Nº ${report.reportNumber.ifEmpty { "#${report.id}" }} • $dateOnlyStr"
                 val reportNumWidth = bodyMutedPaint.measureText(reportNumText)
                 canvas.drawText(reportNumText, pageWidth - margin - reportNumWidth, margin - 20f, bodyMutedPaint)
@@ -118,7 +130,7 @@ class PdfGenerator(private val context: Context) {
             // Bottom Footer
             val footerY = pageHeight - margin + 18f
             canvas.drawLine(margin, footerY - 10f, pageWidth - margin, footerY - 10f, linePaint)
-            
+
             val footerLeft = "Relato Pro — Documento gerado eletronicamente"
             canvas.drawText(footerLeft, margin, footerY, bodyMutedPaint)
 
@@ -140,7 +152,6 @@ class PdfGenerator(private val context: Context) {
         // ==========================================
         // 1. CAPA / CABEÇALHO DO RELATÓRIO
         // ==========================================
-        // Top Banner
         bgPaint.color = primaryDark
         canvas.drawRoundRect(RectF(margin, margin, pageWidth - margin, margin + 95f), 8f, 8f, bgPaint)
 
@@ -152,356 +163,239 @@ class PdfGenerator(private val context: Context) {
             isAntiAlias = true
         }
         val whiteSub = TextPaint().apply {
-            color = Color.WHITE
-            alpha = 220
-            textSize = 11f
+            color = Color.parseColor("#93C5FD")
+            textSize = 10f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             isAntiAlias = true
         }
 
-        val prefs = context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE)
-        val issuerCompany = prefs.getString("user_company", "")?.ifBlank { "RELATO PRO CONSULTORIA" } ?: "RELATO PRO CONSULTORIA"
+        canvas.drawText("RELATO PRO", margin + 16f, margin + 30f, whiteTitle)
+        canvas.drawText("SISTEMA PROFISSIONAL DE AUDITORIA & INSPEÇÃO", margin + 16f, margin + 44f, whiteSub)
 
-        canvas.drawText(issuerCompany.uppercase(Locale.getDefault()), margin + 18f, margin + 30f, whiteTitle.apply { textSize = 12f; color = Color.parseColor("#93C5FD") })
-        whiteTitle.color = Color.WHITE
-        whiteTitle.textSize = 16f
-        canvas.drawText(report.title.ifEmpty { "RELATÓRIO DE INSPEÇÃO TÉCNICA" }.uppercase(Locale.getDefault()), margin + 18f, margin + 54f, whiteTitle)
-        canvas.drawText("Documento Oficial de Vistoria • Nº ${report.reportNumber.ifEmpty { "#${report.id}" }} • Unidade: ${report.unit}", margin + 18f, margin + 76f, whiteSub)
+        // Right box: Report Number & Date
+        val rightInfoPaint = TextPaint().apply {
+            color = Color.WHITE
+            textSize = 10.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+            textAlign = Paint.Align.RIGHT
+        }
+        val rightMutedPaint = TextPaint().apply {
+            color = Color.parseColor("#93C5FD")
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+            textAlign = Paint.Align.RIGHT
+        }
 
-        currentY = margin + 105f
+        val rightX = pageWidth - margin - 16f
+        canvas.drawText("LAUDO TÉCNICO", rightX, margin + 26f, rightInfoPaint)
+        canvas.drawText("Nº ${report.reportNumber.ifEmpty { "#${report.id}" }}", rightX, margin + 40f, rightInfoPaint)
+        canvas.drawText("Emissão: $dateStr", rightX, margin + 54f, rightMutedPaint)
+        canvas.drawText("Status: FINALIZADO", rightX, margin + 68f, rightMutedPaint)
 
-        // Informações Gerais Card (3 Rows)
-        val infoCardHeight = 88f
+        currentY = margin + 112f
+
+        // ==========================================
+        // 2. DADOS DA EMPRESA & INSPEÇÃO
+        // ==========================================
+        canvas.drawText("1. DADOS DA EMPRESA & INSPEÇÃO", margin, currentY, sectionTitlePaint)
+        currentY += 10f
+
+        val infoBoxHeight = 84f
         bgPaint.color = bgLight
-        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + infoCardHeight), 6f, 6f, bgPaint)
-        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + infoCardHeight), 6f, 6f, linePaint)
+        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + infoBoxHeight), 6f, 6f, bgPaint)
+        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + infoBoxHeight), 6f, 6f, linePaint)
 
-        val colA = margin + 14f
-        val colB = margin + (usableWidth / 2) + 10f
+        val col1X = margin + 14f
+        val col2X = margin + (usableWidth / 2f) + 8f
 
-        fun drawMetaItem(x: Float, y: Float, label: String, value: String) {
-            canvas.drawText(label, x, y, bodyMutedPaint)
-            canvas.drawText(value, x, y + 12f, headerPaint)
+        fun drawInfoField(x: Float, y: Float, label: String, value: String) {
+            canvas.drawText(label.uppercase(Locale.getDefault()), x, y, bodyMutedPaint.apply { textSize = 7.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) })
+            val valLayout = @Suppress("DEPRECATION") StaticLayout(
+                value.ifBlank { "Não informado" },
+                bodyPaint.apply { textSize = 9f },
+                (usableWidth / 2f - 24f).toInt(),
+                Layout.Alignment.ALIGN_NORMAL,
+                1.0f,
+                0.0f,
+                false
+            )
+            canvas.save()
+            canvas.translate(x, y + 2f)
+            valLayout.draw(canvas)
+            canvas.restore()
         }
 
-        drawMetaItem(colA, currentY + 18f, "EMPRESA INSPECIONADA:", report.companyName.ifEmpty { "Empresa não informada" })
-        drawMetaItem(colB, currentY + 18f, "UNIDADE / FILIAL:", report.unit.ifEmpty { "Matriz" })
+        val companyDisplayName = report.companyName.ifBlank { "Empresa não informada" }
+        val unitDisplayName = report.unit.ifBlank { "Matriz" }
+        drawInfoField(col1X, currentY + 12f, "Empresa Inspecionada", companyDisplayName)
+        drawInfoField(col2X, currentY + 12f, "Unidade / Filial", unitDisplayName)
 
-        drawMetaItem(colA, currentY + 46f, "LOCAL / SETOR DA INSPEÇÃO:", report.location.ifEmpty { "Setor de Produção" })
-        drawMetaItem(colB, currentY + 46f, "DATA E HORA DA VISTORIA:", dateStr)
+        drawInfoField(col1X, currentY + 38f, "Título do Relatório", report.title.ifBlank { "Vistoria Geral" })
+        drawInfoField(col2X, currentY + 38f, "Local / Setor / Frente de Trabalho", report.location.ifBlank { "Não especificado" })
 
-        drawMetaItem(colA, currentY + 74f, "RESPONSÁVEL TÉCNICO:", report.responsible.ifEmpty { "Alexandre Machado" })
-        drawMetaItem(colB, currentY + 74f, "EMITIDO POR:", issuerCompany)
+        drawInfoField(col1X, currentY + 64f, "Responsável Técnico", report.responsible.ifBlank { "Alexandre Machado" })
+        drawInfoField(col2X, currentY + 64f, "Data e Hora da Inspeção", dateStr)
 
-        currentY += infoCardHeight + 14f
+        currentY += infoBoxHeight + 16f
 
         // ==========================================
-        // 2. RESUMO E INDICADORES DA INSPEÇÃO
+        // 3. QUADRO RESUMO DE CONFORMIDADE
         // ==========================================
-        var conformeCount = 0
-        var naoConformeCount = 0
-        var naCount = 0
+        var countConforme = 0
+        var countNaoConforme = 0
+        var countNA = 0
 
-        val categoryStats = mutableMapOf<String, Triple<Int, Int, Int>>() // Category -> (C, NC, NA)
-
-        for (field in fields) {
-            val answer = answers.find { it.templateFieldId == field.id }
-            val norm = normalizeAnswer(answer?.answerValue)
-            val cat = field.category.ifBlank { "Geral" }
-            val current = categoryStats[cat] ?: Triple(0, 0, 0)
-            
-            when (norm) {
-                "C" -> {
-                    conformeCount++
-                    categoryStats[cat] = current.copy(first = current.first + 1)
-                }
-                "NC" -> {
-                    naoConformeCount++
-                    categoryStats[cat] = current.copy(second = current.second + 1)
-                }
-                else -> {
-                    naCount++
-                    categoryStats[cat] = current.copy(third = current.third + 1)
-                }
+        answers.forEach { ans ->
+            when (normalizeAnswer(ans.answerValue)) {
+                "C" -> countConforme++
+                "NC" -> countNaoConforme++
+                else -> countNA++
             }
         }
-        val totalCount = fields.size
-        val applicableCount = conformeCount + naoConformeCount
-        val compliancePercent = if (applicableCount > 0) (conformeCount.toFloat() / applicableCount.toFloat() * 100f) else 100f
-        val ncPercent = if (applicableCount > 0) (naoConformeCount.toFloat() / applicableCount.toFloat() * 100f) else 0f
-        val complianceFormatted = String.format(Locale.getDefault(), "%.1f%%", compliancePercent)
 
-        val statusLabel = when {
-            compliancePercent >= 90f -> "EXCELENTE"
-            compliancePercent >= 80f -> "BOM"
-            compliancePercent >= 70f -> "ATENÇÃO"
-            else -> "CRÍTICO"
+        val totalEvaluated = countConforme + countNaoConforme
+        val conformidadePct = if (totalEvaluated > 0) {
+            (countConforme.toFloat() / totalEvaluated.toFloat()) * 100f
+        } else {
+            100f
         }
-        val statusBgColor = when {
-            compliancePercent >= 90f -> colorConforme
-            compliancePercent >= 80f -> primaryBlue
-            compliancePercent >= 70f -> Color.parseColor("#F59E0B")
-            else -> colorNaoConforme
-        }
+        val compPctStr = String.format(Locale.getDefault(), "%.1f%%", conformidadePct)
 
-        canvas.drawText("1. INDICADORES E RESULTADOS DA INSPEÇÃO", margin, currentY, sectionTitlePaint)
-        currentY += 12f
+        // Summary Metric Cards
+        val cardWidth = (usableWidth - 24f) / 4f
+        val cardHeight = 44f
 
-        // Top 4 Stat Cards
-        val summaryCardHeight = 44f
-        bgPaint.color = Color.WHITE
-        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + summaryCardHeight), 6f, 6f, bgPaint)
-        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + summaryCardHeight), 6f, 6f, linePaint)
+        fun drawStatCard(x: Float, y: Float, label: String, value: String, valueColor: Int) {
+            bgPaint.color = bgLight
+            canvas.drawRoundRect(RectF(x, y, x + cardWidth, y + cardHeight), 6f, 6f, bgPaint)
+            canvas.drawRoundRect(RectF(x, y, x + cardWidth, y + cardHeight), 6f, 6f, linePaint)
 
-        val statWidth = usableWidth / 4f
-
-        fun drawStatBox(index: Int, label: String, countText: String, color: Int) {
-            val startX = margin + (index * statWidth)
-            if (index > 0) {
-                canvas.drawLine(startX, currentY + 8f, startX, currentY + summaryCardHeight - 8f, linePaint)
-            }
-            val statPaint = TextPaint().apply {
-                this.color = color
+            val valPaint = TextPaint().apply {
+                color = valueColor
                 textSize = 15f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 isAntiAlias = true
+                textAlign = Paint.Align.CENTER
             }
-            canvas.drawText(countText, startX + 14f, currentY + 22f, statPaint)
-            canvas.drawText(label, startX + 14f, currentY + 36f, bodyMutedPaint)
-        }
-
-        drawStatBox(0, "Total Itens", totalCount.toString(), primaryDark)
-        drawStatBox(1, "Conformes (C)", conformeCount.toString(), colorConforme)
-        drawStatBox(2, "Não Conf. (NC)", naoConformeCount.toString(), colorNaoConforme)
-        drawStatBox(3, "Não Aplicáveis (NA)", naCount.toString(), colorNA)
-
-        currentY += summaryCardHeight + 10f
-
-        // Visual Compliance Progress Bar Card
-        val barCardHeight = 48f
-        bgPaint.color = bgLight
-        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + barCardHeight), 6f, 6f, bgPaint)
-        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + barCardHeight), 6f, 6f, linePaint)
-
-        // Text summary
-        val complianceLabelPaint = TextPaint().apply {
-            color = textDark
-            textSize = 10f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
-        canvas.drawText("Conformidade Geral: $complianceFormatted (C: $conformeCount | NC: $naoConformeCount)", margin + 12f, currentY + 18f, complianceLabelPaint)
-
-        // Status pill
-        bgPaint.color = statusBgColor
-        val statusPillWidth = 64f
-        val statusPillHeight = 14f
-        val pillX = pageWidth - margin - statusPillWidth - 12f
-        canvas.drawRoundRect(RectF(pillX, currentY + 7f, pillX + statusPillWidth, currentY + 7f + statusPillHeight), 7f, 7f, bgPaint)
-        
-        val statusTextPaint = TextPaint().apply {
-            color = Color.WHITE
-            textSize = 7.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-            textAlign = Paint.Align.CENTER
-        }
-        canvas.drawText(statusLabel, pillX + (statusPillWidth / 2), currentY + 17.5f, statusTextPaint)
-
-        // Segmented Visual Bar
-        val barX = margin + 12f
-        val barY = currentY + 28f
-        val barW = usableWidth - 24f
-        val barH = 10f
-
-        // Total segments
-        val cFrac = if (totalCount > 0) (conformeCount.toFloat() / totalCount.toFloat()) else 0f
-        val ncFrac = if (totalCount > 0) (naoConformeCount.toFloat() / totalCount.toFloat()) else 0f
-        val naFrac = if (totalCount > 0) (naCount.toFloat() / totalCount.toFloat()) else 0f
-
-        val cW = barW * cFrac
-        val ncW = barW * ncFrac
-        val naW = barW * naFrac
-
-        // Draw background track
-        bgPaint.color = Color.parseColor("#E2E8F0")
-        canvas.drawRoundRect(RectF(barX, barY, barX + barW, barY + barH), 4f, 4f, bgPaint)
-
-        var curBarX = barX
-        if (cW > 0f) {
-            bgPaint.color = colorConforme
-            canvas.drawRect(curBarX, barY, curBarX + cW, barY + barH, bgPaint)
-            curBarX += cW
-        }
-        if (ncW > 0f) {
-            bgPaint.color = colorNaoConforme
-            canvas.drawRect(curBarX, barY, curBarX + ncW, barY + barH, bgPaint)
-            curBarX += ncW
-        }
-        if (naW > 0f) {
-            bgPaint.color = colorNA
-            canvas.drawRect(curBarX, barY, curBarX + naW, barY + barH, bgPaint)
-        }
-
-        currentY += barCardHeight + 10f
-
-        // Quadro de Histórico e Evolução da Empresa (se houver inspeção anterior)
-        if (previousReport != null) {
-            var prevC = 0
-            var prevNC = 0
-            for (pAns in previousAnswers) {
-                when (normalizeAnswer(pAns.answerValue)) {
-                    "C" -> prevC++
-                    "NC" -> prevNC++
-                }
-            }
-            val prevApp = prevC + prevNC
-            val prevComp = if (prevApp > 0) (prevC.toFloat() / prevApp.toFloat() * 100f) else 100f
-            val diffPp = compliancePercent - prevComp
-            val diffSign = if (diffPp > 0) "+" else ""
-            val diffFormatted = String.format(Locale.getDefault(), "%s%.1f pp", diffSign, diffPp)
-
-            val trendText = when {
-                diffPp >= 2.0f -> "MELHORIA (+$diffFormatted)"
-                diffPp <= -2.0f -> "PIORA ($diffFormatted)"
-                else -> "ESTÁVEL ($diffFormatted)"
-            }
-            val trendColor = when {
-                diffPp >= 2.0f -> colorConforme
-                diffPp <= -2.0f -> colorNaoConforme
-                else -> primaryBlue
-            }
-
-            val histCardHeight = 26f
-            bgPaint.color = Color.parseColor("#F1F5F9")
-            canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + histCardHeight), 4f, 4f, bgPaint)
-            canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + histCardHeight), 4f, 4f, linePaint)
-
-            val histTitlePaint = TextPaint().apply {
-                color = primaryDark
-                textSize = 8.5f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                isAntiAlias = true
-            }
-            val histBodyPaint = TextPaint().apply {
-                color = textDark
-                textSize = 8.5f
+            val lblPaint = TextPaint().apply {
+                color = textMuted
+                textSize = 7.5f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
                 isAntiAlias = true
+                textAlign = Paint.Align.CENTER
             }
-            val prevDateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(previousReport.date))
 
-            canvas.drawText("EVOLUÇÃO HISTÓRICA:", margin + 10f, currentY + 16f, histTitlePaint)
-            canvas.drawText("Anterior ($prevDateStr): ${String.format(Locale.getDefault(), "%.1f%%", prevComp)}  →  Atual: $complianceFormatted", margin + 115f, currentY + 16f, histBodyPaint)
-
-            val trendPaint = TextPaint().apply {
-                color = trendColor
-                textSize = 8.5f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                isAntiAlias = true
-            }
-            val trendWidth = trendPaint.measureText("Tendência: $trendText")
-            canvas.drawText("Tendência: $trendText", pageWidth - margin - 10f - trendWidth, currentY + 16f, trendPaint)
-
-            currentY += histCardHeight + 10f
-        } else {
-            currentY += 10f
+            canvas.drawText(value, x + (cardWidth / 2), y + 20f, valPaint)
+            canvas.drawText(label, x + (cardWidth / 2), y + 34f, lblPaint)
         }
 
+        drawStatCard(margin, currentY, "TOTAL ITENS", "${fields.size}", primaryDark)
+        drawStatCard(margin + cardWidth + 8f, currentY, "CONFORMES (C)", "$countConforme", colorConforme)
+        drawStatCard(margin + (cardWidth * 2) + 16f, currentY, "NÃO CONF. (NC)", "$countNaoConforme", colorNaoConforme)
+        drawStatCard(margin + (cardWidth * 3) + 24f, currentY, "ÍNDICE CONFORMIDADE", compPctStr, if (conformidadePct >= 80f) colorConforme else colorNaoConforme)
+
+        currentY += cardHeight + 20f
+
         // ==========================================
-        // 3. TABELA DO CHECKLIST
+        // 4. CHECKLIST DETALHADO POR CATEGORIAS
         // ==========================================
-        canvas.drawText("2. ITENS DE VERIFICAÇÃO (CHECKLIST)", margin, currentY, sectionTitlePaint)
-        currentY += 14f
+        canvas.drawText("2. CHECKLIST DE INSPEÇÃO DETALHADO", margin, currentY, sectionTitlePaint)
+        currentY += 12f
 
-        // Table Header
-        val thHeight = 22f
-        bgPaint.color = primaryDark
-        canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + thHeight), 4f, 4f, bgPaint)
-        
-        val thTextPaint = TextPaint().apply {
-            color = Color.WHITE
-            textSize = 9f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
-
-        val c1 = margin + 8f // Nº
-        val c2 = margin + 34f // Descrição
-        val c3 = margin + 300f // Status
-        val c4 = margin + 380f // Observações
-
-        canvas.drawText("Nº", c1, currentY + 15f, thTextPaint)
-        canvas.drawText("ITEM / DESCRIÇÃO", c2, currentY + 15f, thTextPaint)
-        canvas.drawText("STATUS", c3, currentY + 15f, thTextPaint)
-        canvas.drawText("OBSERVAÇÕES TÉCNICAS", c4, currentY + 15f, thTextPaint)
-
-        currentY += thHeight + 4f
-
-        val groupedFields = fields.groupBy { it.category.ifBlank { "Geral" } }
-        var globalIndex = 0
+        val groupedFields = fields.groupBy { it.category.ifBlank { "GERAL" } }
 
         for ((catName, catFields) in groupedFields) {
-            // Category Section Header
-            if (currentY + 30f > pageHeight - margin - 30f) {
-                startNewPage()
-            }
-
-            bgPaint.color = Color.parseColor("#EBF2FF")
-            canvas.drawRoundRect(RectF(margin, currentY + 2f, pageWidth - margin, currentY + 20f), 3f, 3f, bgPaint)
-            val catHeaderPaint = TextPaint().apply {
-                color = primaryDark
-                textSize = 9.5f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                isAntiAlias = true
-            }
-            canvas.drawText("CATEGORIA: ${catName.uppercase(Locale.getDefault())}", margin + 8f, currentY + 14.5f, catHeaderPaint)
-            currentY += 24f
-
             var catC = 0
             var catNC = 0
             var catNA = 0
 
-            for (field in catFields) {
-                globalIndex++
+            // Check if category header fits
+            if (currentY + 60f > pageHeight - margin - 30f) {
+                startNewPage()
+            }
+
+            // Category Banner
+            bgPaint.color = primaryDark
+            canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + 20f), 4f, 4f, bgPaint)
+            val catHeaderPaint = TextPaint().apply {
+                color = Color.WHITE
+                textSize = 9.5f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                isAntiAlias = true
+            }
+            canvas.drawText("CATEGORIA: ${catName.uppercase(Locale.getDefault())} (${catFields.size} ITENS)", margin + 8f, currentY + 14f, catHeaderPaint)
+            currentY += 24f
+
+            // Table Header
+            val thHeight = 16f
+            bgPaint.color = Color.parseColor("#E2E8F0")
+            canvas.drawRect(margin, currentY, pageWidth - margin, currentY + thHeight, bgPaint)
+
+            val c1 = margin + 6f
+            val c2 = margin + 30f
+            val c3 = margin + usableWidth - 190f
+            val c4 = margin + usableWidth - 120f
+
+            canvas.drawText("Nº", c1, currentY + 11.5f, headerPaint.apply { textSize = 8f })
+            canvas.drawText("ITEM / REQUISITO AVALIADO", c2, currentY + 11.5f, headerPaint)
+            canvas.drawText("STATUS", c3, currentY + 11.5f, headerPaint)
+            canvas.drawText("OBSERVAÇÕES", c4, currentY + 11.5f, headerPaint)
+            currentY += thHeight
+
+            for ((fIndex, field) in catFields.withIndex()) {
                 val answer = answers.find { it.templateFieldId == field.id }
                 val normStatus = normalizeAnswer(answer?.answerValue)
-                val obsText = answer?.observation?.trim() ?: ""
-                val orderStr = String.format(Locale.getDefault(), "%02d", globalIndex)
-
                 when (normStatus) {
                     "C" -> catC++
                     "NC" -> catNC++
                     else -> catNA++
                 }
 
-                @Suppress("DEPRECATION")
-                val questionLayout = StaticLayout(field.label, bodyPaint, 255, Layout.Alignment.ALIGN_NORMAL, 1.1f, 0.0f, false)
-                @Suppress("DEPRECATION")
-                val obsLayout = StaticLayout(if (obsText.isEmpty()) "—" else obsText, bodyMutedPaint, (usableWidth - 390).toInt(), Layout.Alignment.ALIGN_NORMAL, 1.1f, 0.0f, false)
+                val orderStr = String.format(Locale.getDefault(), "%02d", fIndex + 1)
+                val itemLabelText = field.label
 
-                val rowHeight = maxOf(questionLayout.height, obsLayout.height) + 14f
+                val questionWidth = (c3 - c2 - 12f).toInt()
+                val obsWidth = (pageWidth - margin - c4 - 6f).toInt()
+
+                @Suppress("DEPRECATION")
+                val questionLayout = StaticLayout(
+                    itemLabelText,
+                    bodyPaint.apply { textSize = 8.5f },
+                    questionWidth,
+                    Layout.Alignment.ALIGN_NORMAL,
+                    1.1f,
+                    0.0f,
+                    false
+                )
+
+                val obsText = answer?.observation?.ifBlank { "-" } ?: "-"
+                @Suppress("DEPRECATION")
+                val obsLayout = StaticLayout(
+                    obsText,
+                    bodyMutedPaint.apply { textSize = 8f },
+                    obsWidth,
+                    Layout.Alignment.ALIGN_NORMAL,
+                    1.1f,
+                    0.0f,
+                    false
+                )
+
+                val rowHeight = maxOf(22f, maxOf(questionLayout.height.toFloat(), obsLayout.height.toFloat()) + 8f)
 
                 if (currentY + rowHeight > pageHeight - margin - 30f) {
                     startNewPage()
-                    // Re-draw table header on new page
-                    bgPaint.color = primaryDark
-                    canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + thHeight), 4f, 4f, bgPaint)
-                    canvas.drawText("Nº", c1, currentY + 15f, thTextPaint)
-                    canvas.drawText("ITEM / DESCRIÇÃO", c2, currentY + 15f, thTextPaint)
-                    canvas.drawText("STATUS", c3, currentY + 15f, thTextPaint)
-                    canvas.drawText("OBSERVAÇÕES TÉCNICAS", c4, currentY + 15f, thTextPaint)
-                    currentY += thHeight + 4f
                 }
 
-                // Alternating row background
-                if (globalIndex % 2 == 1) {
-                    bgPaint.color = bgLight
+                // Zebra row background
+                if (fIndex % 2 == 1) {
+                    bgPaint.color = Color.parseColor("#F8FAFC")
                     canvas.drawRect(margin, currentY, pageWidth - margin, currentY + rowHeight, bgPaint)
                 }
 
                 // Draw Nº
-                canvas.drawText(orderStr, c1, currentY + 12f, headerPaint)
+                canvas.drawText(orderStr, c1, currentY + 12f, headerPaint.apply { textSize = 8f })
 
                 // Draw Question
                 canvas.save()
@@ -523,7 +417,7 @@ class PdfGenerator(private val context: Context) {
                 bgPaint.color = badgeColor
                 val badgeWidth = 62f
                 canvas.drawRoundRect(RectF(c3, currentY + 2f, c3 + badgeWidth, currentY + 18f), 3f, 3f, bgPaint)
-                
+
                 val badgeTextPaint = TextPaint().apply {
                     color = Color.WHITE
                     textSize = 7.5f
@@ -547,24 +441,24 @@ class PdfGenerator(private val context: Context) {
             val catApp = catC + catNC
             val catCompPct = if (catApp > 0) String.format(Locale.getDefault(), "%.1f%%", (catC.toFloat() / catApp.toFloat() * 100f)) else "100%"
             val catSubtotalText = "Subtotal $catName: C: $catC | NC: $catNC | NA: $catNA | Conformidade: $catCompPct"
-            
-            bgPaint.color = Color.parseColor("#F8FAFC")
+
+            bgPaint.color = Color.parseColor("#F1F5F9")
             canvas.drawRect(margin, currentY, pageWidth - margin, currentY + 16f, bgPaint)
             canvas.drawText(catSubtotalText, margin + 8f, currentY + 11.5f, bodyMutedPaint.apply { textSize = 8f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) })
             currentY += 22f
         }
 
-        currentY += 24f
+        currentY += 16f
 
         // ==========================================
-        // 4. OBSERVAÇÕES FINAIS (GENERAL OBSERVATIONS)
+        // 5. OBSERVAÇÕES FINAIS E RECOMENDAÇÕES
         // ==========================================
         val generalObs = report.generalObservations?.trim() ?: ""
         if (generalObs.isNotEmpty()) {
             @Suppress("DEPRECATION")
             val obsGeneralLayout = StaticLayout(
                 generalObs,
-                bodyPaint,
+                bodyPaint.apply { textSize = 9f },
                 (usableWidth - 24).toInt(),
                 Layout.Alignment.ALIGN_NORMAL,
                 1.2f,
@@ -593,192 +487,265 @@ class PdfGenerator(private val context: Context) {
         }
 
         // ==========================================
-        // 5. EVIDÊNCIAS FOTOGRÁFICAS (GRID DE 2 POR LINHA)
+        // 6. EVIDÊNCIAS FOTOGRÁFICAS VINCULADAS AOS ITENS
         // ==========================================
-        data class PhotoItem(
-            val localPath: String,
-            val itemNumber: String?,
-            val itemLabel: String?,
-            val status: String?,
-            val description: String?
+        data class ItemEvidenceGroup(
+            val fieldId: Long,
+            val categoryName: String,
+            val itemOrder: Int,
+            val questionText: String,
+            val status: String,
+            val observation: String,
+            val photoPaths: List<String>
         )
 
-        val photoItems = mutableListOf<PhotoItem>()
+        val evidenceGroups = mutableListOf<ItemEvidenceGroup>()
 
-        // 1. Photos from PhotoEntity list
-        for (pe in photoEntities) {
-            val field = fields.find { it.id == pe.templateFieldId }
-            val answer = if (field != null) answers.find { it.templateFieldId == field.id } else null
-            val desc = if (!pe.description.isNullOrBlank()) pe.description else answer?.observation
-            photoItems.add(
-                PhotoItem(
-                    localPath = pe.localPath,
-                    itemNumber = field?.let { "Item ${String.format(Locale.getDefault(), "%02d", it.orderIndex + 1)}" },
-                    itemLabel = field?.label,
-                    status = normalizeAnswer(answer?.answerValue),
-                    description = desc
+        // Group photos by Field / Question
+        val allFieldsMap = fields.associateBy { it.id }
+        val answersMap = answers.associateBy { it.templateFieldId }
+
+        // 1. From PhotoEntity
+        val photosByField = photoEntities.groupBy { it.templateFieldId }
+        for ((fieldId, peList) in photosByField) {
+            val field = allFieldsMap[fieldId]
+            val answer = answersMap[fieldId]
+            val validPaths = peList.map { it.localPath }.filter { File(it).exists() }
+            if (validPaths.isNotEmpty()) {
+                evidenceGroups.add(
+                    ItemEvidenceGroup(
+                        fieldId = fieldId ?: 0L,
+                        categoryName = field?.category?.ifBlank { "GERAL" } ?: "GERAL",
+                        itemOrder = field?.orderIndex ?: 0,
+                        questionText = field?.label ?: "Item não especificado",
+                        status = normalizeAnswer(answer?.answerValue),
+                        observation = answer?.observation?.ifBlank { peList.firstNotNullOfOrNull { it.description } ?: "" } ?: "",
+                        photoPaths = validPaths
+                    )
                 )
-            )
+            }
         }
 
-        // 2. Fallback to photos map if photoEntities was empty
-        if (photoItems.isEmpty()) {
-            for (field in fields) {
-                val pList = photos[field.id]
-                val answer = answers.find { it.templateFieldId == field.id }
-                pList?.forEach { path ->
-                    photoItems.add(
-                        PhotoItem(
-                            localPath = path,
-                            itemNumber = "Item ${String.format(Locale.getDefault(), "%02d", field.orderIndex + 1)}",
-                            itemLabel = field.label,
+        // 2. Fallback to photos map if empty
+        if (evidenceGroups.isEmpty() && photos.isNotEmpty()) {
+            for ((fieldId, pList) in photos) {
+                val field = allFieldsMap[fieldId]
+                val answer = answersMap[fieldId]
+                val validPaths = pList.filter { File(it).exists() }
+                if (validPaths.isNotEmpty()) {
+                    evidenceGroups.add(
+                        ItemEvidenceGroup(
+                            fieldId = fieldId,
+                            categoryName = field?.category?.ifBlank { "GERAL" } ?: "GERAL",
+                            itemOrder = field?.orderIndex ?: 0,
+                            questionText = field?.label ?: "Item não especificado",
                             status = normalizeAnswer(answer?.answerValue),
-                            description = answer?.observation
+                            observation = answer?.observation ?: "",
+                            photoPaths = validPaths
                         )
                     )
                 }
             }
         }
 
-        if (photoItems.isNotEmpty()) {
-            if (currentY + 120f > pageHeight - margin - 30f) {
+        val totalPhotosCount = evidenceGroups.sumOf { it.photoPaths.size }
+        var processedPhotosCount = 0
+
+        if (evidenceGroups.isNotEmpty()) {
+            if (currentY + 140f > pageHeight - margin - 30f) {
                 startNewPage()
             }
 
-            canvas.drawText("4. EVIDÊNCIAS FOTOGRÁFICAS", margin, currentY, sectionTitlePaint)
+            canvas.drawText("4. EVIDÊNCIAS FOTOGRÁFICAS E CONSTATAÇÕES", margin, currentY, sectionTitlePaint)
             currentY += 14f
 
-            val cardWidth = (usableWidth - 16f) / 2f
-            val cardHeight = 175f
-            val imgHeight = 110f
+            for ((groupIndex, group) in evidenceGroups.withIndex()) {
+                val statusText = when (group.status) {
+                    "C" -> "CONFORME"
+                    "NC" -> "NÃO CONFORME"
+                    else -> "N/A"
+                }
+                val statusColor = when (group.status) {
+                    "C" -> colorConforme
+                    "NC" -> colorNaoConforme
+                    else -> colorNA
+                }
 
-            var colIndex = 0
+                // Layout item header
+                val headerTitleText = "ITEM ${String.format(Locale.getDefault(), "%02d", group.itemOrder + 1)} • ${group.categoryName.uppercase(Locale.getDefault())}"
+                val questionFullText = group.questionText
 
-            for ((pIdx, item) in photoItems.withIndex()) {
-                val file = File(item.localPath)
-                if (!file.exists()) continue
+                @Suppress("DEPRECATION")
+                val qLayout = StaticLayout(
+                    questionFullText,
+                    bodyPaint.apply { textSize = 9f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) },
+                    (usableWidth - 85f).toInt(),
+                    Layout.Alignment.ALIGN_NORMAL,
+                    1.1f,
+                    0.0f,
+                    false
+                )
 
-                // Check if row fits
-                if (colIndex == 0 && (currentY + cardHeight > pageHeight - margin - 30f)) {
+                var headerHeight = qLayout.height + 24f
+                if (group.observation.isNotBlank()) {
+                    headerHeight += 18f
+                }
+
+                // Check if group header fits on current page
+                if (currentY + headerHeight + 120f > pageHeight - margin - 30f) {
                     startNewPage()
                     canvas.drawText("4. EVIDÊNCIAS FOTOGRÁFICAS (Continuação)", margin, currentY, sectionTitlePaint)
                     currentY += 14f
                 }
 
-                val cardX = margin + (colIndex * (cardWidth + 16f))
-                val cardY = currentY
+                // Draw Evidence Header Container
+                bgPaint.color = Color.parseColor("#F1F5F9")
+                canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + headerHeight), 6f, 6f, bgPaint)
+                canvas.drawRoundRect(RectF(margin, currentY, pageWidth - margin, currentY + headerHeight), 6f, 6f, linePaint)
 
-                // Draw Card Container
-                bgPaint.color = Color.WHITE
-                canvas.drawRoundRect(RectF(cardX, cardY, cardX + cardWidth, cardY + cardHeight), 6f, 6f, bgPaint)
-                canvas.drawRoundRect(RectF(cardX, cardY, cardX + cardWidth, cardY + cardHeight), 6f, 6f, linePaint)
+                // Category & Item index badge
+                canvas.drawText(headerTitleText, margin + 8f, currentY + 11f, bodyMutedPaint.apply { textSize = 7.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) })
 
-                // Top Badge: "EVIDÊNCIA 01"
-                bgPaint.color = primaryDark
-                canvas.drawRoundRect(RectF(cardX, cardY, cardX + cardWidth, cardY + 18f), 6f, 6f, bgPaint)
-                canvas.drawRect(cardX, cardY + 10f, cardX + cardWidth, cardY + 18f, bgPaint) // flat bottom
-
-                val evTitlePaint = TextPaint().apply {
+                // Result Badge in top-right
+                val badgeW = 74f
+                bgPaint.color = statusColor
+                canvas.drawRoundRect(RectF(pageWidth - margin - badgeW - 6f, currentY + 4f, pageWidth - margin - 6f, currentY + 18f), 3f, 3f, bgPaint)
+                val badgeTp = TextPaint().apply {
                     color = Color.WHITE
-                    textSize = 8.5f
+                    textSize = 7.5f
                     typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                     isAntiAlias = true
+                    textAlign = Paint.Align.CENTER
                 }
-                val evNum = String.format(Locale.getDefault(), "EVIDÊNCIA %02d", pIdx + 1)
-                canvas.drawText(evNum, cardX + 8f, cardY + 13f, evTitlePaint)
+                canvas.drawText(statusText, pageWidth - margin - 6f - (badgeW / 2), currentY + 14f, badgeTp)
 
-                // Render Image
-                try {
-                    val bitmap = BitmapFactory.decodeFile(item.localPath)
-                    if (bitmap != null) {
-                        val imgRect = RectF(cardX + 4f, cardY + 22f, cardX + cardWidth - 4f, cardY + 22f + imgHeight)
-                        val scale = maxOf(imgRect.width() / bitmap.width, imgRect.height() / bitmap.height)
-                        val scaledW = bitmap.width * scale
-                        val scaledH = bitmap.height * scale
-                        val offsetX = (imgRect.width() - scaledW) / 2f
-                        val offsetY = (imgRect.height() - scaledH) / 2f
+                // Draw full question text
+                canvas.save()
+                canvas.translate(margin + 8f, currentY + 15f)
+                qLayout.draw(canvas)
+                canvas.restore()
 
-                        canvas.save()
-                        canvas.clipRect(imgRect)
-                        canvas.translate(imgRect.left + offsetX, imgRect.top + offsetY)
-                        canvas.scale(scale, scale)
-                        canvas.drawBitmap(bitmap, 0f, 0f, null)
-                        canvas.restore()
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                // Draw observation if available
+                if (group.observation.isNotBlank()) {
+                    val obsPrefix = "Constatação / Observação: " + group.observation
+                    val obsTrunc = if (obsPrefix.length > 120) obsPrefix.take(117) + "..." else obsPrefix
+                    canvas.drawText(obsTrunc, margin + 8f, currentY + headerHeight - 6f, bodyMutedPaint.apply { textSize = 8f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL) })
                 }
 
-                // Info Footer inside card
-                val footerY = cardY + 22f + imgHeight + 8f
-                val itemTitle = item.itemNumber ?: "Registro Geral"
-                canvas.drawText(itemTitle, cardX + 8f, footerY + 6f, headerPaint)
+                currentY += headerHeight + 8f
 
-                if (item.status != null) {
-                    val statusText = when (item.status) {
-                        "C" -> "Conforme"
-                        "NC" -> "Não Conforme"
-                        else -> "N/A"
+                // Draw photo grid (2 photos per row)
+                val gridCardWidth = (usableWidth - 12f) / 2f
+                val gridCardHeight = 150f
+                val gridImgHeight = 118f
+
+                val photoChunks = group.photoPaths.chunked(2)
+                for (chunk in photoChunks) {
+                    if (currentY + gridCardHeight > pageHeight - margin - 30f) {
+                        startNewPage()
+                        canvas.drawText("4. EVIDÊNCIAS FOTOGRÁFICAS (Continuação)", margin, currentY, sectionTitlePaint)
+                        currentY += 14f
                     }
-                    val statusColor = when (item.status) {
-                        "C" -> colorConforme
-                        "NC" -> colorNaoConforme
-                        else -> colorNA
+
+                    for ((colIdx, pPath) in chunk.withIndex()) {
+                        val cardX = margin + (colIdx * (gridCardWidth + 12f))
+                        val cardY = currentY
+
+                        // Draw card border & background
+                        bgPaint.color = Color.WHITE
+                        canvas.drawRoundRect(RectF(cardX, cardY, cardX + gridCardWidth, cardY + gridCardHeight), 6f, 6f, bgPaint)
+                        canvas.drawRoundRect(RectF(cardX, cardY, cardX + gridCardWidth, cardY + gridCardHeight), 6f, 6f, linePaint)
+
+                        // Top bar inside photo card
+                        bgPaint.color = primaryDark
+                        canvas.drawRoundRect(RectF(cardX, cardY, cardX + gridCardWidth, cardY + 16f), 6f, 6f, bgPaint)
+                        canvas.drawRect(cardX, cardY + 8f, cardX + gridCardWidth, cardY + 16f, bgPaint)
+
+                        val photoTitle = "EVIDÊNCIA FOTOGRÁFICA #${processedPhotosCount + 1}"
+                        val phTitlePaint = TextPaint().apply {
+                            color = Color.WHITE
+                            textSize = 7.5f
+                            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                            isAntiAlias = true
+                        }
+                        canvas.drawText(photoTitle, cardX + 6f, cardY + 11.5f, phTitlePaint)
+
+                        // Load and compress photo bitmap using PdfImageCompressor
+                        processedPhotosCount++
+                        onProgress?.invoke(
+                            processedPhotosCount,
+                            totalPhotosCount,
+                            "Otimizando foto $processedPhotosCount de $totalPhotosCount..."
+                        )
+
+                        val optBitmap = PdfImageCompressor.loadOptimizedBitmapForPdf(
+                            context = context,
+                            filePath = pPath,
+                            targetWidth = 600,
+                            targetHeight = 450
+                        )
+
+                        if (optBitmap != null) {
+                            try {
+                                val imgRect = RectF(cardX + 4f, cardY + 19f, cardX + gridCardWidth - 4f, cardY + 19f + gridImgHeight)
+                                val scale = maxOf(imgRect.width() / optBitmap.width.toFloat(), imgRect.height() / optBitmap.height.toFloat())
+                                val scaledW = optBitmap.width * scale
+                                val scaledH = optBitmap.height * scale
+                                val offsetX = (imgRect.width() - scaledW) / 2f
+                                val offsetY = (imgRect.height() - scaledH) / 2f
+
+                                canvas.save()
+                                canvas.clipRect(imgRect)
+                                canvas.translate(imgRect.left + offsetX, imgRect.top + offsetY)
+                                canvas.scale(scale, scale)
+                                val bmpPaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
+                                canvas.drawBitmap(optBitmap, 0f, 0f, bmpPaint)
+                                canvas.restore()
+                            } finally {
+                                optBitmap.recycle()
+                            }
+                        } else {
+                            // Fallback placeholder box
+                            bgPaint.color = Color.parseColor("#E2E8F0")
+                            canvas.drawRect(cardX + 4f, cardY + 19f, cardX + gridCardWidth - 4f, cardY + 19f + gridImgHeight, bgPaint)
+                            canvas.drawText("Imagem não encontrada", cardX + 20f, cardY + 70f, bodyMutedPaint)
+                        }
+
+                        // Footer date/time
+                        val photoFile = File(pPath)
+                        val lastMod = if (photoFile.exists()) dateOnlyDf.format(Date(photoFile.lastModified())) else dateOnlyStr
+                        canvas.drawText("Registro: $lastMod • Vistoria Técnica", cardX + 6f, cardY + gridCardHeight - 4f, bodyMutedPaint.apply { textSize = 7f })
                     }
-                    val stPaint = TextPaint().apply {
-                        color = statusColor
-                        textSize = 8f
-                        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                        isAntiAlias = true
-                    }
-                    val stWidth = stPaint.measureText(statusText)
-                    canvas.drawText(statusText, cardX + cardWidth - 8f - stWidth, footerY + 6f, stPaint)
+
+                    currentY += gridCardHeight + 10f
                 }
 
-                val desc = item.description ?: item.itemLabel ?: ""
-                val truncatedDesc = if (desc.length > 42) desc.take(40) + "..." else desc
-                canvas.drawText(truncatedDesc, cardX + 8f, footerY + 18f, bodyMutedPaint)
-
-                colIndex++
-                if (colIndex == 2) {
-                    colIndex = 0
-                    currentY += cardHeight + 14f
-                }
+                currentY += 8f
             }
-
-            if (colIndex != 0) {
-                currentY += cardHeight + 14f
-            }
-            currentY += 14f
         }
 
         // ==========================================
-        // 6. DUAS ASSINATURAS (SIDE BY SIDE)
+        // 7. ASSINATURAS DIGITAIS (LADO A LADO)
         // ==========================================
+        onProgress?.invoke(totalPhotosCount, totalPhotosCount, "Finalizando montagem do documento...")
+
         val sigBoxHeight = 110f
         if (currentY + sigBoxHeight + 30f > pageHeight - margin - 30f) {
             startNewPage()
         }
 
-        canvas.drawText("5. ASSINATURAS E RESPONSABILIDADES", margin, currentY, sectionTitlePaint)
-        currentY += 14f
+        canvas.drawText("5. VALIDAÇÃO & ASSINATURAS", margin, currentY, sectionTitlePaint)
+        currentY += 12f
 
-        val sigWidth = (usableWidth - 16f) / 2f
-
-        // Get the 2 signatures with robust matching
-        val sigRespRelatorio = signatures.firstOrNull { 
-            it.role.startsWith("RESPONSAVEL_RELATORIO") ||
-            it.role.contains("RESPONSAVEL", ignoreCase = true) || 
-            it.role.contains("Inspetor", ignoreCase = true)
+        val sigRespRelatorio = signatures.find {
+            it.role == "RESPONSAVEL_RELATORIO" || it.role.startsWith("RESPONSAVEL") || it.role == "Inspetor Técnico"
         } ?: signatures.firstOrNull()
 
-        val sigPresenteOp = signatures.firstOrNull { 
-            (it.role.startsWith("PRESENTE_OPERACAO") ||
-             it.role.contains("PRESENTE", ignoreCase = true) || 
-             it.role.contains("OPERACAO", ignoreCase = true) || 
-             it.role.contains("Acompanhante", ignoreCase = true) || 
-             it.role.contains("Supervisor", ignoreCase = true)) && it.id != (sigRespRelatorio?.id ?: -1L)
-        } ?: signatures.firstOrNull { it.id != (sigRespRelatorio?.id ?: -1L) }
+        val sigPresenteOp = signatures.find {
+            it.role == "PRESENTE_OPERACAO" || it.role.startsWith("PRESENTE") || it.role == "Acompanhante"
+        } ?: signatures.getOrNull(1)
+
+        val sigWidth = (usableWidth - 16f) / 2f
 
         fun drawSignatureBox(
             x: Float,
@@ -793,40 +760,45 @@ class PdfGenerator(private val context: Context) {
             canvas.drawRoundRect(RectF(x, y, x + sigWidth, y + sigBoxHeight), 6f, 6f, linePaint)
 
             // Header of box
-            canvas.drawText(title, x + 10f, y + 16f, headerPaint)
-            canvas.drawLine(x + 10f, y + 22f, x + sigWidth - 10f, y + 22f, linePaint)
+            bgPaint.color = Color.parseColor("#F1F5F9")
+            canvas.drawRoundRect(RectF(x, y, x + sigWidth, y + 20f), 6f, 6f, bgPaint)
+            canvas.drawRect(x, y + 12f, x + sigWidth, y + 20f, bgPaint)
 
-            // Draw Signature Bitmap if present
-            var drawn = false
-            if (sig != null && !sig.localPath.isNullOrBlank()) {
-                val file = File(sig.localPath)
-                if (file.exists()) {
+            val sigHeaderPaint = TextPaint().apply {
+                color = primaryDark
+                textSize = 7.5f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                isAntiAlias = true
+            }
+            canvas.drawText(title, x + 8f, y + 13.5f, sigHeaderPaint)
+
+            // Signature stroke / bitmap
+            if (sig?.localPath != null && File(sig.localPath).exists()) {
+                val sigBmp = BitmapFactory.decodeFile(sig.localPath)
+                if (sigBmp != null) {
                     try {
-                        val sigBmp = BitmapFactory.decodeFile(sig.localPath)
-                        if (sigBmp != null) {
-                            val sigRect = RectF(x + 15f, y + 26f, x + sigWidth - 15f, y + 74f)
-                            val scale = minOf(sigRect.width() / sigBmp.width, sigRect.height() / sigBmp.height)
-                            val scaledW = sigBmp.width * scale
-                            val scaledH = sigBmp.height * scale
-                            val offsetX = (sigRect.width() - scaledW) / 2f
-                            val offsetY = (sigRect.height() - scaledH) / 2f
+                        val sRect = RectF(x + 10f, y + 24f, x + sigWidth - 10f, y + 74f)
+                        val scale = minOf(sRect.width() / sigBmp.width.toFloat(), sRect.height() / sigBmp.height.toFloat())
+                        val sW = sigBmp.width * scale
+                        val sH = sigBmp.height * scale
+                        val sOffX = (sRect.width() - sW) / 2f
+                        val sOffY = (sRect.height() - sH) / 2f
 
-                            val dest = RectF(sigRect.left + offsetX, sigRect.top + offsetY, sigRect.left + offsetX + scaledW, sigRect.top + offsetY + scaledH)
-                            canvas.drawBitmap(sigBmp, null, dest, null)
-                            drawn = true
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                        canvas.save()
+                        canvas.translate(sRect.left + sOffX, sRect.top + sOffY)
+                        canvas.scale(scale, scale)
+                        canvas.drawBitmap(sigBmp, 0f, 0f, null)
+                        canvas.restore()
+                    } finally {
+                        sigBmp.recycle()
                     }
                 }
-            }
-            if (!drawn) {
-                canvas.drawText("[ Assinatura Digital Pendente ]", x + 20f, y + 54f, bodyMutedPaint)
+            } else {
+                // Line for manual signature
+                canvas.drawLine(x + 20f, y + 68f, x + sigWidth - 20f, y + 68f, linePaint)
             }
 
-            // Divider before name
-            canvas.drawLine(x + 10f, y + 78f, x + sigWidth - 10f, y + 78f, linePaint)
-
+            // Name & Role text
             val name = sig?.name?.ifBlank { defaultName } ?: defaultName
             val rawRole = sig?.role?.ifBlank { defaultRole } ?: defaultRole
             val displayRole = when {
@@ -835,8 +807,8 @@ class PdfGenerator(private val context: Context) {
                 rawRole == "PRESENTE_OPERACAO" -> defaultRole
                 else -> rawRole
             }
-            canvas.drawText("Nome: $name", x + 10f, y + 92f, bodyPaint)
-            canvas.drawText("Cargo: $displayRole  •  Data: $dateOnlyStr", x + 10f, y + 104f, bodyMutedPaint)
+            canvas.drawText("Nome: $name", x + 10f, y + 90f, bodyPaint.apply { textSize = 8.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) })
+            canvas.drawText("Cargo: $displayRole  •  Data: $dateOnlyStr", x + 10f, y + 102f, bodyMutedPaint.apply { textSize = 7.5f })
         }
 
         drawSignatureBox(
@@ -867,8 +839,17 @@ class PdfGenerator(private val context: Context) {
         val outputFile = File(outputDir, "RELATO-PRO_Relatorio_${safeLocation}_${dateForName}_${report.id}.pdf")
 
         return@withContext try {
-            document.writeTo(FileOutputStream(outputFile))
-            outputFile
+            FileOutputStream(outputFile).use { fos ->
+                document.writeTo(fos)
+            }
+            val sizeBytes = outputFile.length()
+            val formattedSize = formatFileSize(sizeBytes)
+            PdfGenerationResult(
+                file = outputFile,
+                fileSizeBytes = sizeBytes,
+                fileSizeFormatted = formattedSize,
+                photosCount = totalPhotosCount
+            )
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -877,12 +858,20 @@ class PdfGenerator(private val context: Context) {
         }
     }
 
+    private fun formatFileSize(bytes: Long): String {
+        return when {
+            bytes >= 1024 * 1024 -> String.format(Locale.getDefault(), "%.2f MB", bytes.toDouble() / (1024 * 1024))
+            bytes >= 1024 -> String.format(Locale.getDefault(), "%.1f KB", bytes.toDouble() / 1024)
+            else -> "$bytes B"
+        }
+    }
+
     private fun normalizeAnswer(answerValue: String?): String {
         if (answerValue == null) return "NA"
         val trimmed = answerValue.trim().uppercase(Locale.getDefault())
         return when {
-            trimmed == "C" || trimmed == "CONFORME" -> "C"
-            trimmed == "NC" || trimmed == "NÃO CONFORME" || trimmed == "NAO CONFORME" -> "NC"
+            trimmed == "C" || trimmed == "CONFORME" || trimmed == "SIM" -> "C"
+            trimmed == "NC" || trimmed == "NÃO CONFORME" || trimmed == "NAO CONFORME" || trimmed == "NÃO" -> "NC"
             else -> "NA"
         }
     }

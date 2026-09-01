@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.relatopro.app.ui.theme.*
+import com.relatopro.app.utils.CameraResolution
+import com.relatopro.app.utils.PhotoQuality
+import com.relatopro.app.utils.PreferenceUtils
 import java.io.File
 import java.io.FileOutputStream
 
@@ -370,6 +373,8 @@ fun SettingsScreen(
     var summaryEnabled by remember { mutableStateOf(prefs.getBoolean("pdf_summary_table", true)) }
     var observationsEnabled by remember { mutableStateOf(prefs.getBoolean("pdf_observations", true)) }
     var autoSaveEnabled by remember { mutableStateOf(prefs.getBoolean("auto_save", true)) }
+    var selectedPhotoQuality by remember { mutableStateOf(PreferenceUtils.getPhotoQuality(context)) }
+    var selectedCameraRes by remember { mutableStateOf(PreferenceUtils.getCameraResolution(context)) }
 
     var showAboutDialog by remember { mutableStateOf(false) }
     var showTermsDialog by remember { mutableStateOf(false) }
@@ -493,7 +498,95 @@ fun SettingsScreen(
                 }
             }
 
-            // SEÇÃO 3: RELATÓRIOS E PDF
+            // SEÇÃO 3: QUALIDADE DAS FOTOS NO PDF & CÂMERA
+            item {
+                SettingsSectionHeader("OTIMIZAÇÃO DE FOTOS & CÂMERA")
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Column {
+                            Text("Qualidade das Fotos no PDF", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                            Text("Define a taxa de compressão aplicada às evidências na geração do laudo PDF.", fontSize = 12.sp, color = colors.textSecondary)
+                        }
+
+                        PhotoQuality.entries.forEach { q ->
+                            val isSel = selectedPhotoQuality == q
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) colors.primary.copy(alpha = 0.08f) else Color.Transparent)
+                                    .border(1.dp, if (isSel) colors.primary else colors.border, RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        selectedPhotoQuality = q
+                                        PreferenceUtils.setPhotoQuality(context, q)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(q.title, fontSize = 13.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium, color = if (isSel) colors.primary else colors.textPrimary)
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(q.description, fontSize = 11.sp, color = colors.textSecondary, lineHeight = 14.sp)
+                                }
+                                RadioButton(
+                                    selected = isSel,
+                                    onClick = {
+                                        selectedPhotoQuality = q
+                                        PreferenceUtils.setPhotoQuality(context, q)
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = colors.primary)
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.6f))
+
+                        Column {
+                            Text("Resolução das Fotos da Câmera", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                            Text("Menor resolução = arquivos menores e processamento mais rápido no aparelho.", fontSize = 12.sp, color = colors.textSecondary)
+                        }
+
+                        CameraResolution.entries.forEach { r ->
+                            val isSel = selectedCameraRes == r
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) colors.primary.copy(alpha = 0.08f) else Color.Transparent)
+                                    .border(1.dp, if (isSel) colors.primary else colors.border, RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        selectedCameraRes = r
+                                        PreferenceUtils.setCameraResolution(context, r)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(r.title, fontSize = 13.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium, color = if (isSel) colors.primary else colors.textPrimary)
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(r.description, fontSize = 11.sp, color = colors.textSecondary, lineHeight = 14.sp)
+                                }
+                                RadioButton(
+                                    selected = isSel,
+                                    onClick = {
+                                        selectedCameraRes = r
+                                        PreferenceUtils.setCameraResolution(context, r)
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = colors.primary)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // SEÇÃO 4: RELATÓRIOS E PDF
             item {
                 SettingsSectionHeader("PREFERÊNCIAS DE RELATÓRIO E PDF")
                 Card(
@@ -543,7 +636,7 @@ fun SettingsScreen(
                             checked = autoSaveEnabled,
                             onCheckedChange = {
                                 autoSaveEnabled = it
-                                prefs.edit().putBoolean("auto_save", it).apply()
+                                PreferenceUtils.setAutoSaveEnabled(context, it)
                             }
                         )
                     }

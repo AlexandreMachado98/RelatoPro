@@ -50,12 +50,57 @@ class FieldModeViewModel @Inject constructor(
     private val _operationSignature = MutableStateFlow<SignatureEntity?>(null)
     val operationSignature: StateFlow<SignatureEntity?> = _operationSignature.asStateFlow()
 
+    private val _isAutoSaving = MutableStateFlow(false)
+    val isAutoSaving: StateFlow<Boolean> = _isAutoSaving.asStateFlow()
+
+    private val _lastSavedTime = MutableStateFlow<Long>(0L)
+    val lastSavedTime: StateFlow<Long> = _lastSavedTime.asStateFlow()
+
+    /**
+     * Carrega um rascunho existente para continuar a edição exatamente de onde parou,
+     * sem duplicar registros no banco.
+     */
+    fun loadExistingReport(reportId: Long) {
+        viewModelScope.launch {
+            val report = reportRepository.getReportById(reportId) ?: return@launch
+            _currentReport.value = report
+
+            val templateFields = templateRepository.getTemplateFieldsList(report.templateId)
+            _fields.value = templateFields
+
+            // Load existing answers
+            val answersList = reportRepository.getReportAnswersSync(reportId)
+            _answers.value = answersList.associateBy { it.templateFieldId }
+
+            // Load existing signatures
+            val signatures = reportRepository.getSignatures(reportId)
+            _inspectorSignature.value = signatures.find {
+                it.role == "RESPONSAVEL_RELATORIO" || it.role.startsWith("RESPONSAVEL")
+            }
+            _operationSignature.value = signatures.find {
+                it.role == "PRESENTE_OPERACAO" || it.role.startsWith("PRESENTE")
+            }
+
+            // Observe photos for this report
+            reportRepository.getReportPhotos(reportId).collect { photoList ->
+                _photos.value = photoList
+            }
+        }
+    }
+
+    /**
+     * Inicializa um novo relatório caso não esteja editando um rascunho existente.
+     */
     fun initializeReportFromTemplate(templateId: Long, userCompany: String, responsible: String) {
+        if (_currentReport.value != null && _currentReport.value?.templateId == templateId) {
+            return // Already initialized
+        }
+
         viewModelScope.launch {
             val template = templateRepository.getTemplateById(templateId)
             val templateFields = templateRepository.getTemplateFieldsList(templateId)
             _fields.value = templateFields
-            
+
             val companyList = companyRepository.getAllCompaniesList()
             val firstCompany = companyList.firstOrNull()
 
@@ -77,7 +122,7 @@ class FieldModeViewModel @Inject constructor(
                 pdfLocalPath = null,
                 syncStatus = "PENDING"
             )
-            
+
             val reportId = reportRepository.createReport(newReport)
             val created = newReport.copy(id = reportId)
             _currentReport.value = created
@@ -86,6 +131,15 @@ class FieldModeViewModel @Inject constructor(
             reportRepository.getReportPhotos(reportId).collect { photoList ->
                 _photos.value = photoList
             }
+        }
+    }
+
+    private fun triggerAutoSaveFeedback() {
+        _isAutoSaving.value = true
+        _lastSavedTime.value = System.currentTimeMillis()
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(600)
+            _isAutoSaving.value = false
         }
     }
 
@@ -109,6 +163,7 @@ class FieldModeViewModel @Inject constructor(
         _currentReport.value = updated
         viewModelScope.launch {
             reportRepository.updateReport(updated)
+            triggerAutoSaveFeedback()
         }
     }
 
@@ -134,6 +189,7 @@ class FieldModeViewModel @Inject constructor(
         _currentReport.value = updated
         viewModelScope.launch {
             reportRepository.updateReport(updated)
+            triggerAutoSaveFeedback()
         }
     }
 
@@ -143,6 +199,7 @@ class FieldModeViewModel @Inject constructor(
         _currentReport.value = updated
         viewModelScope.launch {
             reportRepository.updateReport(updated)
+            triggerAutoSaveFeedback()
         }
     }
 
@@ -151,7 +208,7 @@ class FieldModeViewModel @Inject constructor(
 
         viewModelScope.launch {
             val existingAnswer = _answers.value[fieldId]
-            
+
             val newAnswer = ReportAnswerEntity(
                 id = existingAnswer?.id ?: 0,
                 reportId = reportId,
@@ -162,10 +219,11 @@ class FieldModeViewModel @Inject constructor(
             )
 
             reportRepository.saveAnswer(newAnswer)
-            
+
             val updatedMap = _answers.value.toMutableMap()
             updatedMap[fieldId] = newAnswer
             _answers.value = updatedMap
+            triggerAutoSaveFeedback()
         }
     }
 
@@ -188,6 +246,7 @@ class FieldModeViewModel @Inject constructor(
                 updatedMap[field.id] = newAnswer
             }
             _answers.value = updatedMap
+            triggerAutoSaveFeedback()
         }
     }
 
@@ -204,6 +263,7 @@ class FieldModeViewModel @Inject constructor(
                 lng = null
             )
             reportRepository.savePhoto(photo)
+            triggerAutoSaveFeedback()
         }
     }
 
@@ -235,6 +295,7 @@ class FieldModeViewModel @Inject constructor(
             } else {
                 _operationSignature.value = entity
             }
+            triggerAutoSaveFeedback()
         }
     }
 
@@ -247,26 +308,30 @@ class FieldModeViewModel @Inject constructor(
             } else {
                 _operationSignature.value = null
             }
+            triggerAutoSaveFeedback()
         }
     }
 
-    fun finalizeReport(onPdfGenerated: () -> Unit) {
+    fun finalizeReport(
+        onProgress: ((current: Int, total: Int, stage: String) -> Unit)? = null,
+        onPdfGenerated: (PdfGenerator.PdfGenerationResult?) -> Unit
+    ) {
         val report = _currentReport.value ?: return
         viewModelScope.launch {
-            val photosList = reportRepository.getReportPhotos(report.id).first()
-            val signaturesList = reportRepository.getSignatures(report.id)
-            
-            val photosMap = photosList
-                .filter { it.templateFieldId != null }
-                .groupBy { it.templateFieldId!! }
-                .mapValues { entry ->
-                    entry.value.map { it.localPath }
-                }.toMutableMap()
+            val photosList = _photos.value
+            val photosMap = photosList.groupBy { it.templateFieldId ?: 0L }
+                .mapValues { entry -> entry.value.map { it.localPath } }
 
-            // Fetch previous reports of the same company for historical evolution
-            val allCompanyReports = if (report.companyId != null) {
-                reportRepository.getAllReports().first().filter { 
-                    it.companyId == report.companyId && it.id != report.id && it.status == "FINALIZED" 
+            val signaturesList = listOfNotNull(
+                _inspectorSignature.value,
+                _operationSignature.value
+            )
+
+            // Previous Report for Delta comparison
+            val allReports = reportRepository.getAllReports().first()
+            val allCompanyReports = if (report.companyId != null && report.companyId > 0) {
+                allReports.filter {
+                    it.companyId == report.companyId && it.id != report.id && it.status == "FINALIZED"
                 }.sortedByDescending { it.date }
             } else {
                 emptyList()
@@ -280,7 +345,7 @@ class FieldModeViewModel @Inject constructor(
             }
 
             val reportToGenerate = report.copy(status = "FINALIZED")
-            val pdfFile = try {
+            val pdfResult = try {
                 pdfGenerator.generateReportPdf(
                     report = reportToGenerate,
                     fields = _fields.value,
@@ -289,7 +354,8 @@ class FieldModeViewModel @Inject constructor(
                     signatures = signaturesList,
                     photoEntities = photosList,
                     previousReport = previousReport,
-                    previousAnswers = previousAnswers
+                    previousAnswers = previousAnswers,
+                    onProgress = onProgress
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -297,12 +363,12 @@ class FieldModeViewModel @Inject constructor(
             }
 
             val finalized = reportToGenerate.copy(
-                pdfLocalPath = pdfFile?.absolutePath
+                pdfLocalPath = pdfResult?.file?.absolutePath
             )
             reportRepository.updateReport(finalized)
             _currentReport.value = finalized
-            
-            onPdfGenerated()
+
+            onPdfGenerated(pdfResult)
         }
     }
 }

@@ -20,8 +20,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.data.local.entity.TemplateEntity
+import com.relatopro.app.data.local.entity.TemplateFieldEntity
 import com.relatopro.app.ui.components.animation.AnimatedListItem
 import com.relatopro.app.ui.theme.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,8 +41,12 @@ fun ChecklistsScreen(
     val selectedTab by viewModel.selectedTab.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val fieldsCountMap by viewModel.fieldsCountMap.collectAsState()
+    val scope = rememberCoroutineScope()
 
     var templateToDelete by remember { mutableStateOf<TemplateEntity?>(null) }
+    var showImportDialog by remember { mutableStateOf(false) }
+    var templateToShare by remember { mutableStateOf<TemplateEntity?>(null) }
+    var templateFieldsForShare by remember { mutableStateOf<List<TemplateFieldEntity>>(emptyList()) }
 
     Scaffold(
         containerColor = colors.background,
@@ -55,6 +61,13 @@ fun ChecklistsScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
+                    }
+                },
+                actions = {
+                    TextButton(onClick = { showImportDialog = true }) {
+                        Icon(Icons.Default.Download, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Importar", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
@@ -212,6 +225,13 @@ fun ChecklistsScreen(
                                 isUserCreated = isUserCreated,
                                 onStartReport = { onNavigateToStartReport(template.id) },
                                 onEdit = { onNavigateToEdit(template.id) },
+                                onShare = {
+                                    scope.launch {
+                                        val fList = viewModel.getTemplateFields(template.id)
+                                        templateFieldsForShare = fList
+                                        templateToShare = template
+                                    }
+                                },
                                 onDuplicate = {
                                     viewModel.duplicateChecklist(template.id) {
                                         viewModel.setTab("MEUS_CHECKLISTS")
@@ -224,6 +244,28 @@ fun ChecklistsScreen(
                 }
             }
         }
+    }
+
+    // Share Checklist Dialog (QR Code / File)
+    if (templateToShare != null) {
+        ShareChecklistDialog(
+            template = templateToShare!!,
+            fields = templateFieldsForShare,
+            onDismiss = {
+                templateToShare = null
+                templateFieldsForShare = emptyList()
+            }
+        )
+    }
+
+    // Import Checklist Dialog (QR Code / File / Code)
+    if (showImportDialog) {
+        ImportChecklistDialog(
+            onDismiss = { showImportDialog = false },
+            onConfirmImport = { pkg ->
+                viewModel.importChecklistPackage(pkg)
+            }
+        )
     }
 
     // Delete Confirmation Dialog
@@ -303,6 +345,7 @@ fun ChecklistCardItem(
     isUserCreated: Boolean,
     onStartReport: () -> Unit,
     onEdit: () -> Unit,
+    onShare: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -376,6 +419,14 @@ fun ChecklistCardItem(
                                 onEdit()
                             },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = colors.primary) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Compartilhar (QR / Arquivo)", color = colors.textPrimary) },
+                            onClick = {
+                                menuExpanded = false
+                                onShare()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = colors.primary) }
                         )
                         DropdownMenuItem(
                             text = { Text("Duplicar", color = colors.textPrimary) },

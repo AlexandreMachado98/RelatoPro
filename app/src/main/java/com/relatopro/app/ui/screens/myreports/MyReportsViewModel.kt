@@ -55,4 +55,15 @@ class MyReportsViewModel @Inject constructor(
             onComplete(file)
         }
     }
+
+    fun importParsedReports(reportsToImport: List<ReportEntity>, onComplete: (Int) -> Unit = {}) {
+        viewModelScope.launch {
+            var count = 0
+            for (r in reportsToImport) {
+                reportRepository.createReport(r)
+                count++
+            }
+            onComplete(count)
+        }
+    }
 }

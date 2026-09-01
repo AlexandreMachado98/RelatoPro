@@ -10,59 +10,80 @@ import java.io.FileOutputStream
 
 object ImageOptimizer {
 
-    private const val MAX_WIDTH = 1280
-    private const val MAX_HEIGHT = 1280
-    private const val COMPRESSION_QUALITY = 80
-
     /**
-     * Otimiza a imagem salva pela câmera: redimensiona e comprime para WebP (ou JPEG) 
-     * para não lotar o armazenamento do aparelho (Requisito 9).
+     * Otimiza a imagem salva pela câmera: redimensiona e comprime conforme as preferências
+     * de resolução e qualidade configuradas no aplicativo.
      */
     fun optimizeImageFile(context: Context, originalFile: File): File? {
         try {
+            val cameraRes = PreferenceUtils.getCameraResolution(context)
+            val photoQual = PreferenceUtils.getPhotoQuality(context)
+
             // 1. Read EXIF rotation
-            val exif = ExifInterface(originalFile.absolutePath)
-            val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
-            
+            val exif = try {
+                ExifInterface(originalFile.absolutePath)
+            } catch (e: Exception) {
+                null
+            }
+            val orientation = exif?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
+                ?: ExifInterface.ORIENTATION_UNDEFINED
+
             // 2. Decode with bounds to avoid OutOfMemory
             val options = BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
             }
             BitmapFactory.decodeFile(originalFile.absolutePath, options)
-            
+
             // Calculate inSampleSize
-            options.inSampleSize = calculateInSampleSize(options, MAX_WIDTH, MAX_HEIGHT)
+            options.inSampleSize = calculateInSampleSize(options, cameraRes.maxWidth, cameraRes.maxHeight)
             options.inJustDecodeBounds = false
-            
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888
+
             var bitmap = BitmapFactory.decodeFile(originalFile.absolutePath, options) ?: return null
-            
+
             // 3. Rotate if necessary
             bitmap = rotateBitmap(bitmap, orientation)
-            
-            // 4. Save optimized file
+
+            // 4. Scale precisely if needed
+            if (bitmap.width > cameraRes.maxWidth || bitmap.height > cameraRes.maxHeight) {
+                val scale = Math.min(
+                    cameraRes.maxWidth.toFloat() / bitmap.width.toFloat(),
+                    cameraRes.maxHeight.toFloat() / bitmap.height.toFloat()
+                )
+                val destW = (bitmap.width * scale).toInt()
+                val destH = (bitmap.height * scale).toInt()
+                if (destW > 0 && destH > 0) {
+                    val scaled = Bitmap.createScaledBitmap(bitmap, destW, destH, true)
+                    if (scaled != bitmap) {
+                        bitmap.recycle()
+                        bitmap = scaled
+                    }
+                }
+            }
+
+            // 5. Save optimized file
             val optimizedFile = File(
-                context.filesDir, 
+                context.filesDir,
                 "photos/opt_${System.currentTimeMillis()}.webp",
             )
             optimizedFile.parentFile?.mkdirs()
-            
+
             FileOutputStream(optimizedFile).use { out ->
-                // Using WEBP_LOSSY for great compression/quality ratio
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, COMPRESSION_QUALITY, out)
+                    bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, photoQual.jpegQuality, out)
                 } else {
                     @Suppress("DEPRECATION")
-                    bitmap.compress(Bitmap.CompressFormat.WEBP, COMPRESSION_QUALITY, out)
+                    bitmap.compress(Bitmap.CompressFormat.WEBP, photoQual.jpegQuality, out)
                 }
             }
-            
+
             // Delete the huge original file from cache to save space
             if (originalFile.exists()) {
                 originalFile.delete()
             }
-            
+
             bitmap.recycle()
-            
+
             return optimizedFile
         } catch (e: Exception) {
             e.printStackTrace()
@@ -103,17 +124,17 @@ object ImageOptimizer {
                 matrix.setRotate(-90f)
                 matrix.postScale(-1f, 1f)
             }
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(270f)
             else -> return bitmap
         }
+
         return try {
-            val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-            if (rotatedBitmap != bitmap) {
+            val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            if (rotated != bitmap) {
                 bitmap.recycle()
             }
-            rotatedBitmap
-        } catch (e: OutOfMemoryError) {
-            e.printStackTrace()
+            rotated
+        } catch (e: Exception) {
             bitmap
         }
     }

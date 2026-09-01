@@ -98,4 +98,46 @@ class ChecklistsViewModel @Inject constructor(
             repository.deleteTemplate(templateId)
         }
     }
+
+    suspend fun getTemplateFields(templateId: Long): List<com.relatopro.app.data.local.entity.TemplateFieldEntity> {
+        return repository.getTemplateFieldsList(templateId)
+    }
+
+    fun importChecklistPackage(pkg: com.relatopro.app.utils.ChecklistShareUtil.ChecklistPackage, onImported: (Long) -> Unit = {}) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val newTemplate = TemplateEntity(
+                name = pkg.name,
+                description = pkg.description,
+                category = pkg.category.ifBlank { pkg.categories.firstOrNull()?.name ?: "Personalizados" },
+                version = 1,
+                createdAt = now,
+                updatedAt = now,
+                isGlobal = false,
+                userId = currentUserEmail
+            )
+
+            var globalOrder = 0
+            val fieldsToInsert = mutableListOf<com.relatopro.app.data.local.entity.TemplateFieldEntity>()
+            for (cat in pkg.categories) {
+                for (item in cat.items) {
+                    fieldsToInsert.add(
+                        com.relatopro.app.data.local.entity.TemplateFieldEntity(
+                            templateId = 0L,
+                            category = cat.name,
+                            label = item.label,
+                            type = item.type,
+                            isRequired = item.isRequired,
+                            orderIndex = globalOrder++
+                        )
+                    )
+                }
+            }
+
+            val templateId = repository.createTemplate(newTemplate, fieldsToInsert)
+
+            _selectedTab.value = "MEUS_CHECKLISTS"
+            onImported(templateId)
+        }
+    }
 }

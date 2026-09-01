@@ -138,12 +138,17 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable(
-                                route = "field_mode/{templateId}",
-                                arguments = listOf(navArgument("templateId") { type = NavType.LongType })
+                                route = "field_mode/{templateId}?reportId={reportId}",
+                                arguments = listOf(
+                                    navArgument("templateId") { type = NavType.LongType },
+                                    navArgument("reportId") { type = NavType.LongType; defaultValue = 0L }
+                                )
                             ) { backStackEntry ->
                                 val templateId = backStackEntry.arguments?.getLong("templateId") ?: 1L
+                                val reportId = backStackEntry.arguments?.getLong("reportId") ?: 0L
                                 FieldModeScreen(
                                     templateId = templateId,
+                                    reportId = reportId,
                                     viewModel = hiltViewModel(),
                                     onNavigateBack = { navController.popBackStack() }
                                 )
@@ -163,7 +168,10 @@ class MainActivity : ComponentActivity() {
                                 MyReportsScreen(
                                     viewModel = hiltViewModel(),
                                     initialFilter = filter,
-                                    onNavigateBack = { navController.popBackStack() }
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToEditDraft = { templateId, reportId ->
+                                        navController.navigate("field_mode/$templateId?reportId=$reportId")
+                                    }
                                 )
                             }
                             composable("history") {

@@ -1,20 +1,36 @@
 package com.relatopro.app.ui.screens.checklists
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
 import android.net.Uri
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -25,10 +41,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
+import com.google.zxing.*
+import com.google.zxing.common.HybridBinarizer
 import com.relatopro.app.data.local.entity.TemplateEntity
 import com.relatopro.app.data.local.entity.TemplateFieldEntity
 import com.relatopro.app.ui.theme.AppTheme
@@ -36,6 +57,8 @@ import com.relatopro.app.utils.ChecklistShareUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.nio.ByteBuffer
+import java.util.concurrent.Executors
 
 @Composable
 fun ShareChecklistDialog(
@@ -53,22 +76,25 @@ fun ShareChecklistDialog(
 
     LaunchedEffect(template.id) {
         withContext(Dispatchers.Default) {
-            val json = ChecklistShareUtil.serializeChecklistToJson(template, fields)
-            val payload = ChecklistShareUtil.encodeChecklistToQrPayload(json)
+            val payload = ChecklistShareUtil.encodeChecklistToQrPayload(template, fields)
             qrPayload = payload
-            qrBitmap = ChecklistShareUtil.generateQrCodeBitmap(payload, 512)
+            qrBitmap = ChecklistShareUtil.generateQrCodeBitmap(payload, 600)
         }
     }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
             colors = CardDefaults.cardColors(containerColor = colors.surface),
             shape = RoundedCornerShape(16.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -88,14 +114,14 @@ fun ShareChecklistDialog(
 
                 HorizontalDivider(color = colors.border.copy(alpha = 0.6f))
 
-                // QR Code Container
+                // QR Code Display Container
                 Box(
                     modifier = Modifier
-                        .size(210.dp)
+                        .size(230.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color.White)
-                        .border(1.dp, colors.border, RoundedCornerShape(12.dp))
-                        .padding(8.dp),
+                        .border(2.dp, colors.primary.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     if (qrBitmap != null) {
@@ -105,12 +131,15 @@ fun ShareChecklistDialog(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        CircularProgressIndicator(color = colors.primary)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CircularProgressIndicator(color = colors.primary, modifier = Modifier.size(32.dp))
+                            Text("Gerando QR Code...", fontSize = 12.sp, color = colors.textSecondary)
+                        }
                     }
                 }
 
                 Text(
-                    "Aponte a câmera de outro dispositivo para importar este checklist instantaneamente.",
+                    "Aponte a câmera de outro dispositivo com o Relato Pro para importar este checklist instantaneamente sem necessidade de internet.",
                     fontSize = 11.sp,
                     color = colors.textSecondary,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -183,11 +212,27 @@ fun ImportChecklistDialog(
     val colors = AppTheme.colors
     val scope = rememberCoroutineScope()
 
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Arquivo / Imagem, 1 = Digitar Código
+    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Câmera QR, 1 = Arquivo / Foto, 2 = Digitar Código
     var rawCodeInput by remember { mutableStateOf("") }
     var parsedPackage by remember { mutableStateOf<ChecklistShareUtil.ChecklistPackage?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isReadingFile by remember { mutableStateOf(false) }
+
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            hasCameraPermission = granted
+            if (!granted) {
+                errorMessage = "Permissão de câmera necessária para escanear QR Code em tempo real."
+            }
+        }
+    )
 
     // File Picker for .relatopro or .json files
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -202,7 +247,7 @@ fun ImportChecklistDialog(
                     if (pkg != null) {
                         parsedPackage = pkg
                     } else {
-                        errorMessage = "Arquivo inválido ou corrompido. Certifique-se de selecionar um arquivo .relatopro ou .json exportado pelo Relato Pro."
+                        errorMessage = "Arquivo inválido ou corrompido. Selecione um arquivo .relatopro ou .json válido."
                     }
                 }
             }
@@ -228,6 +273,7 @@ fun ImportChecklistDialog(
                                 withContext(Dispatchers.Main) {
                                     isReadingFile = false
                                     if (pkg != null) {
+                                        triggerVibration(context)
                                         parsedPackage = pkg
                                     } else {
                                         errorMessage = "QR Code lido não é um checklist válido do Relato Pro."
@@ -258,13 +304,17 @@ fun ImportChecklistDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
             colors = CardDefaults.cardColors(containerColor = colors.surface),
             shape = RoundedCornerShape(16.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
@@ -289,21 +339,94 @@ fun ImportChecklistDialog(
                         Tab(
                             selected = selectedTab == 0,
                             onClick = { selectedTab = 0; errorMessage = null },
-                            text = { Text("Arquivo / QR", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
-                            icon = { Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            text = { Text("Escanear", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp)) }
                         )
                         Tab(
                             selected = selectedTab == 1,
                             onClick = { selectedTab = 1; errorMessage = null },
-                            text = { Text("Digitar Código", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            text = { Text("Arquivo / Foto", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            icon = { Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                        )
+                        Tab(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2; errorMessage = null },
+                            text = { Text("Código", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
                             icon = { Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(16.dp)) }
                         )
                     }
 
                     when (selectedTab) {
                         0 -> {
+                            // LIVE CAMERAX QR CODE SCANNER
+                            if (hasCameraPermission) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(260.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.Black),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CameraLiveScanner(
+                                        onQrDetected = { payload ->
+                                            val pkg = ChecklistShareUtil.decodeChecklistPayload(payload)
+                                            if (pkg != null) {
+                                                triggerVibration(context)
+                                                parsedPackage = pkg
+                                                errorMessage = null
+                                            } else {
+                                                errorMessage = "QR Code lido não é um checklist compatível."
+                                            }
+                                        }
+                                    )
+
+                                    // Viewfinder Overlay
+                                    Box(
+                                        modifier = Modifier
+                                            .size(180.dp)
+                                            .border(2.dp, colors.primary, RoundedCornerShape(12.dp))
+                                    )
+
+                                    Text(
+                                        "Posicione o QR Code no quadrado",
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .padding(bottom = 10.dp)
+                                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            } else {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(40.dp), tint = colors.primary)
+                                    Text("Permissão de Câmera Necessária", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                                    Text("Permita o acesso à câmera para ler QR Codes diretamente.", fontSize = 12.sp, color = colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                    Button(
+                                        onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("Ativar Câmera", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                        1 -> {
+                            // ARQUIVO & FOTO DA GALERIA
                             Column(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 10.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
@@ -316,7 +439,7 @@ fun ImportChecklistDialog(
                                     if (isReadingFile) {
                                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                                     } else {
-                                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
                                         Text("Selecionar Arquivo (.relatopro / .json)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                     }
@@ -339,21 +462,22 @@ fun ImportChecklistDialog(
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth().height(46.dp)
                                 ) {
-                                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
+                                    Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Carregar Foto/Imagem do QR Code", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text("Carregar Foto do QR Code da Galeria", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
                             }
                         }
-                        1 -> {
+                        2 -> {
+                            // DIGITAR / COLAR CÓDIGO
                             Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                                 Text("Cole o código do checklist abaixo:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                                 Spacer(Modifier.height(6.dp))
                                 OutlinedTextField(
                                     value = rawCodeInput,
                                     onValueChange = { rawCodeInput = it; errorMessage = null },
-                                    placeholder = { Text("RELATOPRO:CHK:1:...") },
-                                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                                    placeholder = { Text("RPRO:2:... ou RELATOPRO:CHK:1:...") },
+                                    modifier = Modifier.fillMaxWidth().height(110.dp),
                                     shape = RoundedCornerShape(8.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = colors.primary,
@@ -366,8 +490,9 @@ fun ImportChecklistDialog(
                                 Button(
                                     onClick = {
                                         if (rawCodeInput.isNotBlank()) {
-                                            val pkg = ChecklistShareUtil.decodeChecklistPayload(rawCodeInput) ?: ChecklistShareUtil.parseChecklistJson(rawCodeInput)
+                                            val pkg = ChecklistShareUtil.decodeChecklistPayload(rawCodeInput)
                                             if (pkg != null) {
+                                                triggerVibration(context)
                                                 parsedPackage = pkg
                                                 errorMessage = null
                                             } else {
@@ -427,13 +552,13 @@ fun ImportChecklistDialog(
                             HorizontalDivider(color = colors.border.copy(alpha = 0.6f))
 
                             Text("Estrutura do Formulário:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                            pkg.categories.forEachIndexed { idx, cat ->
+                            pkg.categories.forEach { cat ->
                                 Text("• ${cat.name} (${cat.items.size} itens)", fontSize = 11.sp, color = colors.textSecondary)
                             }
                         }
                     }
 
-                    Text("Deseja importar este formulário como uma cópia independente em 'Meus Checklists'?", fontSize = 12.sp, color = colors.textSecondary)
+                    Text("Deseja importar este formulário como um modelo em 'Meus Checklists'?", fontSize = 12.sp, color = colors.textSecondary)
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(
@@ -462,5 +587,109 @@ fun ImportChecklistDialog(
                 }
             }
         }
+    }
+}
+
+/**
+ * Componente de câmera em tempo real que analisa cada frame com o ZXing
+ */
+@Composable
+fun CameraLiveScanner(
+    onQrDetected: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    var isScanningActive by remember { mutableStateOf(true) }
+
+    AndroidView(
+        factory = { ctx ->
+            val previewView = PreviewView(ctx)
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+
+                val imageAnalysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+
+                val multiFormatReader = MultiFormatReader().apply {
+                    setHints(mapOf(
+                        DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE),
+                        DecodeHintType.CHARACTER_SET to "UTF-8"
+                    ))
+                }
+
+                imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                    if (!isScanningActive) {
+                        imageProxy.close()
+                        return@setAnalyzer
+                    }
+
+                    val plane = imageProxy.planes.firstOrNull()
+                    if (plane != null) {
+                        val buffer: ByteBuffer = plane.buffer
+                        val data = ByteArray(buffer.remaining())
+                        buffer.get(data)
+
+                        val width = imageProxy.width
+                        val height = imageProxy.height
+                        val source = PlanarYUVLuminanceSource(
+                            data, width, height, 0, 0, width, height, false
+                        )
+                        val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
+
+                        try {
+                            val result = multiFormatReader.decodeWithState(binaryBitmap)
+                            val text = result.text
+                            if (!text.isNullOrBlank()) {
+                                isScanningActive = false
+                                ContextCompat.getMainExecutor(ctx).execute {
+                                    onQrDetected(text)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Frame sem QR Code válido, continua escaneando
+                        } finally {
+                            multiFormatReader.reset()
+                        }
+                    }
+                    imageProxy.close()
+                }
+
+                try {
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        imageAnalysis
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }, ContextCompat.getMainExecutor(ctx))
+
+            previewView
+        },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+private fun triggerVibration(context: Context) {
+    try {
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(100)
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
 }

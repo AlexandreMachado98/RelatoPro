@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.relatopro.app.data.local.entity.TemplateEntity
+import com.relatopro.app.ui.components.buttons.PrimaryButton
+import com.relatopro.app.ui.components.buttons.TextActionButton
 import com.relatopro.app.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -64,7 +66,7 @@ fun MainAppScreen(
     val templates by dashboardViewModel.templates.collectAsState()
 
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
+    val colors = AppTheme.colors
 
     if (showNewReportDialog) {
         NewReportDialog(
@@ -77,8 +79,6 @@ fun MainAppScreen(
         )
     }
 
-    val colors = AppTheme.colors
-
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -90,7 +90,12 @@ fun MainAppScreen(
                 }
             },
             text = {
-                Text("Você precisará entrar novamente com sua conta Google para acessar o aplicativo.\n\nSeus relatórios permanecerão salvos.", fontSize = 13.sp, color = colors.textSecondary, lineHeight = 18.sp)
+                Text(
+                    "Você precisará entrar novamente com sua conta para acessar o aplicativo.\n\nTodos os seus relatórios e fotos salvos permanecerão protegidos.",
+                    fontSize = 13.sp,
+                    color = colors.textSecondary,
+                    lineHeight = 18.sp
+                )
             },
             confirmButton = {
                 Button(
@@ -100,17 +105,23 @@ fun MainAppScreen(
                         prefs.edit().clear().apply()
                         onLogout()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.statusNaoConforme)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.statusNaoConforme,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Sair", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Sair da Conta", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancelar", color = colors.textSecondary)
-                }
+                TextActionButton(
+                    text = "Cancelar",
+                    onClick = { showLogoutDialog = false }
+                )
             },
-            containerColor = colors.surface
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
@@ -129,7 +140,7 @@ fun MainAppScreen(
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = colors.sidebar,
-                modifier = Modifier.width(280.dp)
+                modifier = Modifier.width(285.dp)
             ) {
                 PermanentSidebar(
                     currentRoute = currentRoute,
@@ -169,19 +180,24 @@ fun MainAppScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Image(
                                     painter = painterResource(id = com.relatopro.app.R.drawable.logo),
-                                    contentDescription = "Logo",
+                                    contentDescription = "Logo Relato Pro",
                                     modifier = Modifier
-                                        .size(26.dp)
+                                        .size(28.dp)
                                         .clip(CircleShape),
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Relato Pro", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    "Relato Pro",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = colors.textPrimary
+                                )
                             }
                         },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = colors.textPrimary)
+                                Icon(Icons.Default.Menu, contentDescription = "Menu Principal", tint = colors.textPrimary)
                             }
                         },
                         actions = {
@@ -221,18 +237,19 @@ fun MainAppScreen(
 private fun DesktopTopBar(currentRoute: String?) {
     val context = LocalContext.current
     val isDark = AppTheme.isDark
-
     val colors = AppTheme.colors
+
     val title = when {
-        currentRoute?.startsWith("dashboard") == true -> "Dashboard"
-        currentRoute?.startsWith("my_reports") == true -> "Meus Relatórios"
-        currentRoute?.startsWith("history") == true -> "Histórico de Relatórios"
-        currentRoute?.startsWith("indicators") == true -> "Indicadores & Estatísticas"
-        currentRoute?.startsWith("checklists") == true -> "Checklists & Modelos"
-        currentRoute?.startsWith("template_builder") == true -> "Criar/Editar Checklist"
+        currentRoute?.startsWith("dashboard") == true -> "Painel de Controle"
+        currentRoute?.startsWith("my_reports") == true -> "Meus Relatórios & Vistorias"
+        currentRoute?.startsWith("history") == true -> "Histórico Mensal de Relatórios"
+        currentRoute?.startsWith("indicators") == true -> "Indicadores & Conformidade"
+        currentRoute?.startsWith("checklists") == true -> "Modelos de Checklist"
+        currentRoute?.startsWith("template_builder") == true -> "Criador de Checklist"
+        currentRoute?.startsWith("companies") == true -> "Empresas & Unidades"
         currentRoute?.startsWith("profile") == true -> "Meu Perfil"
-        currentRoute?.startsWith("settings") == true -> "Configurações"
-        currentRoute?.startsWith("help") == true -> "Ajuda e Suporte"
+        currentRoute?.startsWith("settings") == true -> "Configurações do Sistema"
+        currentRoute?.startsWith("help") == true -> "Ajuda & Suporte"
         else -> "Relato Pro"
     }
 
@@ -250,7 +267,7 @@ private fun DesktopTopBar(currentRoute: String?) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-        
+
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             // Theme Toggle Button
             OutlinedButton(
@@ -264,7 +281,7 @@ private fun DesktopTopBar(currentRoute: String?) {
                 ),
                 border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                modifier = Modifier.height(36.dp)
+                modifier = Modifier.height(38.dp)
             ) {
                 Icon(
                     imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
@@ -316,115 +333,153 @@ private fun PermanentSidebar(
     ) {
         // Logo Header
         Row(
-            modifier = Modifier.padding(24.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
                 painter = painterResource(id = com.relatopro.app.R.drawable.logo),
                 contentDescription = "Logo",
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(34.dp)
                     .clip(CircleShape),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text("Relato Pro", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Column {
+                Text("Relato Pro", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text("Vistorias & Laudos", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+            }
         }
-        
-        // Dashboard Button
+
+        // Dashboard Main Button
         Box(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
             val isDashboard = currentRoute == "dashboard"
-            val bg = if (isDashboard) PrimaryBlue else Color.Transparent
+            val bg = if (isDashboard) PrimaryBlue else Color.White.copy(alpha = 0.06f)
             Button(
-                onClick = { 
-                    navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } } 
+                onClick = {
+                    navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } }
                     onItemClick()
                 },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = bg),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = bg,
+                    contentColor = Color.White
+                ),
                 shape = RoundedCornerShape(8.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
+                    Icon(Icons.Default.Dashboard, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Dashboard", color = Color.White, fontSize = 14.sp)
+                    Text("Painel de Controle", color = Color.White, fontSize = 13.sp, fontWeight = if (isDashboard) FontWeight.Bold else FontWeight.Medium)
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(20.dp))
-        
-        // Menu Items
-        LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
-            item { SidebarCategory("RELATÓRIOS") }
-            item { SidebarItem(Icons.Default.Add, "Novo Relatório", false) { onNewReportClick(); onItemClick() } }
-            item { SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute?.startsWith("my_reports") == true) { 
-                navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") } 
-                onItemClick()
-            } }
-            item { SidebarItem(Icons.Default.History, "Histórico Mensal", currentRoute == "history") { 
-                navController.navigate("history") { popUpTo("dashboard") } 
-                onItemClick() 
-            } }
-            item { SidebarItem(Icons.Default.Analytics, "Indicadores & Estatísticas", currentRoute == "indicators") { 
-                navController.navigate("indicators") { popUpTo("dashboard") } 
-                onItemClick() 
-            } }
-            item { SidebarItem(Icons.Default.Edit, "Rascunhos", false) { navController.navigate("my_reports?filter=Rascunhos") { popUpTo("dashboard") }; onItemClick() } }
-            item { SidebarItem(Icons.AutoMirrored.Filled.Send, "Enviados", false) { navController.navigate("my_reports?filter=Enviados") { popUpTo("dashboard") }; onItemClick() } }
-            item { SidebarItem(Icons.Default.CheckCircle, "Concluídos", false) { navController.navigate("my_reports?filter=Concluídos") { popUpTo("dashboard") }; onItemClick() } }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            
-            item { SidebarCategory("EMPRESAS & CLIENTES") }
-            item { SidebarItem(Icons.Default.Business, "Empresas Inspecionadas", currentRoute?.startsWith("companies") == true) { 
-                navController.navigate("companies") { popUpTo("dashboard") }
-                onItemClick() 
-            } }
+        Spacer(modifier = Modifier.height(16.dp))
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            
-            item { SidebarCategory("CHECKLISTS") }
-            item { SidebarItem(Icons.AutoMirrored.Filled.Assignment, "Meus Checklists & Modelos", currentRoute?.startsWith("checklists") == true) { 
-                navController.navigate("checklists") { popUpTo("dashboard") }
-                onItemClick() 
-            } }
-            item { SidebarItem(Icons.Default.Add, "Criar Checklist", currentRoute?.startsWith("template_builder") == true) { 
-                navController.navigate("template_builder?templateId=0") { popUpTo("dashboard") }
-                onItemClick() 
-            } }
+        // Menu Items Grouped Logically
+        LazyColumn(
+            modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            item { SidebarCategory("INSPEÇÕES & CAMPO") }
+            item {
+                SidebarItem(Icons.Default.AddCircle, "Iniciar Nova Inspeção", false, badge = "Novo") {
+                    onNewReportClick()
+                    onItemClick()
+                }
+            }
+            item {
+                SidebarItem(Icons.AutoMirrored.Filled.ListAlt, "Meus Relatórios", currentRoute?.startsWith("my_reports") == true) {
+                    navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
+            item {
+                SidebarItem(Icons.Default.EditNote, "Rascunhos em Aberto", false) {
+                    navController.navigate("my_reports?filter=Rascunhos") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
+            item {
+                SidebarItem(Icons.AutoMirrored.Filled.Assignment, "Modelos de Checklist", currentRoute?.startsWith("checklists") == true) {
+                    navController.navigate("checklists") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
+            item {
+                SidebarItem(Icons.Default.PlaylistAdd, "Criar Novo Checklist", currentRoute?.startsWith("template_builder") == true) {
+                    navController.navigate("template_builder?templateId=0") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            
-            item { SidebarCategory("CONFIGURAÇÕES") }
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+
+            item { SidebarCategory("GESTÃO & CLIENTES") }
+            item {
+                SidebarItem(Icons.Default.Business, "Empresas Inspecionadas", currentRoute?.startsWith("companies") == true) {
+                    navController.navigate("companies") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
+            item {
+                SidebarItem(Icons.Default.Analytics, "Indicadores & Gráficos", currentRoute == "indicators") {
+                    navController.navigate("indicators") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
+            item {
+                SidebarItem(Icons.Default.History, "Histórico Mensal", currentRoute == "history") {
+                    navController.navigate("history") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+
+            item { SidebarCategory("SISTEMA") }
             item {
                 val isDark = AppTheme.isDark
                 SidebarItem(
                     icon = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                    title = if (isDark) "Ativar Modo Claro" else "Ativar Modo Escuro",
+                    title = if (isDark) "Alternar Modo Claro" else "Alternar Modo Escuro",
                     selected = false
                 ) {
                     com.relatopro.app.ui.theme.ThemeManager.toggleTheme(context, isDark)
                 }
             }
-            item { SidebarItem(Icons.Default.Person, "Meu Perfil", currentRoute == "profile") { 
-                navController.navigate("profile") { popUpTo("dashboard") }
-                onItemClick() 
-            } }
-            item { SidebarItem(Icons.Default.Settings, "Configurações", currentRoute == "settings") { 
-                navController.navigate("settings") { popUpTo("dashboard") }
-                onItemClick() 
-            } }
-            item { SidebarItem(Icons.AutoMirrored.Filled.HelpOutline, "Ajuda e Suporte", currentRoute == "help") { 
-                navController.navigate("help") { popUpTo("dashboard") }
-                onItemClick() 
-            } }
+            item {
+                SidebarItem(Icons.Default.Person, "Meu Perfil", currentRoute == "profile") {
+                    navController.navigate("profile") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
+            item {
+                SidebarItem(Icons.Default.Settings, "Configurações", currentRoute == "settings") {
+                    navController.navigate("settings") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
+            item {
+                SidebarItem(Icons.AutoMirrored.Filled.HelpOutline, "Ajuda & Suporte", currentRoute == "help") {
+                    navController.navigate("help") { popUpTo("dashboard") }
+                    onItemClick()
+                }
+            }
 
             item { Spacer(modifier = Modifier.height(8.dp)) }
-            item { SidebarItem(Icons.AutoMirrored.Filled.ExitToApp, "Sair", false) { onLogoutClick() } }
+            item {
+                SidebarItem(Icons.AutoMirrored.Filled.ExitToApp, "Sair da Conta", false, tint = Color(0xFFF87171)) {
+                    onLogoutClick()
+                }
+            }
+            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
-        
+
         // Footer User Profile
         val customPhotoPath = prefs.getString("user_custom_photo_path", null)
         val googlePhotoUrl = prefs.getString("user_photo_url", null)
@@ -442,7 +497,10 @@ private fun PermanentSidebar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(38.dp).clip(CircleShape).background(PrimaryBlue),
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(PrimaryBlue),
                 contentAlignment = Alignment.Center
             ) {
                 if (!activeAvatar.isNullOrBlank()) {
@@ -453,12 +511,12 @@ private fun PermanentSidebar(
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
                 } else {
-                    Text(initials.ifEmpty { "RP" }, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(initials, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(userName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                Text(userName, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(userRole, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp, maxLines = 1)
             }
         }
@@ -469,18 +527,26 @@ private fun PermanentSidebar(
 private fun SidebarCategory(title: String) {
     Text(
         text = title,
-        color = Color.White.copy(alpha = 0.4f),
-        fontSize = 11.sp,
+        color = Color.White.copy(alpha = 0.45f),
+        fontSize = 10.sp,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp)
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
     )
 }
 
 @Composable
-private fun SidebarItem(icon: ImageVector, title: String, selected: Boolean, onClick: () -> Unit) {
-    val bgColor = if (selected) Color.White.copy(alpha = 0.1f) else Color.Transparent
-    val contentColor = if (selected) Color.White else Color.White.copy(alpha = 0.7f)
-    val fw = if (selected) FontWeight.Bold else FontWeight.Normal
+private fun SidebarItem(
+    icon: ImageVector,
+    title: String,
+    selected: Boolean,
+    badge: String? = null,
+    tint: Color? = null,
+    onClick: () -> Unit
+) {
+    val bgColor = if (selected) PrimaryBlue.copy(alpha = 0.25f) else Color.Transparent
+    val contentColor = tint ?: if (selected) Color.White else Color.White.copy(alpha = 0.8f)
+    val fw = if (selected) FontWeight.Bold else FontWeight.Medium
 
     Row(
         modifier = Modifier
@@ -494,10 +560,27 @@ private fun SidebarItem(icon: ImageVector, title: String, selected: Boolean, onC
     ) {
         Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = title, color = contentColor, fontSize = 13.sp, fontWeight = fw)
+        Text(text = title, color = contentColor, fontSize = 13.sp, fontWeight = fw, modifier = Modifier.weight(1f))
+        if (badge != null) {
+            Box(
+                modifier = Modifier
+                    .background(PrimaryBlue, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(badge, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
+/**
+ * Barra de Navegação Inferior Mobile Otimizada (5 abas acessíveis)
+ * - Início: Dashboard & Ações Rápidas
+ * - Relatórios: Lista de vistorias com filtros
+ * - + Novo: Botão Central Proeminente
+ * - Checklists: Acesso direto a modelos
+ * - Mais: Menu de gestão & preferências
+ */
 @Composable
 private fun MobileBottomBar(
     currentRoute: String?,
@@ -508,52 +591,111 @@ private fun MobileBottomBar(
     val colors = AppTheme.colors
 
     Box(
-        modifier = Modifier.fillMaxWidth().height(80.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(82.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).background(colors.surface),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            color = colors.surface,
+            tonalElevation = 6.dp,
+            shadowElevation = 10.dp,
+            modifier = Modifier.fillMaxWidth().height(66.dp)
         ) {
-            BottomNavIcon(Icons.Default.Home, "Início", currentRoute == "dashboard") {
-                navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } }
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BottomNavIcon(
+                    icon = Icons.Default.Home,
+                    label = "Início",
+                    selected = currentRoute == "dashboard"
+                ) {
+                    navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = false } }
+                }
+
+                BottomNavIcon(
+                    icon = Icons.AutoMirrored.Filled.ListAlt,
+                    label = "Relatórios",
+                    selected = currentRoute?.startsWith("my_reports") == true
+                ) {
+                    navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") }
+                }
+
+                Spacer(modifier = Modifier.width(56.dp)) // Espaço para o FAB Central
+
+                BottomNavIcon(
+                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    label = "Checklists",
+                    selected = currentRoute?.startsWith("checklists") == true
+                ) {
+                    navController.navigate("checklists") { popUpTo("dashboard") }
+                }
+
+                BottomNavIcon(
+                    icon = Icons.Default.Menu,
+                    label = "Mais",
+                    selected = false
+                ) {
+                    onMenuClick()
+                }
             }
-            BottomNavIcon(Icons.AutoMirrored.Filled.ListAlt, "Relatórios", currentRoute?.startsWith("my_reports") == true) {
-                navController.navigate("my_reports?filter=Todos") { popUpTo("dashboard") }
-            }
-            Spacer(modifier = Modifier.width(48.dp))
-            
-            BottomNavIcon(Icons.Default.History, "Histórico", currentRoute == "history") {
-                navController.navigate("history") { popUpTo("dashboard") }
-            }
-            BottomNavIcon(Icons.Default.Menu, "Mais", false) { onMenuClick() }
         }
-        
+
+        // Botão Central de Ação Rápida (FAB "+ Novo")
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
+                .offset(y = (-8).dp)
                 .size(56.dp)
                 .clip(CircleShape)
                 .background(colors.primary)
                 .clickable { onNewReportClick() },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Novo", tint = Color.White, modifier = Modifier.size(28.dp))
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Iniciar Inspeção",
+                tint = Color.White,
+                modifier = Modifier.size(30.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun BottomNavIcon(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+private fun BottomNavIcon(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
     val colors = AppTheme.colors
     val color = if (selected) colors.primary else colors.textSecondary
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick).padding(8.dp)
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
-        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(label, color = color, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = color,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = label,
+            color = color,
+            fontSize = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+        )
     }
 }

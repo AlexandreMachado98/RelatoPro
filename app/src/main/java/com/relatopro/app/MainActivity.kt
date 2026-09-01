@@ -103,9 +103,17 @@ class MainActivity : ComponentActivity() {
                                 DashboardScreen(
                                     viewModel = viewModel,
                                     onNavigateToChecklists = { navController.navigate("checklists") },
-                                    onNavigateToFieldMode = { templateId -> navController.navigate("field_mode/$templateId") },
+                                    onNavigateToFieldMode = { templateId, reportId ->
+                                        if (reportId != null && reportId > 0) {
+                                            navController.navigate("field_mode/$templateId?reportId=$reportId")
+                                        } else {
+                                            navController.navigate("field_mode/$templateId")
+                                        }
+                                    },
                                     onNavigateToMyReports = { navController.navigate("my_reports") },
-                                    onNavigateToIndicators = { navController.navigate("indicators") }
+                                    onNavigateToIndicators = { navController.navigate("indicators") },
+                                    onNavigateToCompanies = { navController.navigate("companies") },
+                                    onNavigateToNewChecklist = { navController.navigate("template_builder?templateId=0") }
                                 )
                             }
                             composable("checklists") {

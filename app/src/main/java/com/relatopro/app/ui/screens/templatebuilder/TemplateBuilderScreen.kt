@@ -616,7 +616,11 @@ fun AddOrEditCategoryDialog(
             Button(
                 onClick = { if (categoryName.isNotBlank()) onConfirm(categoryName.trim()) },
                 enabled = categoryName.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(8.dp)
             ) {
                 Text("Salvar Categoria", fontWeight = FontWeight.Bold, color = Color.White)
             }
@@ -703,7 +707,11 @@ fun AddOrEditItemDialog(
             Button(
                 onClick = { if (label.isNotBlank()) onConfirm(label.trim(), type) },
                 enabled = label.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(8.dp)
             ) {
                 Text("Salvar Item", fontWeight = FontWeight.Bold, color = Color.White)
             }

@@ -933,9 +933,13 @@ fun InfoStepForm(
                                         showCompanySelectorModal = false
                                         showQuickCreateModal = true
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = colors.primary,
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text("Cadastrar Nova Empresa", fontSize = 12.sp)
+                                    Text("Cadastrar Nova Empresa", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -1545,13 +1549,16 @@ fun PhotosStepContent(
             }
             Button(
                 onClick = onAddPhotoClick,
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryBlue,
+                    contentColor = Color.White
+                ),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.height(40.dp)
             ) {
-                Icon(Icons.Default.AddAPhoto, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Tirar Foto", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("Tirar Foto", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
 

@@ -28,6 +28,10 @@ import androidx.core.content.FileProvider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.relatopro.app.data.local.entity.ReportEntity
+import com.relatopro.app.ui.components.buttons.PrimaryButton
+import com.relatopro.app.ui.components.buttons.SecondaryButton
+import com.relatopro.app.ui.components.buttons.TextActionButton
+import com.relatopro.app.ui.components.feedback.EmptyStateView
 import com.relatopro.app.ui.theme.*
 import com.relatopro.app.utils.CsvImporter
 import kotlinx.coroutines.launch
@@ -98,55 +102,57 @@ fun MyReportsScreen(
     }
 
     val filteredReports = reports.filter {
-        val matchesQuery = it.title.contains(searchQuery, ignoreCase = true) ||
-                           it.location.contains(searchQuery, ignoreCase = true) ||
-                           it.id.toString().contains(searchQuery)
-        val matchesStatus = when (selectedStatus) {
+        val matchesSearch = it.title.contains(searchQuery, ignoreCase = true) ||
+                it.location.contains(searchQuery, ignoreCase = true) ||
+                it.companyName.contains(searchQuery, ignoreCase = true) ||
+                it.id.toString().contains(searchQuery)
+        val matchesFilter = when (selectedStatus) {
             "Todos" -> true
-            "Concluídos" -> it.status == "FINALIZED"
             "Rascunhos" -> it.status == "DRAFT"
+            "Concluídos" -> it.status == "FINALIZED"
             "Enviados" -> it.status == "SENT"
             else -> true
         }
-        matchesQuery && matchesStatus
-    }.sortedByDescending { it.date }
+        matchesSearch && matchesFilter
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(if (isDesktop) 24.dp else 16.dp)
         ) {
-            // Header
+            // Header Section
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Meus Relatórios", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                    Text("Gerencie, importe e compartilhe suas inspeções.", fontSize = 13.sp, color = colors.textSecondary)
+                Column {
+                    Text(
+                        "Meus Relatórios",
+                        fontSize = if (isDesktop) 24.sp else 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        "Gerencie e exporte suas vistorias e laudos técnicos",
+                        fontSize = 13.sp,
+                        color = colors.textSecondary
+                    )
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(
+                    SecondaryButton(
+                        text = "Importar CSV",
+                        icon = Icons.Default.UploadFile,
                         onClick = { csvFilePicker.launch("*/*") },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                        modifier = Modifier.height(38.dp)
-                    ) {
-                        if (isParsingCsv) {
-                            CircularProgressIndicator(color = colors.primary, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.primary)
-                            Spacer(Modifier.width(4.dp))
-                            Text("Importar CSV", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.primary)
-                        }
-                    }
+                        height = 40.dp
+                    )
 
-                    Button(
+                    PrimaryButton(
+                        text = "Exportar CSV",
+                        icon = Icons.Default.TableChart,
                         onClick = {
                             if (!isExporting && reports.isNotEmpty()) {
                                 isExporting = true
@@ -158,34 +164,25 @@ fun MyReportsScreen(
                                 }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                        modifier = Modifier.height(38.dp)
-                    ) {
-                        if (isExporting) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.TableChart, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                            Spacer(Modifier.width(4.dp))
-                            Text("Exportar CSV", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
+                        isLoading = isExporting,
+                        enabled = reports.isNotEmpty(),
+                        height = 40.dp
+                    )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
 
-            // Filtros / Toolbar
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Search Bar
             val draftsCount = reports.count { it.status == "DRAFT" }
             val completedCount = reports.count { it.status == "FINALIZED" }
             val sentCount = reports.count { it.status == "SENT" }
-            
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Pesquisar por título, ID ou local...") },
+                placeholder = { Text("Pesquisar por título, empresa, setor ou #ID...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Pesquisar", tint = colors.textSecondary) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -194,7 +191,7 @@ fun MyReportsScreen(
                         }
                     }
                 },
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = colors.primary,
                     unfocusedBorderColor = colors.border,
@@ -205,11 +202,14 @@ fun MyReportsScreen(
                 ),
                 singleLine = true
             )
-            
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             // Row of Filter Chips
             Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChipItem("Todos", reports.size, selectedStatus == "Todos") { selectedStatus = "Todos" }
@@ -217,18 +217,28 @@ fun MyReportsScreen(
                 FilterChipItem("Concluídos", completedCount, selectedStatus == "Concluídos") { selectedStatus = "Concluídos" }
                 FilterChipItem("Enviados", sentCount, selectedStatus == "Enviados") { selectedStatus = "Enviados" }
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Content
             if (filteredReports.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = colors.textSecondary.copy(alpha = 0.5f))
-                        Spacer(Modifier.height(16.dp))
-                        Text("Nenhum relatório encontrado.", color = colors.textSecondary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                    }
+                val emptyDesc = if (searchQuery.isNotBlank() || selectedStatus != "Todos") {
+                    "Nenhum relatório corresponde aos filtros aplicados. Tente alterar o termo ou limpar os filtros."
+                } else {
+                    "Você ainda não realizou nenhuma inspeção. Inicie sua primeira vistoria em campo através do botão abaixo."
                 }
+
+                EmptyStateView(
+                    icon = if (searchQuery.isNotBlank()) Icons.Default.SearchOff else Icons.Default.Description,
+                    title = if (searchQuery.isNotBlank()) "Nenhum resultado encontrado" else "Nenhum relatório registrado",
+                    description = emptyDesc,
+                    actionButtonText = if (searchQuery.isNotBlank() || selectedStatus != "Todos") "Limpar Filtros" else null,
+                    onActionClick = {
+                        searchQuery = ""
+                        selectedStatus = "Todos"
+                    },
+                    modifier = Modifier.weight(1f)
+                )
             } else {
                 if (isDesktop) {
                     DesktopReportsTable(
@@ -306,22 +316,18 @@ fun MyReportsScreen(
             },
             confirmButton = {
                 if (parseResult.validReports.isNotEmpty()) {
-                    Button(
+                    PrimaryButton(
+                        text = "Confirmar Importação (${parseResult.validReports.size})",
                         onClick = {
                             viewModel.importParsedReports(parseResult.validReports)
                             csvParseResult = null
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Confirmar Importação (${parseResult.validReports.size})", fontWeight = FontWeight.Bold)
-                    }
+                        height = 42.dp
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { csvParseResult = null }) {
-                    Text("Cancelar", color = colors.textSecondary)
-                }
+                TextActionButton(text = "Cancelar", onClick = { csvParseResult = null })
             },
             containerColor = colors.surface
         )
@@ -331,27 +337,29 @@ fun MyReportsScreen(
 @Composable
 fun FilterChipItem(title: String, count: Int, isSelected: Boolean, onClick: () -> Unit) {
     val colors = AppTheme.colors
-    val bgColor = if (isSelected) colors.primary else Color.Transparent
+    val bgColor = if (isSelected) colors.primary else colors.surface
     val contentColor = if (isSelected) Color.White else colors.textSecondary
     val borderColor = if (isSelected) colors.primary else colors.border
-    
+
     Box(
         modifier = Modifier
             .border(1.dp, borderColor, RoundedCornerShape(20.dp))
             .background(bgColor, RoundedCornerShape(20.dp))
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, color = contentColor, fontSize = 14.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+            Text(title, color = contentColor, fontSize = 13.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
             Spacer(modifier = Modifier.width(6.dp))
             Box(
-                modifier = Modifier.background(
-                    if (isSelected) Color.White.copy(alpha = 0.25f) else colors.surfaceVariant,
-                    RoundedCornerShape(10.dp)
-                ).padding(horizontal = 6.dp, vertical = 2.dp)
+                modifier = Modifier
+                    .background(
+                        if (isSelected) Color.White.copy(alpha = 0.25f) else colors.surfaceVariant,
+                        RoundedCornerShape(10.dp)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
-                Text(count.toString(), color = contentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(count.toString(), color = contentColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -380,14 +388,14 @@ fun DesktopReportsTable(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(colors.surfaceVariant)
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("ID", modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
-                Text("TÍTULO", modifier = Modifier.weight(2f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
-                Text("LOCAL", modifier = Modifier.weight(2f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
+                Text("TÍTULO / EMPRESA", modifier = Modifier.weight(2f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
+                Text("SETOR / LOCAL", modifier = Modifier.weight(1.8f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
                 Text("DATA", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
-                Text("STATUS", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
+                Text("STATUS", modifier = Modifier.weight(1.2f), fontWeight = FontWeight.Bold, color = colors.textSecondary, fontSize = 12.sp)
                 Spacer(modifier = Modifier.width(48.dp))
             }
             HorizontalDivider(color = colors.border)
@@ -397,7 +405,9 @@ fun DesktopReportsTable(
                 items(reports) { report ->
                     var expanded by remember { mutableStateOf(false) }
                     val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(report.date))
-                    
+                    val titleDisplay = report.title.ifEmpty { "Inspeção #${report.id}" }
+                    val companyDisplay = report.companyName.ifBlank { "Sem empresa" }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -408,15 +418,18 @@ fun DesktopReportsTable(
                                     report.pdfLocalPath?.let { onOpenPdf(it) }
                                 }
                             }
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("#${report.id}", modifier = Modifier.width(60.dp), color = colors.textPrimary, fontSize = 14.sp)
-                        Text(report.title.ifEmpty { "Inspeção Padrão" }, modifier = Modifier.weight(2f), color = colors.textPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(report.location, modifier = Modifier.weight(2f), color = colors.textSecondary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(dateStr, modifier = Modifier.weight(1f), color = colors.textSecondary, fontSize = 14.sp)
-                        
-                        Box(modifier = Modifier.weight(1f)) {
+                        Text("#${report.id}", modifier = Modifier.width(60.dp), color = colors.textSecondary, fontSize = 13.sp)
+                        Column(modifier = Modifier.weight(2f)) {
+                            Text(titleDisplay, color = colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(companyDisplay, color = colors.primary, fontSize = 11.sp, maxLines = 1)
+                        }
+                        Text(report.location.ifBlank { "Não informado" }, modifier = Modifier.weight(1.8f), color = colors.textSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(dateStr, modifier = Modifier.weight(1f), color = colors.textSecondary, fontSize = 13.sp)
+
+                        Box(modifier = Modifier.weight(1.2f)) {
                             StatusBadge(report.status)
                         }
 
@@ -472,93 +485,108 @@ fun MobileReportsList(
 ) {
     val colors = AppTheme.colors
 
-    if (reports.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxWidth().height(260.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.Description,
-                    contentDescription = null,
-                    modifier = Modifier.size(56.dp),
-                    tint = colors.textSecondary.copy(alpha = 0.4f)
-                )
-                Spacer(Modifier.height(12.dp))
-                Text("Nenhum relatório encontrado", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
-                Spacer(Modifier.height(4.dp))
-                Text("Crie seu primeiro relatório ou ajuste os filtros.", fontSize = 13.sp, color = colors.textSecondary)
-            }
-        }
-    } else {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(reports.size) { index ->
-                val report = reports[index]
-                var expanded by remember { mutableStateOf(false) }
-                val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.date))
-                
-                com.relatopro.app.ui.components.animation.AnimatedListItem(index = index) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (report.status == "DRAFT") {
-                                    onEditDraft(report.templateId, report.id)
-                                } else {
-                                    report.pdfLocalPath?.let { onOpenPdf(it) }
-                                }
-                            },
-                        colors = CardDefaults.cardColors(containerColor = colors.surface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(0.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(report.title.ifEmpty { "Relatório #${report.id}" }, fontWeight = FontWeight.Bold, color = colors.textPrimary, fontSize = 16.sp)
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(report.location, color = colors.textSecondary, fontSize = 14.sp)
-                                }
-                                Box {
-                                    IconButton(onClick = { expanded = true }) {
-                                        Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = colors.textSecondary)
-                                    }
-                                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(colors.surface)) {
-                                        if (report.status == "DRAFT") {
-                                            DropdownMenuItem(
-                                                text = { Text("Editar e Continuar", color = colors.primary, fontWeight = FontWeight.Bold) },
-                                                onClick = {
-                                                    expanded = false
-                                                    onEditDraft(report.templateId, report.id)
-                                                },
-                                                leadingIcon = { Icon(Icons.Default.EditNote, contentDescription = null, tint = colors.primary) }
-                                            )
-                                        }
-                                        DropdownMenuItem(
-                                            text = { Text("Visualizar PDF", color = colors.textPrimary) },
-                                            onClick = { expanded = false; report.pdfLocalPath?.let { onOpenPdf(it) } },
-                                            leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = colors.primary) }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Compartilhar", color = colors.textPrimary) },
-                                            onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it, report.id) } },
-                                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = colors.primary) }
-                                        )
-                                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
-                                        DropdownMenuItem(
-                                            text = { Text("Excluir", color = colors.statusNaoConforme) },
-                                            onClick = { expanded = false; onDeleteReport(report) },
-                                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = colors.statusNaoConforme) }
-                                        )
-                                    }
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        items(reports.size) { index ->
+            val report = reports[index]
+            var expanded by remember { mutableStateOf(false) }
+            val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.date))
+            val companyDisplay = report.companyName.ifBlank { "Empresa não informada" }
+            val titleDisplay = report.title.ifEmpty { "Inspeção #${report.id}" }
+
+            com.relatopro.app.ui.components.animation.AnimatedListItem(index = index) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (report.status == "DRAFT") {
+                                onEditDraft(report.templateId, report.id)
+                            } else {
+                                report.pdfLocalPath?.let { onOpenPdf(it) }
+                            }
+                        },
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    titleDisplay,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colors.textPrimary,
+                                    fontSize = 15.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    companyDisplay,
+                                    color = colors.primary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
+                                )
+                                if (report.location.isNotBlank()) {
+                                    Text(
+                                        "Local: ${report.location}",
+                                        color = colors.textSecondary,
+                                        fontSize = 11.sp,
+                                        maxLines = 1
+                                    )
                                 }
                             }
-                            Spacer(Modifier.height(16.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text(dateStr, color = colors.textSecondary, fontSize = 12.sp)
-                                StatusBadge(report.status)
+                            Box {
+                                IconButton(onClick = { expanded = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Ações", tint = colors.textSecondary)
+                                }
+                                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(colors.surface)) {
+                                    if (report.status == "DRAFT") {
+                                        DropdownMenuItem(
+                                            text = { Text("Editar e Continuar", color = colors.primary, fontWeight = FontWeight.Bold) },
+                                            onClick = {
+                                                expanded = false
+                                                onEditDraft(report.templateId, report.id)
+                                            },
+                                            leadingIcon = { Icon(Icons.Default.EditNote, contentDescription = null, tint = colors.primary) }
+                                        )
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text("Visualizar PDF", color = colors.textPrimary) },
+                                        onClick = { expanded = false; report.pdfLocalPath?.let { onOpenPdf(it) } },
+                                        leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = colors.primary) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Compartilhar", color = colors.textPrimary) },
+                                        onClick = { expanded = false; report.pdfLocalPath?.let { onSharePdf(it, report.id) } },
+                                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = colors.primary) }
+                                    )
+                                    HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
+                                    DropdownMenuItem(
+                                        text = { Text("Excluir", color = colors.statusNaoConforme) },
+                                        onClick = { expanded = false; onDeleteReport(report) },
+                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = colors.statusNaoConforme) }
+                                    )
+                                }
                             }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+                        HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(dateStr, color = colors.textSecondary, fontSize = 11.sp)
+                            StatusBadge(report.status)
                         }
                     }
                 }
@@ -581,16 +609,17 @@ fun StatusBadge(status: String) {
         "DRAFT" -> "Rascunho"
         else -> status
     }
-    
+
     Box(
         modifier = Modifier
-            .background(color.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(6.dp).background(color, RoundedCornerShape(3.dp)))
             Spacer(Modifier.width(6.dp))
-            Text(text, color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

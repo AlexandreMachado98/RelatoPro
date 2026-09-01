@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.*
@@ -68,10 +69,10 @@ fun DashboardScreen(
             contentPadding = PaddingValues(bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // 1. SMART ACTIVE DRAFT BANNER (Se houver rascunho em andamento)
+            // 1. SMART ACTIVE DRAFT BANNER (Compacto e Organizado)
             if (latestDraft != null) {
                 item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     val draftDateStr = remember(latestDraft.date) {
                         SimpleDateFormat("dd/MM 'às' HH:mm", Locale.getDefault()).format(Date(latestDraft.date))
                     }
@@ -81,55 +82,87 @@ fun DashboardScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        colors = CardDefaults.cardColors(containerColor = colors.primary.copy(alpha = 0.08f)),
-                        shape = RoundedCornerShape(14.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.primary.copy(alpha = 0.4f))
+                            .padding(horizontal = 20.dp)
+                            .clickable { onNavigateToFieldMode(latestDraft.templateId, latestDraft.id) },
+                        colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.primary.copy(alpha = 0.35f))
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .background(colors.primary, RoundedCornerShape(10.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.EditNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Inspeção em Andamento", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.primary)
-                                        Spacer(Modifier.width(6.dp))
-                                        Box(
-                                            modifier = Modifier
-                                                .background(colors.statusWarning.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text("Rascunho", color = colors.statusWarning, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                    Spacer(Modifier.height(2.dp))
-                                    Text("$draftTitle • $companyName", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary, maxLines = 1)
-                                    Text("Última alteração: $draftDateStr", fontSize = 11.sp, color = colors.textSecondary)
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(colors.primary.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.EditNote,
+                                    contentDescription = null,
+                                    tint = colors.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
+
                             Spacer(Modifier.width(10.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .background(colors.statusWarning.copy(alpha = 0.18f), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            "Rascunho",
+                                            color = colors.statusWarning,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "$draftTitle • $companyName",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = colors.textPrimary,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+                                Spacer(Modifier.height(1.dp))
+                                Text(
+                                    text = "Última alteração: $draftDateStr",
+                                    fontSize = 10.sp,
+                                    color = colors.textSecondary,
+                                    maxLines = 1
+                                )
+                            }
+
+                            Spacer(Modifier.width(8.dp))
+
                             Button(
                                 onClick = { onNavigateToFieldMode(latestDraft.templateId, latestDraft.id) },
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.primary,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(30.dp)
                             ) {
-                                Text("Continuar", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
-                                Spacer(Modifier.width(4.dp))
-                                Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                                Text("Continuar", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                                Spacer(Modifier.width(2.dp))
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = Color.White
+                                )
                             }
                         }
                     }

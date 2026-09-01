@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.relatopro.app.data.local.entity.TemplateEntity
@@ -54,8 +55,21 @@ fun ChecklistsScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Checklists", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
-                        Text("Gerencie modelos e seus checklists de campo", fontSize = 12.sp, color = colors.textSecondary)
+                        Text(
+                            text = "Modelos de Checklist",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            color = colors.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Gerenciar modelos de inspeção",
+                            fontSize = 11.sp,
+                            color = colors.textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 },
                 navigationIcon = {
@@ -64,10 +78,20 @@ fun ChecklistsScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { showImportDialog = true }) {
-                        Icon(Icons.Default.Download, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+                    OutlinedButton(
+                        onClick = { showImportDialog = true },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = colors.surfaceVariant,
+                            contentColor = colors.primary
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.height(34.dp).padding(end = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Importar", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Importar", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)

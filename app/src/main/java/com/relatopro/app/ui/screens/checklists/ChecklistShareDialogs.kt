@@ -167,15 +167,15 @@ fun ShareChecklistDialog(
                             }
                         },
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
                         modifier = Modifier.weight(1f).height(42.dp)
                     ) {
                         if (isExportingFile) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Enviar Arquivo", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Enviar Arquivo", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
 
@@ -195,7 +195,7 @@ fun ShareChecklistDialog(
                     ) {
                         Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Copiar Código", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Copiar Código", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     }
                 }
             }
@@ -413,10 +413,10 @@ fun ImportChecklistDialog(
                                     Text("Permita o acesso à câmera para ler QR Codes diretamente.", fontSize = 12.sp, color = colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                     Button(
                                         onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
-                                        Text("Ativar Câmera", fontWeight = FontWeight.Bold)
+                                        Text("Ativar Câmera", fontWeight = FontWeight.Bold, color = Color.White)
                                     }
                                 }
                             }
@@ -432,16 +432,16 @@ fun ImportChecklistDialog(
                             ) {
                                 Button(
                                     onClick = { filePickerLauncher.launch("*/*") },
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth().height(46.dp)
                                 ) {
                                     if (isReadingFile) {
                                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                                     } else {
-                                        Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Default.UploadFile, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
-                                        Text("Selecionar Arquivo (.relatopro / .json)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Text("Selecionar Arquivo (.relatopro / .json)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                                     }
                                 }
 
@@ -464,7 +464,7 @@ fun ImportChecklistDialog(
                                 ) {
                                     Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Carregar Foto do QR Code da Galeria", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text("Carregar Foto do QR Code da Galeria", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = colors.textPrimary)
                                 }
                             }
                         }
@@ -500,11 +500,11 @@ fun ImportChecklistDialog(
                                             }
                                         }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth().height(42.dp)
                                 ) {
-                                    Text("Validar Código", fontWeight = FontWeight.Bold)
+                                    Text("Validar Código", fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                             }
                         }
@@ -567,7 +567,7 @@ fun ImportChecklistDialog(
                             modifier = Modifier.weight(1f).height(44.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                         ) {
-                            Text("Voltar", color = colors.textPrimary)
+                            Text("Voltar", color = colors.textPrimary, fontWeight = FontWeight.SemiBold)
                         }
 
                         Button(
@@ -575,13 +575,13 @@ fun ImportChecklistDialog(
                                 onConfirmImport(pkg)
                                 onDismiss()
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1.3f).height(44.dp)
                         ) {
-                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Download, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Confirmar Importação", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("Confirmar Importação", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                         }
                     }
                 }

@@ -274,7 +274,7 @@ fun HistoryScreen(
                                 "ENVIADOS" -> "Enviados"
                                 else -> "Status: Todos"
                             }
-                            Text(statusLabel, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Text(statusLabel, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.textPrimary)
                             Spacer(Modifier.width(4.dp))
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
@@ -298,7 +298,7 @@ fun HistoryScreen(
                                 modifier = Modifier.height(40.dp)
                             ) {
                                 val yearLabel = if (selectedYear == -1) "Ano: Todos" else selectedYear.toString()
-                                Text(yearLabel, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Text(yearLabel, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.textPrimary)
                                 Spacer(Modifier.width(4.dp))
                                 Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
@@ -443,13 +443,13 @@ fun HistoryScreen(
                                 openPdf(rep.pdfLocalPath)
                                 selectedReportForDetails = null
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1f).height(48.dp)
                         ) {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Ver PDF", fontWeight = FontWeight.Bold)
+                            Text("Ver PDF", fontWeight = FontWeight.Bold, color = Color.White)
                         }
 
                         OutlinedButton(
@@ -464,7 +464,7 @@ fun HistoryScreen(
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Compartilhar", fontWeight = FontWeight.Bold)
+                            Text("Compartilhar", fontWeight = FontWeight.Bold, color = colors.textPrimary)
                         }
                     } else {
                         Text(

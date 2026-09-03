@@ -77,7 +77,7 @@ fun NewReportDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = colors.textSecondary)
+                Text("Cancelar", color = colors.textPrimary, fontWeight = FontWeight.SemiBold)
             }
         },
         containerColor = colors.surface

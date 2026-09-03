@@ -476,7 +476,7 @@ fun FieldModeScreen(
                     ) {
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Ver PDF", fontWeight = FontWeight.Bold)
+                        Text("Ver PDF", fontWeight = FontWeight.Bold, color = colors.primary)
                     }
 
                     Button(
@@ -485,12 +485,12 @@ fun FieldModeScreen(
                             pdfResultDialog = null
                             onNavigateBack()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Compartilhar", fontWeight = FontWeight.Bold)
+                        Text("Compartilhar", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             },
@@ -499,7 +499,7 @@ fun FieldModeScreen(
                     pdfResultDialog = null
                     onNavigateBack()
                 }) {
-                    Text("Concluir", color = colors.textSecondary)
+                    Text("Concluir", color = colors.textPrimary, fontWeight = FontWeight.SemiBold)
                 }
             },
             containerColor = colors.surface,
@@ -1353,7 +1353,8 @@ fun ChecklistStepContent(
                                                 Text(
                                                     text = "${itemPhotos.size}",
                                                     fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White
                                                 )
                                             }
                                         }

@@ -220,7 +220,7 @@ fun CompaniesScreen(
             },
             dismissButton = {
                 TextButton(onClick = { companyToDelete = null }) {
-                    Text("Cancelar", color = colors.textSecondary)
+                    Text("Cancelar", color = colors.textPrimary, fontWeight = FontWeight.SemiBold)
                 }
             },
             containerColor = colors.surface,
@@ -594,7 +594,7 @@ fun AddOrEditCompanyDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = colors.textSecondary)
+                Text("Cancelar", color = colors.textPrimary, fontWeight = FontWeight.SemiBold)
             }
         },
         containerColor = colors.surface

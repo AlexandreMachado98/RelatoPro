@@ -205,18 +205,18 @@ fun ChecklistsScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Button(
                                     onClick = onNavigateToCreate,
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White)
                                 ) {
                                     Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Criar Checklist", fontWeight = FontWeight.Bold)
+                                    Text("Criar Checklist", fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                                 OutlinedButton(
                                     onClick = { viewModel.setTab("MODELOS") },
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                                     border = androidx.compose.foundation.BorderStroke(1.dp, colors.primary)
                                 ) {
-                                    Text("Ver Modelos")
+                                    Text("Ver Modelos", color = colors.primary, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -325,7 +325,7 @@ fun ChecklistsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { templateToDelete = null }) {
-                    Text("Cancelar", color = colors.textSecondary)
+                    Text("Cancelar", color = colors.textPrimary, fontWeight = FontWeight.SemiBold)
                 }
             },
             containerColor = colors.surface,

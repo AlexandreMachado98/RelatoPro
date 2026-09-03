@@ -1239,16 +1239,36 @@ fun ChecklistStepContent(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Folder, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(catName.uppercase(), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = PrimaryDark)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Folder, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = catName.uppercase(),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = PrimaryDark,
+                                maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                lineHeight = 15.sp,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
                         }
-                        Text("C: $catC • NC: $catNC • Conf: $catCompPercent", fontSize = 11.sp, color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "C: $catC • NC: $catNC • Conf: $catCompPercent",
+                            fontSize = 11.sp,
+                            color = PrimaryBlue,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -1264,11 +1284,11 @@ fun ChecklistStepContent(
                     border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                             Box(
                                 modifier = Modifier
-                                    .size(24.dp)
+                                    .size(22.dp)
                                     .background(BackgroundLight, RoundedCornerShape(4.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -1279,25 +1299,25 @@ fun ChecklistStepContent(
                                     fontSize = 11.sp
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = field.label,
                                 fontWeight = FontWeight.Medium,
                                 color = TextPrimary,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 modifier = Modifier.weight(1f),
-                                lineHeight = 18.sp
+                                lineHeight = 17.sp
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 ComplianceChip("Conforme", "C", StatusConforme, answerValue?.uppercase() in listOf("C", "CONFORME", "TRUE", "SIM")) {
                                     onUpdateAnswer(field.id, "C", answer?.observation)
                                 }

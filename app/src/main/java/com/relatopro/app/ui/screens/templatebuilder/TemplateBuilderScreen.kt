@@ -331,7 +331,7 @@ fun CategoryCardBlock(
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             // Category Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -341,24 +341,26 @@ fun CategoryCardBlock(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
-                            .background(colors.primary.copy(alpha = 0.12f), RoundedCornerShape(8.dp)),
+                            .size(28.dp)
+                            .background(colors.primary.copy(alpha = 0.12f), RoundedCornerShape(6.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Folder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Folder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = categoryName.uppercase(),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = colors.textPrimary,
-                            maxLines = 1
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            lineHeight = 15.sp
                         )
                         Text(
                             text = "${categoryFields.size} item(ns)",
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             color = colors.textSecondary
                         )
                     }
@@ -491,7 +493,7 @@ fun ItemRowCard(
             .background(colors.surfaceVariant)
             .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
             .clickable(onClick = onEdit)
-            .padding(10.dp)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

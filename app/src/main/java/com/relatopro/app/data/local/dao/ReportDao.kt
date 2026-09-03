@@ -1,6 +1,7 @@
 package com.relatopro.app.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -42,6 +43,9 @@ interface ReportDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPhoto(photo: PhotoEntity): Long
+
+    @Delete
+    suspend fun deletePhoto(photo: PhotoEntity)
 
     @Query("SELECT * FROM photos WHERE reportId = :reportId")
     fun getReportPhotos(reportId: Long): Flow<List<PhotoEntity>>

@@ -16,9 +16,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -318,10 +320,12 @@ fun FieldModeScreen(
                         1 -> ChecklistStepContent(
                             fields = fields,
                             answers = answers,
+                            photos = photos,
                             onUpdateAnswer = { fieldId, answerValue, obs ->
                                 viewModel.updateAnswer(fieldId, answerValue, obs)
                             },
                             onLaunchCamera = { fieldId -> launchCamera(fieldId) },
+                            onDeletePhoto = { photo -> viewModel.deletePhoto(photo) },
                             onMarkAllConforme = { viewModel.markAllConforme() }
                         )
                         2 -> PhotosStepContent(
@@ -1143,8 +1147,10 @@ fun ReadOnlyInfoCard(
 fun ChecklistStepContent(
     fields: List<TemplateFieldEntity>,
     answers: Map<Long, com.relatopro.app.data.local.entity.ReportAnswerEntity>,
+    photos: List<PhotoEntity> = emptyList(),
     onUpdateAnswer: (fieldId: Long, answerValue: String?, observation: String?) -> Unit,
     onLaunchCamera: (fieldId: Long) -> Unit,
+    onDeletePhoto: (PhotoEntity) -> Unit = {},
     onMarkAllConforme: () -> Unit = {}
 ) {
     var selectedFieldId by remember { mutableStateOf<Long?>(null) }
@@ -1210,7 +1216,7 @@ fun ChecklistStepContent(
                             .background(PrimaryBlue.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Text("${(answeredCount * 100) / fields.size}%", color = PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("${if(fields.isNotEmpty()) (answeredCount * 100) / fields.size else 0}%", color = PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -1277,6 +1283,9 @@ fun ChecklistStepContent(
                 val field = catFields[itemIndex]
                 val answer = answers[field.id]
                 val answerValue = answer?.answerValue
+                val itemPhotos = remember(photos, field.id) {
+                    photos.filter { it.templateFieldId == field.id }
+                }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -1329,13 +1338,40 @@ fun ChecklistStepContent(
                                 }
                             }
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                IconButton(
-                                    onClick = { onLaunchCamera(field.id) },
-                                    modifier = Modifier.size(36.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // Camera Button with Attached Photos Badge Indicator
+                                BadgedBox(
+                                    badge = {
+                                        if (itemPhotos.isNotEmpty()) {
+                                            Badge(
+                                                containerColor = PrimaryBlue,
+                                                contentColor = Color.White
+                                            ) {
+                                                Text(
+                                                    text = "${itemPhotos.size}",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
                                 ) {
-                                    Icon(Icons.Default.CameraAlt, contentDescription = "Foto", tint = PrimaryBlue, modifier = Modifier.size(18.dp))
+                                    IconButton(
+                                        onClick = { onLaunchCamera(field.id) },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.CameraAlt,
+                                            contentDescription = "Foto",
+                                            tint = if (itemPhotos.isNotEmpty()) PrimaryBlue else TextSecondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
+
                                 IconButton(
                                     onClick = {
                                         selectedFieldId = field.id
@@ -1367,6 +1403,95 @@ fun ChecklistStepContent(
                                     color = TextSecondary,
                                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                                 )
+                            }
+                        }
+
+                        // Attached Photos Mini-Gallery Box
+                        if (itemPhotos.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Surface(
+                                color = PrimaryBlue.copy(alpha = 0.04f),
+                                shape = RoundedCornerShape(8.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryBlue.copy(alpha = 0.2f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.PhotoLibrary,
+                                                contentDescription = null,
+                                                tint = PrimaryBlue,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Spacer(Modifier.width(5.dp))
+                                            Text(
+                                                text = "${itemPhotos.size} ${if (itemPhotos.size == 1) "foto anexada" else "fotos anexadas"}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = PrimaryBlue
+                                            )
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .clickable { onLaunchCamera(field.id) }
+                                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        ) {
+                                            Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(11.dp))
+                                            Spacer(Modifier.width(3.dp))
+                                            Text(
+                                                text = "+ Foto",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = PrimaryBlue
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(6.dp))
+
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        items(itemPhotos) { photo ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(52.dp)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .border(1.dp, BorderColor, RoundedCornerShape(6.dp))
+                                            ) {
+                                                AsyncImage(
+                                                    model = photo.localPath,
+                                                    contentDescription = "Evidência do item",
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.TopEnd)
+                                                        .size(18.dp)
+                                                        .background(Color.Black.copy(alpha = 0.65f), RoundedCornerShape(bottomStart = 6.dp))
+                                                        .clickable { onDeletePhoto(photo) },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Close,
+                                                        contentDescription = "Remover",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(11.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

@@ -267,6 +267,13 @@ class FieldModeViewModel @Inject constructor(
         }
     }
 
+    fun deletePhoto(photo: PhotoEntity) {
+        viewModelScope.launch {
+            reportRepository.deletePhoto(photo)
+            triggerAutoSaveFeedback()
+        }
+    }
+
     fun saveSignature(
         bitmap: Bitmap,
         context: Context,

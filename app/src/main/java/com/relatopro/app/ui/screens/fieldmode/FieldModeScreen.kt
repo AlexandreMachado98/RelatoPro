@@ -8,8 +8,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -105,6 +108,8 @@ fun FieldModeScreen(
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var previewPhotoPath by remember { mutableStateOf<String?>(null) }
 
+    val photoImportProgress by viewModel.photoImportProgress.collectAsState()
+
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
@@ -121,16 +126,7 @@ fun FieldModeScreen(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
             if (uris.isNotEmpty()) {
-                val optimizedPaths = mutableListOf<String>()
-                uris.forEach { uri ->
-                    val optFile = ImageOptimizer.optimizeUri(context, uri)
-                    if (optFile != null) {
-                        optimizedPaths.add(optFile.absolutePath)
-                    }
-                }
-                if (optimizedPaths.isNotEmpty()) {
-                    viewModel.savePhotos(activeFieldId, optimizedPaths)
-                }
+                viewModel.importPhotosFromGallery(context, uris, activeFieldId)
             }
         }
     )
@@ -319,6 +315,51 @@ fun FieldModeScreen(
             
             HorizontalDivider(color = colors.border, thickness = 1.dp)
 
+            // Non-blocking Photo Import Progress Banner
+            AnimatedVisibility(
+                visible = photoImportProgress.isProcessing,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = colors.primary.copy(alpha = 0.12f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.primary.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            color = colors.primary,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = photoImportProgress.message,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.primary
+                            )
+                            if (photoImportProgress.total > 0) {
+                                Spacer(Modifier.height(3.dp))
+                                LinearProgressIndicator(
+                                    progress = { photoImportProgress.current.toFloat() / photoImportProgress.total.toFloat() },
+                                    modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(1.5.dp)),
+                                    color = colors.primary,
+                                    trackColor = colors.primary.copy(alpha = 0.2f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // STEP CONTENT (Smooth Directional Animated Transition)
             AnimatedContent(
                 targetState = selectedStep,
@@ -362,7 +403,7 @@ fun FieldModeScreen(
                                 viewModel.updateAnswer(fieldId, answerValue, obs)
                             },
                             onLaunchCamera = { fieldId -> openPhotoPicker(fieldId) },
-                            onDeletePhoto = { photo -> viewModel.deletePhoto(photo) },
+                            onDeletePhoto = { photo -> viewModel.deletePhoto(context, photo) },
                             onPhotoClick = { path -> previewPhotoPath = path },
                             onMarkAllConforme = { viewModel.markAllConforme() },
                             onAddFormClick = { showAddFormDialog = true },
@@ -371,7 +412,7 @@ fun FieldModeScreen(
                         2 -> PhotosStepContent(
                             photos = photos,
                             onAddPhotoClick = { openPhotoPicker(null) },
-                            onDeletePhoto = { photo -> viewModel.deletePhoto(photo) },
+                            onDeletePhoto = { photo -> viewModel.deletePhoto(context, photo) },
                             onPhotoClick = { path -> previewPhotoPath = path }
                         )
                         3 -> ObservationsStepContent(
@@ -1723,9 +1764,15 @@ fun ChecklistStepContent(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    items(itemPhotos.size) { photoIndex ->
+                                    items(
+                                        count = itemPhotos.size,
+                                        key = { idx -> itemPhotos[idx].id }
+                                    ) { photoIndex ->
                                         val p = itemPhotos[photoIndex]
-                                        val photoFile = File(p.localPath)
+                                        val context = LocalContext.current
+                                        val thumbFile = remember(p.localPath) {
+                                            com.relatopro.app.utils.ThumbnailManager.getThumbnailFile(context, p.localPath)
+                                        }
                                         Box(
                                             modifier = Modifier
                                                 .size(52.dp)
@@ -1733,9 +1780,13 @@ fun ChecklistStepContent(
                                                 .border(1.dp, colors.border, RoundedCornerShape(6.dp))
                                                 .clickable { onPhotoClick(p.localPath) }
                                         ) {
-                                            if (photoFile.exists()) {
+                                            if (thumbFile.exists()) {
                                                 AsyncImage(
-                                                    model = photoFile,
+                                                    model = coil.request.ImageRequest.Builder(context)
+                                                        .data(thumbFile)
+                                                        .size(120, 120)
+                                                        .crossfade(true)
+                                                        .build(),
                                                     contentDescription = "Foto do item",
                                                     contentScale = ContentScale.Crop,
                                                     modifier = Modifier.fillMaxSize()
@@ -2249,23 +2300,30 @@ fun PhotosStepContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(photos) { photo ->
+                items(items = photos, key = { it.id }) { photo ->
                     Card(
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                         colors = CardDefaults.cardColors(containerColor = colors.surface)
                     ) {
                         Column {
-                            val file = File(photo.localPath)
+                            val context = LocalContext.current
+                            val thumbFile = remember(photo.localPath) {
+                                com.relatopro.app.utils.ThumbnailManager.getThumbnailFile(context, photo.localPath)
+                            }
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(120.dp)
                                     .clickable { onPhotoClick(photo.localPath) }
                             ) {
-                                if (file.exists()) {
+                                if (thumbFile.exists()) {
                                     AsyncImage(
-                                        model = file,
+                                        model = coil.request.ImageRequest.Builder(context)
+                                            .data(thumbFile)
+                                            .size(260, 240)
+                                            .crossfade(true)
+                                            .build(),
                                         contentDescription = "Evidência",
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize()

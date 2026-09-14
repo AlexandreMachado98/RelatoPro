@@ -18,6 +18,7 @@ import com.relatopro.app.pdf.PdfGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withPermit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -28,6 +29,13 @@ data class AttachedFormEntry(
     val instanceId: String,
     val templateId: Long,
     val title: String
+)
+
+data class PhotoImportProgress(
+    val isProcessing: Boolean = false,
+    val current: Int = 0,
+    val total: Int = 0,
+    val message: String = ""
 )
 
 @HiltViewModel
@@ -58,6 +66,9 @@ class FieldModeViewModel @Inject constructor(
 
     private val _photos = MutableStateFlow<List<PhotoEntity>>(emptyList())
     val photos: StateFlow<List<PhotoEntity>> = _photos.asStateFlow()
+
+    private val _photoImportProgress = MutableStateFlow(PhotoImportProgress())
+    val photoImportProgress: StateFlow<PhotoImportProgress> = _photoImportProgress.asStateFlow()
 
     private val _inspectorSignature = MutableStateFlow<SignatureEntity?>(null)
     val inspectorSignature: StateFlow<SignatureEntity?> = _inspectorSignature.asStateFlow()
@@ -409,9 +420,82 @@ class FieldModeViewModel @Inject constructor(
         }
     }
 
-    fun deletePhoto(photo: PhotoEntity) {
-        viewModelScope.launch {
+    /**
+     * Importa múltiplas fotos da galeria com controle estrito de concorrência (Dispatchers.IO)
+     * para não travar a interface e evitar picos de consumo de memória em fotos de alta resolução.
+     */
+    fun importPhotosFromGallery(
+        context: Context,
+        uris: List<android.net.Uri>,
+        templateFieldId: Long?
+    ) {
+        val reportId = _currentReport.value?.id ?: return
+        if (uris.isEmpty()) return
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val total = uris.size
+            _photoImportProgress.value = PhotoImportProgress(
+                isProcessing = true,
+                current = 0,
+                total = total,
+                message = "Preparando $total foto(s)..."
+            )
+
+            val semaphore = kotlinx.coroutines.sync.Semaphore(2) // Max 2 parallel decodes
+            val now = System.currentTimeMillis()
+
+            uris.forEachIndexed { index, uri ->
+                semaphore.withPermit {
+                    _photoImportProgress.value = PhotoImportProgress(
+                        isProcessing = true,
+                        current = index + 1,
+                        total = total,
+                        message = "Processando foto ${index + 1} de $total..."
+                    )
+
+                    val optimized = com.relatopro.app.utils.ImageOptimizer.optimizeUri(context, uri)
+                    if (optimized != null && optimized.exists()) {
+                        val photo = PhotoEntity(
+                            reportId = reportId,
+                            templateFieldId = templateFieldId,
+                            localPath = optimized.absolutePath,
+                            timestamp = now + index,
+                            description = null,
+                            lat = null,
+                            lng = null
+                        )
+                        // Save incrementally so UI shows photos as they finish
+                        reportRepository.savePhoto(photo)
+                    }
+                }
+            }
+
+            _photoImportProgress.value = PhotoImportProgress(
+                isProcessing = false,
+                current = total,
+                total = total,
+                message = "Concluído!"
+            )
+            triggerAutoSaveFeedback()
+        }
+    }
+
+    fun deletePhoto(context: Context, photo: PhotoEntity) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            // Delete record in database
             reportRepository.deletePhoto(photo)
+
+            // Delete original file and thumbnail from disk
+            try {
+                val file = File(photo.localPath)
+                if (file.exists()) {
+                    file.delete()
+                }
+                com.relatopro.app.utils.ThumbnailManager.deleteThumbnail(context, photo.localPath)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             triggerAutoSaveFeedback()
         }
     }

@@ -77,12 +77,14 @@ object ImageOptimizer {
                 }
             }
 
-            // Delete the huge original file from cache to save space
-            if (originalFile.exists()) {
-                originalFile.delete()
+            // 6. Pre-generate micro-thumbnail for fast UI rendering
+            try {
+                val thumbName = "thumb_" + optimizedFile.name.substringBeforeLast(".") + ".webp"
+                val thumbFile = File(ThumbnailManager.getThumbnailsDir(context), thumbName)
+                ThumbnailManager.createThumbnail(optimizedFile, thumbFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-
-            bitmap.recycle()
 
             return optimizedFile
         } catch (e: Exception) {

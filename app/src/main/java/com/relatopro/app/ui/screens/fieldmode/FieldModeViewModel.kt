@@ -9,6 +9,7 @@ import com.relatopro.app.data.local.entity.PhotoEntity
 import com.relatopro.app.data.local.entity.ReportAnswerEntity
 import com.relatopro.app.data.local.entity.ReportEntity
 import com.relatopro.app.data.local.entity.SignatureEntity
+import com.relatopro.app.data.local.entity.TemplateEntity
 import com.relatopro.app.data.local.entity.TemplateFieldEntity
 import com.relatopro.app.domain.repository.CompanyRepository
 import com.relatopro.app.domain.repository.ReportRepository
@@ -17,9 +18,17 @@ import com.relatopro.app.pdf.PdfGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
+
+data class AttachedFormEntry(
+    val instanceId: String,
+    val templateId: Long,
+    val title: String
+)
 
 @HiltViewModel
 class FieldModeViewModel @Inject constructor(
@@ -32,8 +41,14 @@ class FieldModeViewModel @Inject constructor(
     val companies: StateFlow<List<CompanyEntity>> = companyRepository.getAllCompanies()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val availableTemplates: StateFlow<List<TemplateEntity>> = templateRepository.getAllTemplates()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _currentReport = MutableStateFlow<ReportEntity?>(null)
     val currentReport: StateFlow<ReportEntity?> = _currentReport.asStateFlow()
+
+    private val _attachedForms = MutableStateFlow<List<AttachedFormEntry>>(emptyList())
+    val attachedForms: StateFlow<List<AttachedFormEntry>> = _attachedForms.asStateFlow()
 
     private val _fields = MutableStateFlow<List<TemplateFieldEntity>>(emptyList())
     val fields: StateFlow<List<TemplateFieldEntity>> = _fields.asStateFlow()
@@ -58,15 +73,17 @@ class FieldModeViewModel @Inject constructor(
 
     /**
      * Carrega um rascunho existente para continuar a edição exatamente de onde parou,
-     * sem duplicar registros no banco.
+     * restaurando formulários base e adicionais.
      */
     fun loadExistingReport(reportId: Long) {
         viewModelScope.launch {
             val report = reportRepository.getReportById(reportId) ?: return@launch
             _currentReport.value = report
 
-            val templateFields = templateRepository.getTemplateFieldsList(report.templateId)
-            _fields.value = templateFields
+            val attachedList = parseAttachedFormsJson(report.attachedFormsJson)
+            _attachedForms.value = attachedList
+
+            reloadAllFields(report, attachedList)
 
             // Load existing answers
             val answersList = reportRepository.getReportAnswersSync(reportId)
@@ -100,6 +117,7 @@ class FieldModeViewModel @Inject constructor(
             val template = templateRepository.getTemplateById(templateId)
             val templateFields = templateRepository.getTemplateFieldsList(templateId)
             _fields.value = templateFields
+            _attachedForms.value = emptyList()
 
             val companyList = companyRepository.getAllCompaniesList()
             val firstCompany = companyList.firstOrNull()
@@ -120,7 +138,8 @@ class FieldModeViewModel @Inject constructor(
                 status = "DRAFT",
                 generalObservations = "",
                 pdfLocalPath = null,
-                syncStatus = "PENDING"
+                syncStatus = "PENDING",
+                attachedFormsJson = ""
             )
 
             val reportId = reportRepository.createReport(newReport)
@@ -131,6 +150,108 @@ class FieldModeViewModel @Inject constructor(
             reportRepository.getReportPhotos(reportId).collect { photoList ->
                 _photos.value = photoList
             }
+        }
+    }
+
+    private fun parseAttachedFormsJson(jsonStr: String): List<AttachedFormEntry> {
+        if (jsonStr.isBlank()) return emptyList()
+        val list = mutableListOf<AttachedFormEntry>()
+        try {
+            val arr = JSONArray(jsonStr)
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                list.add(
+                    AttachedFormEntry(
+                        instanceId = obj.optString("instanceId", "form_$i"),
+                        templateId = obj.optLong("templateId"),
+                        title = obj.optString("title", "Formulário Adicional")
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
+    private fun serializeAttachedFormsJson(list: List<AttachedFormEntry>): String {
+        val arr = JSONArray()
+        list.forEach { entry ->
+            val obj = JSONObject()
+            obj.put("instanceId", entry.instanceId)
+            obj.put("templateId", entry.templateId)
+            obj.put("title", entry.title)
+            arr.put(obj)
+        }
+        return arr.toString()
+    }
+
+    private suspend fun reloadAllFields(report: ReportEntity, attachedList: List<AttachedFormEntry>) {
+        val baseFields = templateRepository.getTemplateFieldsList(report.templateId)
+        val allFields = mutableListOf<TemplateFieldEntity>()
+        allFields.addAll(baseFields)
+
+        attachedList.forEachIndexed { idx, entry ->
+            val rawFields = templateRepository.getTemplateFieldsList(entry.templateId)
+            val mappedFields = rawFields.map { f ->
+                f.copy(
+                    id = (idx + 1) * 1_000_000L + f.id,
+                    category = "[${entry.title}] ${f.category}",
+                    orderIndex = (idx + 1) * 1000 + f.orderIndex
+                )
+            }
+            allFields.addAll(mappedFields)
+        }
+        _fields.value = allFields
+    }
+
+    /**
+     * Adiciona um novo formulário/checklist à inspeção em andamento.
+     */
+    fun addTemplateToCurrentReport(templateId: Long, customTitle: String) {
+        val report = _currentReport.value ?: return
+        viewModelScope.launch {
+            val template = templateRepository.getTemplateById(templateId) ?: return@launch
+            val finalTitle = customTitle.ifBlank { template.name }
+            val newEntry = AttachedFormEntry(
+                instanceId = "form_${System.currentTimeMillis()}",
+                templateId = templateId,
+                title = finalTitle
+            )
+            val currentAttached = _attachedForms.value.toMutableList()
+            currentAttached.add(newEntry)
+            _attachedForms.value = currentAttached
+
+            val jsonStr = serializeAttachedFormsJson(currentAttached)
+            val updatedReport = report.copy(attachedFormsJson = jsonStr)
+            reportRepository.updateReport(updatedReport)
+            _currentReport.value = updatedReport
+
+            reloadAllFields(updatedReport, currentAttached)
+            triggerAutoSaveFeedback()
+        }
+    }
+
+    /**
+     * Remove um bloco de formulário adicional anexado à inspeção.
+     */
+    fun removeAttachedForm(instanceId: String) {
+        val report = _currentReport.value ?: return
+        viewModelScope.launch {
+            val currentAttached = _attachedForms.value.toMutableList()
+            val indexToRemove = currentAttached.indexOfFirst { it.instanceId == instanceId }
+            if (indexToRemove < 0) return@launch
+
+            currentAttached.removeAt(indexToRemove)
+            _attachedForms.value = currentAttached
+
+            val jsonStr = serializeAttachedFormsJson(currentAttached)
+            val updatedReport = report.copy(attachedFormsJson = jsonStr)
+            reportRepository.updateReport(updatedReport)
+            _currentReport.value = updatedReport
+
+            reloadAllFields(updatedReport, currentAttached)
+            triggerAutoSaveFeedback()
         }
     }
 

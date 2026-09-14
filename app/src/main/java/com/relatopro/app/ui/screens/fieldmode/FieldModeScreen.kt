@@ -70,8 +70,12 @@ fun FieldModeScreen(
     val fields by viewModel.fields.collectAsState()
     val answers by viewModel.answers.collectAsState()
     val photos by viewModel.photos.collectAsState()
+    val attachedForms by viewModel.attachedForms.collectAsState()
+    val availableTemplates by viewModel.availableTemplates.collectAsState()
     val isAutoSaving by viewModel.isAutoSaving.collectAsState()
     val lastSavedTime by viewModel.lastSavedTime.collectAsState()
+
+    var showAddFormDialog by remember { mutableStateOf(false) }
 
     val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
     val loggedInName = remember { prefs.getString("user_name", "")?.ifBlank { "Alexandre Machado" } ?: "Alexandre Machado" }
@@ -321,12 +325,15 @@ fun FieldModeScreen(
                             fields = fields,
                             answers = answers,
                             photos = photos,
+                            attachedForms = attachedForms,
                             onUpdateAnswer = { fieldId, answerValue, obs ->
                                 viewModel.updateAnswer(fieldId, answerValue, obs)
                             },
                             onLaunchCamera = { fieldId -> launchCamera(fieldId) },
                             onDeletePhoto = { photo -> viewModel.deletePhoto(photo) },
-                            onMarkAllConforme = { viewModel.markAllConforme() }
+                            onMarkAllConforme = { viewModel.markAllConforme() },
+                            onAddFormClick = { showAddFormDialog = true },
+                            onRemoveAttachedForm = { instanceId -> viewModel.removeAttachedForm(instanceId) }
                         )
                         2 -> PhotosStepContent(
                             photos = photos,
@@ -504,6 +511,17 @@ fun FieldModeScreen(
             },
             containerColor = colors.surface,
             shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    if (showAddFormDialog) {
+        AddFormToReportDialog(
+            availableTemplates = availableTemplates,
+            onDismiss = { showAddFormDialog = false },
+            onConfirm = { selectedTplId, title ->
+                viewModel.addTemplateToCurrentReport(selectedTplId, title)
+                showAddFormDialog = false
+            }
         )
     }
 }
@@ -1148,14 +1166,18 @@ fun ChecklistStepContent(
     fields: List<TemplateFieldEntity>,
     answers: Map<Long, com.relatopro.app.data.local.entity.ReportAnswerEntity>,
     photos: List<PhotoEntity> = emptyList(),
+    attachedForms: List<AttachedFormEntry> = emptyList(),
     onUpdateAnswer: (fieldId: Long, answerValue: String?, observation: String?) -> Unit,
     onLaunchCamera: (fieldId: Long) -> Unit,
     onDeletePhoto: (PhotoEntity) -> Unit = {},
-    onMarkAllConforme: () -> Unit = {}
+    onMarkAllConforme: () -> Unit = {},
+    onAddFormClick: () -> Unit = {},
+    onRemoveAttachedForm: (String) -> Unit = {}
 ) {
     val colors = AppTheme.colors
     var selectedFieldId by remember { mutableStateOf<Long?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
+    var formToRemoveInstanceId by remember { mutableStateOf<String?>(null) }
 
     if (fields.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1163,6 +1185,15 @@ fun ChecklistStepContent(
                 Icon(Icons.Default.Checklist, contentDescription = null, tint = colors.textSecondary.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("Nenhum item configurado neste checklist.", color = colors.textSecondary, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(14.dp))
+                Button(
+                    onClick = onAddFormClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("+ Adicionar Formulário", color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
         }
         return
@@ -1172,17 +1203,19 @@ fun ChecklistStepContent(
     val categoriesGrouped = fields.groupBy { it.category.ifBlank { "Geral" } }
 
     var totalC = 0
+    var totalParcial = 0
     var totalNC = 0
     var totalNA = 0
     answers.values.forEach { ans ->
         when (ans.answerValue?.trim()?.uppercase()) {
             "C", "CONFORME", "TRUE", "SIM" -> totalC++
+            "PARCIAL", "PARCIALMENTE CONFORME", "P" -> totalParcial++
             "NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO" -> totalNC++
             "NA", "N/A", "NÃO APLICÁVEL", "NAO APLICAVEL" -> totalNA++
         }
     }
-    val applicable = totalC + totalNC
-    val generalComp = if (applicable > 0) (totalC.toFloat() / applicable.toFloat() * 100f) else null
+    val applicable = totalC + totalParcial + totalNC
+    val generalComp = if (applicable > 0) ((totalC + 0.5f * totalParcial) / applicable.toFloat() * 100f) else null
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1191,34 +1224,49 @@ fun ChecklistStepContent(
     ) {
         // Top Toolbar
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Itens de Verificação", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
-                    Text("$answeredCount de ${fields.size} respondidos", fontSize = 12.sp, color = colors.textSecondary)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Itens de Verificação", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                        Text("$answeredCount de ${fields.size} respondidos", fontSize = 12.sp, color = colors.textSecondary)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(
+                            onClick = onMarkAllConforme,
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.statusConforme.copy(alpha = 0.15f), contentColor = colors.statusConforme),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Icon(Icons.Default.DoneAll, contentDescription = null, tint = colors.statusConforme, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Todos C", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.statusConforme)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(colors.primary.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("${if(fields.isNotEmpty()) (answeredCount * 100) / fields.size else 0}%", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = onMarkAllConforme,
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.statusConforme.copy(alpha = 0.15f), contentColor = colors.statusConforme),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Icon(Icons.Default.DoneAll, contentDescription = null, tint = colors.statusConforme, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Todos C", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.statusConforme)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .background(colors.primary.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text("${if(fields.isNotEmpty()) (answeredCount * 100) / fields.size else 0}%", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
+
+                // Add Form Action Button
+                OutlinedButton(
+                    onClick = onAddFormClick,
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.primary.copy(alpha = 0.6f))
+                ) {
+                    Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("+ Adicionar Outro Formulário a Esta Inspeção", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = colors.primary)
                 }
             }
         }
@@ -1226,23 +1274,32 @@ fun ChecklistStepContent(
         // Category Groups
         categoriesGrouped.forEach { (catName, catFields) ->
             var catC = 0
+            var catParcial = 0
             var catNC = 0
             var catNA = 0
             catFields.forEach { f ->
                 val ans = answers[f.id]
                 when (ans?.answerValue?.trim()?.uppercase()) {
                     "C", "CONFORME", "TRUE", "SIM" -> catC++
+                    "PARCIAL", "PARCIALMENTE CONFORME", "P" -> catParcial++
                     "NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO" -> catNC++
                     "NA", "N/A", "NÃO APLICÁVEL", "NAO APLICAVEL" -> catNA++
                 }
             }
-            val catApp = catC + catNC
-            val catCompPercent = if (catApp > 0) String.format(Locale.getDefault(), "%.0f%%", (catC.toFloat() / catApp.toFloat() * 100f)) else "—"
+            val catApp = catC + catParcial + catNC
+            val catCompPercent = if (catApp > 0) String.format(Locale.getDefault(), "%.0f%%", ((catC + 0.5f * catParcial) / catApp.toFloat() * 100f)) else if (catNA > 0) "N/A" else "—"
+
+            val isAttachedBlock = catName.startsWith("[") && catName.contains("]")
+            val attachedFormTitle = if (isAttachedBlock) catName.substringAfter("[").substringBefore("]") else ""
+            val matchedAttachedForm = attachedForms.find { it.title == attachedFormTitle }
 
             item(key = "cat_header_$catName") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isAttachedBlock) colors.primary.copy(alpha = 0.08f) else colors.surfaceVariant
+                    ),
+                    border = if (isAttachedBlock) androidx.compose.foundation.BorderStroke(1.dp, colors.primary.copy(alpha = 0.3f)) else null,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Row(
@@ -1256,7 +1313,12 @@ fun ChecklistStepContent(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.Folder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(15.dp))
+                            Icon(
+                                if (isAttachedBlock) Icons.Default.PostAdd else Icons.Default.Folder,
+                                contentDescription = null,
+                                tint = colors.primary,
+                                modifier = Modifier.size(15.dp)
+                            )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = catName.uppercase(),
@@ -1270,12 +1332,22 @@ fun ChecklistStepContent(
                             )
                         }
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "C: $catC • NC: $catNC • Conf: $catCompPercent",
-                            fontSize = 11.sp,
-                            color = colors.primary,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "C: $catC • P: $catParcial • NC: $catNC • $catCompPercent",
+                                fontSize = 11.sp,
+                                color = colors.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (matchedAttachedForm != null) {
+                                IconButton(
+                                    onClick = { formToRemoveInstanceId = matchedAttachedForm.instanceId },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(Icons.Default.DeleteOutline, contentDescription = "Remover Bloco", tint = colors.statusNaoConforme, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1322,26 +1394,43 @@ fun ChecklistStepContent(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
+                        // 4 Exclusive Options: C (1.0), PARCIAL (0.5), NC (0.0), NA (Excluded)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
                                 ComplianceChip("Conforme", "C", colors.statusConforme, answerValue?.uppercase() in listOf("C", "CONFORME", "TRUE", "SIM")) {
                                     onUpdateAnswer(field.id, "C", answer?.observation)
                                 }
+                                ComplianceChip("Parcial", "PARCIAL", colors.statusWarning, answerValue?.uppercase() in listOf("PARCIAL", "PARCIALMENTE CONFORME", "P")) {
+                                    onUpdateAnswer(field.id, "PARCIAL", answer?.observation)
+                                    if (answer?.observation.isNullOrBlank()) {
+                                        selectedFieldId = field.id
+                                        showBottomSheet = true
+                                    }
+                                }
                                 ComplianceChip("Não Conforme", "NC", colors.statusNaoConforme, answerValue?.uppercase() in listOf("NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO")) {
                                     onUpdateAnswer(field.id, "NC", answer?.observation)
+                                    if (answer?.observation.isNullOrBlank()) {
+                                        selectedFieldId = field.id
+                                        showBottomSheet = true
+                                    }
                                 }
                                 ComplianceChip("N/A", "NA", colors.statusNaoAplicavel, answerValue?.uppercase() in listOf("NA", "N/A", "NÃO APLICÁVEL", "NAO APLICAVEL")) {
                                     onUpdateAnswer(field.id, "NA", answer?.observation)
                                 }
                             }
 
+                            Spacer(Modifier.width(4.dp))
+
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 // Camera Button with Attached Photos Badge Indicator
                                 BadgedBox(
@@ -1508,7 +1597,7 @@ fun ChecklistStepContent(
                                                 )
                                                 .background(colors.primary.copy(alpha = 0.08f))
                                                 .clickable { onLaunchCamera(field.id) },
-                                            contentAlignment = Alignment.Center
+                                             contentAlignment = Alignment.Center
                                         ) {
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 Icon(
@@ -1551,7 +1640,7 @@ fun ChecklistStepContent(
                         Text("Resultado Geral da Vistoria", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
                         if (generalComp != null) {
                             Text(
-                                text = String.format(Locale.getDefault(), "%.0f%% Conforme", generalComp),
+                                text = String.format(Locale.getDefault(), "%.1f%% Conforme", generalComp),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = if (generalComp >= 80f) colors.statusConforme else colors.statusNaoConforme
@@ -1562,13 +1651,42 @@ fun ChecklistStepContent(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("• Conformes: $totalC", fontSize = 12.sp, color = colors.statusConforme, fontWeight = FontWeight.SemiBold)
-                        Text("• Não Conformes: $totalNC", fontSize = 12.sp, color = colors.statusNaoConforme, fontWeight = FontWeight.SemiBold)
-                        Text("• N/A: $totalNA", fontSize = 12.sp, color = colors.statusNaoAplicavel, fontWeight = FontWeight.SemiBold)
+                        Text("• C: $totalC", fontSize = 11.sp, color = colors.statusConforme, fontWeight = FontWeight.SemiBold)
+                        Text("• Parcial: $totalParcial", fontSize = 11.sp, color = colors.statusWarning, fontWeight = FontWeight.SemiBold)
+                        Text("• NC: $totalNC", fontSize = 11.sp, color = colors.statusNaoConforme, fontWeight = FontWeight.SemiBold)
+                        Text("• NA: $totalNA", fontSize = 11.sp, color = colors.statusNaoAplicavel, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
         }
+    }
+
+    // Confirmation Dialog to Remove Attached Form
+    if (formToRemoveInstanceId != null) {
+        val formId = formToRemoveInstanceId!!
+        val target = attachedForms.find { it.instanceId == formId }
+        AlertDialog(
+            onDismissRequest = { formToRemoveInstanceId = null },
+            title = { Text("Remover Bloco de Formulário?", fontWeight = FontWeight.Bold, color = colors.textPrimary) },
+            text = { Text("Tem certeza que deseja remover o formulário '${target?.title ?: "adicional"}'? Todas as respostas deste bloco serão excluídas.", color = colors.textSecondary) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onRemoveAttachedForm(formId)
+                        formToRemoveInstanceId = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.statusNaoConforme)
+                ) {
+                    Text("Remover", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { formToRemoveInstanceId = null }) {
+                    Text("Cancelar", color = colors.textSecondary)
+                }
+            },
+            containerColor = colors.surface
+        )
     }
 
     // BOTTOM SHEET FOR TECHNICAL OBSERVATIONS
@@ -1630,6 +1748,8 @@ fun ChecklistStepContent(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val suggestions = listOf(
+                        "Atende parcialmente os requisitos",
+                        "Necessário ajuste operacional",
                         "Substituição imediata",
                         "Recarga / Manutenção",
                         "Sinalização ausente",
@@ -1657,7 +1777,7 @@ fun ChecklistStepContent(
                     value = obsText,
                     onValueChange = { obsText = it },
                     modifier = Modifier.fillMaxWidth().height(120.dp),
-                    placeholder = { Text("Descreva anomalias, motivos ou ações corretivas...", fontSize = 13.sp, color = colors.textSecondary) },
+                    placeholder = { Text("Descreva anomalias, motivos do status Parcial ou ações corretivas...", fontSize = 13.sp, color = colors.textSecondary) },
                     shape = RoundedCornerShape(8.dp),
                     trailingIcon = {
                         IconButton(onClick = launchSpeech) {
@@ -1690,6 +1810,150 @@ fun ChecklistStepContent(
             }
         }
     }
+}
+
+@Composable
+fun AddFormToReportDialog(
+    availableTemplates: List<com.relatopro.app.data.local.entity.TemplateEntity>,
+    onDismiss: () -> Unit,
+    onConfirm: (templateId: Long, customTitle: String) -> Unit
+) {
+    val colors = AppTheme.colors
+    var query by remember { mutableStateOf("") }
+    var selectedTemplate by remember { mutableStateOf<com.relatopro.app.data.local.entity.TemplateEntity?>(null) }
+    var customTitle by remember { mutableStateOf("") }
+
+    val filteredTemplates = remember(availableTemplates, query) {
+        if (query.isBlank()) availableTemplates
+        else availableTemplates.filter {
+            it.name.contains(query, ignoreCase = true) ||
+            it.category.contains(query, ignoreCase = true) ||
+            it.description.contains(query, ignoreCase = true)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text("Adicionar Formulário ao Laudo", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = colors.textPrimary)
+                Text("Selecione um checklist adicional para anexar à inspeção em andamento.", fontSize = 12.sp, color = colors.textSecondary)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text("Buscar modelo de checklist...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = colors.textSecondary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.primary,
+                        unfocusedBorderColor = colors.border,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
+                    )
+                )
+
+                Text("Selecione o Modelo:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 200.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(filteredTemplates.size) { idx ->
+                        val tpl = filteredTemplates[idx]
+                        val isSelected = selectedTemplate?.id == tpl.id
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedTemplate = tpl
+                                    if (customTitle.isBlank()) {
+                                        customTitle = tpl.name
+                                    }
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) colors.primary.copy(alpha = 0.12f) else colors.surfaceVariant
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) colors.primary else colors.border
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Checklist,
+                                    contentDescription = null,
+                                    tint = if (isSelected) colors.primary else colors.textSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(tpl.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
+                                    Text(tpl.category.ifBlank { "Geral" }, fontSize = 11.sp, color = colors.textSecondary)
+                                }
+                                if (isSelected) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (selectedTemplate != null) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Título / Identificação do Bloco:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                        OutlinedTextField(
+                            value = customTitle,
+                            onValueChange = { customTitle = it },
+                            placeholder = { Text("Ex: Comboio — Frota 02, Apoio Setor B...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = colors.primary,
+                                unfocusedBorderColor = colors.border,
+                                focusedTextColor = colors.textPrimary,
+                                unfocusedTextColor = colors.textPrimary
+                            )
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val tpl = selectedTemplate
+                    if (tpl != null) {
+                        onConfirm(tpl.id, customTitle.ifBlank { tpl.name })
+                    }
+                },
+                enabled = selectedTemplate != null,
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Anexar Formulário", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = colors.textSecondary)
+            }
+        },
+        containerColor = colors.surface
+    )
 }
 
 @Composable

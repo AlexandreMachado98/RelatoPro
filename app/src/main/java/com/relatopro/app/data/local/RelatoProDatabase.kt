@@ -27,7 +27,7 @@ import com.relatopro.app.data.local.entity.UserEntity
         CompanyEntity::class,
         CorrectiveActionEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class RelatoProDatabase : RoomDatabase() {

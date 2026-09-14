@@ -21,6 +21,7 @@ data class CategoryIndicator(
     val categoryName: String,
     val totalItems: Int,
     val conformeCount: Int,
+    val parcialCount: Int = 0,
     val naoConformeCount: Int,
     val naCount: Int,
     val compliancePercent: Float
@@ -47,6 +48,7 @@ data class CompanyRankingItem(
     val totalReports: Int,
     val totalItems: Int,
     val conformeCount: Int,
+    val parcialCount: Int = 0,
     val naoConformeCount: Int,
     val compliancePercent: Float,
     val ncPercent: Float,
@@ -73,6 +75,7 @@ data class IndicatorsUiState(
     val draftReports: Int = 0,
     val totalEvaluatedItems: Int = 0,
     val totalConforme: Int = 0,
+    val totalParcial: Int = 0,
     val totalNaoConforme: Int = 0,
     val totalNA: Int = 0,
     val compliancePercent: Float? = null,
@@ -102,6 +105,13 @@ data class IndicatorsUiState(
     val topNonConformities: List<NonConformityItem> = emptyList(),
     val timePoints: List<TimePoint> = emptyList(),
     val availableCompanies: List<CompanyEntity> = emptyList()
+)
+
+private data class CatStatsAccumulator(
+    var c: Int = 0,
+    var parcial: Int = 0,
+    var nc: Int = 0,
+    var na: Int = 0
 )
 
 @HiltViewModel
@@ -214,10 +224,11 @@ class IndicatorsViewModel @Inject constructor(
         val draftReports = currentPeriodReports.count { it.status == "DRAFT" || it.status == "PENDING" }
 
         var cCount = 0
+        var parcialCount = 0
         var ncCount = 0
         var naCount = 0
 
-        val categoryStats = mutableMapOf<String, Triple<Int, Int, Int>>() // Cat -> (C, NC, NA)
+        val categoryStats = mutableMapOf<String, CatStatsAccumulator>()
         val ncItemCounts = mutableMapOf<String, Pair<String, Int>>() // ItemLabel -> (Category, Count)
 
         // Cache template fields for fast lookup
@@ -233,10 +244,11 @@ class IndicatorsViewModel @Inject constructor(
             val field = allFieldsList[ans.templateFieldId]
             val cat = field?.category?.ifBlank { "Geral" } ?: "Geral"
             val label = field?.label ?: "Item #${ans.templateFieldId}"
-            val currentCat = categoryStats[cat] ?: Triple(0, 0, 0)
+            val currentCat = categoryStats.getOrPut(cat) { CatStatsAccumulator() }
 
             val norm = when (ans.answerValue?.trim()?.uppercase()) {
                 "C", "CONFORME", "TRUE", "SIM" -> "C"
+                "PARCIAL", "PARCIALMENTE CONFORME", "P" -> "PARCIAL"
                 "NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO" -> "NC"
                 else -> "NA"
             }
@@ -244,26 +256,30 @@ class IndicatorsViewModel @Inject constructor(
             when (norm) {
                 "C" -> {
                     cCount++
-                    categoryStats[cat] = currentCat.copy(first = currentCat.first + 1)
+                    currentCat.c++
+                }
+                "PARCIAL" -> {
+                    parcialCount++
+                    currentCat.parcial++
                 }
                 "NC" -> {
                     ncCount++
-                    categoryStats[cat] = currentCat.copy(second = currentCat.second + 1)
+                    currentCat.nc++
                     val prevItem = ncItemCounts[label] ?: Pair(cat, 0)
                     ncItemCounts[label] = Pair(cat, prevItem.second + 1)
                 }
                 else -> {
                     naCount++
-                    categoryStats[cat] = currentCat.copy(third = currentCat.third + 1)
+                    currentCat.na++
                 }
             }
         }
 
-        val totalEvaluated = cCount + ncCount + naCount
-        val applicable = cCount + ncCount
+        val totalEvaluated = cCount + parcialCount + ncCount + naCount
+        val applicable = cCount + parcialCount + ncCount
 
-        // Standard Aggregation: C / (C + NC) * 100
-        val compliancePercent = if (applicable > 0) (cCount.toFloat() / applicable.toFloat() * 100f) else null
+        // Conformidade com Parcial (0.5 peso): (C + 0.5 * Parcial) / (C + Parcial + NC) * 100
+        val compliancePercent = if (applicable > 0) ((cCount + 0.5f * parcialCount) / applicable.toFloat() * 100f) else null
         val ncPercent = if (applicable > 0) (ncCount.toFloat() / applicable.toFloat() * 100f) else null
         val naPercent = if (totalEvaluated > 0) (naCount.toFloat() / totalEvaluated.toFloat() * 100f) else null
 
@@ -298,32 +314,36 @@ class IndicatorsViewModel @Inject constructor(
             val currIds = currCompReports.map { it.id }.toSet()
             val currAns = allAnswers.filter { it.reportId in currIds }
             var compC = 0
+            var compParcial = 0
             var compNC = 0
             var compNA = 0
             currAns.forEach {
                 when (it.answerValue?.trim()?.uppercase()) {
                     "C", "CONFORME", "TRUE", "SIM" -> compC++
+                    "PARCIAL", "PARCIALMENTE CONFORME", "P" -> compParcial++
                     "NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO" -> compNC++
                     else -> compNA++
                 }
             }
-            val compApp = compC + compNC
-            val compCompPercent = if (compApp > 0) (compC.toFloat() / compApp.toFloat() * 100f) else 100f
+            val compApp = compC + compParcial + compNC
+            val compCompPercent = if (compApp > 0) ((compC + 0.5f * compParcial) / compApp.toFloat() * 100f) else 100f
             val compNcPercent = if (compApp > 0) (compNC.toFloat() / compApp.toFloat() * 100f) else 0f
 
             // Previous metrics
             val prevIds = prevCompReports.map { it.id }.toSet()
             val prevAns = allAnswers.filter { it.reportId in prevIds }
             var pC = 0
+            var pParcial = 0
             var pNC = 0
             prevAns.forEach {
                 when (it.answerValue?.trim()?.uppercase()) {
                     "C", "CONFORME", "TRUE", "SIM" -> pC++
+                    "PARCIAL", "PARCIALMENTE CONFORME", "P" -> pParcial++
                     "NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO" -> pNC++
                 }
             }
-            val pApp = pC + pNC
-            val prevCompPercent = if (pApp > 0) (pC.toFloat() / pApp.toFloat() * 100f) else null
+            val pApp = pC + pParcial + pNC
+            val prevCompPercent = if (pApp > 0) ((pC + 0.5f * pParcial) / pApp.toFloat() * 100f) else null
 
             val variationPp = if (prevCompPercent != null) compCompPercent - prevCompPercent else null
 
@@ -362,8 +382,9 @@ class IndicatorsViewModel @Inject constructor(
                     companyName = compName,
                     unit = unit,
                     totalReports = currCompReports.size,
-                    totalItems = compC + compNC + compNA,
+                    totalItems = compC + compParcial + compNC + compNA,
                     conformeCount = compC,
+                    parcialCount = compParcial,
                     naoConformeCount = compNC,
                     compliancePercent = compCompPercent,
                     ncPercent = compNcPercent,
@@ -432,14 +453,15 @@ class IndicatorsViewModel @Inject constructor(
 
         // Category breakdown
         val categoryList = categoryStats.map { (cat, counts) ->
-            val catApp = counts.first + counts.second
-            val catComp = if (catApp > 0) (counts.first.toFloat() / catApp.toFloat() * 100f) else 100f
+            val catApp = counts.c + counts.parcial + counts.nc
+            val catComp = if (catApp > 0) ((counts.c + 0.5f * counts.parcial) / catApp.toFloat() * 100f) else 100f
             CategoryIndicator(
                 categoryName = cat,
-                totalItems = counts.first + counts.second + counts.third,
-                conformeCount = counts.first,
-                naoConformeCount = counts.second,
-                naCount = counts.third,
+                totalItems = counts.c + counts.parcial + counts.nc + counts.na,
+                conformeCount = counts.c,
+                parcialCount = counts.parcial,
+                naoConformeCount = counts.nc,
+                naCount = counts.na,
                 compliancePercent = catComp
             )
         }.sortedByDescending { it.naoConformeCount }

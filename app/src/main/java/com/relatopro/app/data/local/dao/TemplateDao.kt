@@ -52,6 +52,9 @@ interface TemplateDao {
     @Query("SELECT * FROM templates WHERE id = :id")
     suspend fun getTemplateById(id: Long): TemplateEntity?
 
+    @Query("SELECT * FROM templates WHERE name = :name LIMIT 1")
+    suspend fun getTemplateByName(name: String): TemplateEntity?
+
     @Query("SELECT COUNT(*) FROM templates")
     suspend fun getTemplatesCount(): Int
 }

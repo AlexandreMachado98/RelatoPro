@@ -43,6 +43,7 @@ class PdfGenerator(private val context: Context) {
     private val textDark = Color.parseColor("#0F172A")
     private val textMuted = Color.parseColor("#64748B")
     private val colorConforme = Color.parseColor("#16A34A") // Emerald Green
+    private val colorParcial = Color.parseColor("#D97706") // Amber / Orange (0.5 pt)
     private val colorNaoConforme = Color.parseColor("#DC2626") // Red
     private val colorNA = Color.parseColor("#94A3B8") // Slate
     private val borderLight = Color.parseColor("#E2E8F0")
@@ -244,27 +245,30 @@ class PdfGenerator(private val context: Context) {
         // 3. QUADRO RESUMO DE CONFORMIDADE
         // ==========================================
         var countConforme = 0
+        var countParcial = 0
         var countNaoConforme = 0
         var countNA = 0
 
         answers.forEach { ans ->
             when (normalizeAnswer(ans.answerValue)) {
                 "C" -> countConforme++
+                "PARCIAL" -> countParcial++
                 "NC" -> countNaoConforme++
                 else -> countNA++
             }
         }
 
-        val totalEvaluated = countConforme + countNaoConforme
-        val conformidadePct = if (totalEvaluated > 0) {
-            (countConforme.toFloat() / totalEvaluated.toFloat()) * 100f
+        val totalApplicable = countConforme + countParcial + countNaoConforme
+        val conformidadePct = if (totalApplicable > 0) {
+            ((countConforme + 0.5f * countParcial) / totalApplicable.toFloat()) * 100f
         } else {
             100f
         }
         val compPctStr = String.format(Locale.getDefault(), "%.1f%%", conformidadePct)
 
-        // Summary Metric Cards
-        val cardWidth = (usableWidth - 24f) / 4f
+        // Summary Metric Cards (5 distinct stat cards)
+        val cardGap = 6f
+        val cardWidth = (usableWidth - (cardGap * 4f)) / 5f
         val cardHeight = 44f
 
         fun drawStatCard(x: Float, y: Float, label: String, value: String, valueColor: Int) {
@@ -274,14 +278,14 @@ class PdfGenerator(private val context: Context) {
 
             val valPaint = TextPaint().apply {
                 color = valueColor
-                textSize = 15f
+                textSize = 14f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
             }
             val lblPaint = TextPaint().apply {
                 color = textMuted
-                textSize = 7.5f
+                textSize = 7f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
@@ -292,9 +296,10 @@ class PdfGenerator(private val context: Context) {
         }
 
         drawStatCard(margin, currentY, "TOTAL ITENS", "${fields.size}", primaryDark)
-        drawStatCard(margin + cardWidth + 8f, currentY, "CONFORMES (C)", "$countConforme", colorConforme)
-        drawStatCard(margin + (cardWidth * 2) + 16f, currentY, "NÃO CONF. (NC)", "$countNaoConforme", colorNaoConforme)
-        drawStatCard(margin + (cardWidth * 3) + 24f, currentY, "ÍNDICE CONFORMIDADE", compPctStr, if (conformidadePct >= 80f) colorConforme else colorNaoConforme)
+        drawStatCard(margin + (cardWidth + cardGap), currentY, "CONFORMES (C)", "$countConforme", colorConforme)
+        drawStatCard(margin + (cardWidth + cardGap) * 2, currentY, "PARCIAIS (P)", "$countParcial", colorParcial)
+        drawStatCard(margin + (cardWidth + cardGap) * 3, currentY, "NÃO CONF. (NC)", "$countNaoConforme", colorNaoConforme)
+        drawStatCard(margin + (cardWidth + cardGap) * 4, currentY, "CONFORMIDADE", compPctStr, if (conformidadePct >= 80f) colorConforme else colorNaoConforme)
 
         currentY += cardHeight + 20f
 
@@ -308,6 +313,7 @@ class PdfGenerator(private val context: Context) {
 
         for ((catName, catFields) in groupedFields) {
             var catC = 0
+            var catParcial = 0
             var catNC = 0
             var catNA = 0
 
@@ -349,6 +355,7 @@ class PdfGenerator(private val context: Context) {
                 val normStatus = normalizeAnswer(answer?.answerValue)
                 when (normStatus) {
                     "C" -> catC++
+                    "PARCIAL" -> catParcial++
                     "NC" -> catNC++
                     else -> catNA++
                 }
@@ -406,11 +413,13 @@ class PdfGenerator(private val context: Context) {
                 // Draw Status Badge
                 val badgeColor = when (normStatus) {
                     "C" -> colorConforme
+                    "PARCIAL" -> colorParcial
                     "NC" -> colorNaoConforme
                     else -> colorNA
                 }
                 val badgeText = when (normStatus) {
                     "C" -> "CONFORME"
+                    "PARCIAL" -> "PARCIAL"
                     "NC" -> "NÃO CONF."
                     else -> "N/A"
                 }
@@ -438,9 +447,9 @@ class PdfGenerator(private val context: Context) {
             }
 
             // Category Subtotal Footer
-            val catApp = catC + catNC
-            val catCompPct = if (catApp > 0) String.format(Locale.getDefault(), "%.1f%%", (catC.toFloat() / catApp.toFloat() * 100f)) else "100%"
-            val catSubtotalText = "Subtotal $catName: C: $catC | NC: $catNC | NA: $catNA | Conformidade: $catCompPct"
+            val catApp = catC + catParcial + catNC
+            val catCompPct = if (catApp > 0) String.format(Locale.getDefault(), "%.1f%%", ((catC + 0.5f * catParcial) / catApp.toFloat() * 100f)) else "100%"
+            val catSubtotalText = "Subtotal $catName: C: $catC | P: $catParcial | NC: $catNC | NA: $catNA | Conformidade: $catCompPct"
 
             bgPaint.color = Color.parseColor("#F1F5F9")
             canvas.drawRect(margin, currentY, pageWidth - margin, currentY + 16f, bgPaint)
@@ -562,11 +571,13 @@ class PdfGenerator(private val context: Context) {
             for ((groupIndex, group) in evidenceGroups.withIndex()) {
                 val statusText = when (group.status) {
                     "C" -> "CONFORME"
+                    "PARCIAL" -> "PARCIAL"
                     "NC" -> "NÃO CONFORME"
                     else -> "N/A"
                 }
                 val statusColor = when (group.status) {
                     "C" -> colorConforme
+                    "PARCIAL" -> colorParcial
                     "NC" -> colorNaoConforme
                     else -> colorNA
                 }
@@ -870,8 +881,9 @@ class PdfGenerator(private val context: Context) {
         if (answerValue == null) return "NA"
         val trimmed = answerValue.trim().uppercase(Locale.getDefault())
         return when {
-            trimmed == "C" || trimmed == "CONFORME" || trimmed == "SIM" -> "C"
-            trimmed == "NC" || trimmed == "NÃO CONFORME" || trimmed == "NAO CONFORME" || trimmed == "NÃO" -> "NC"
+            trimmed == "C" || trimmed == "CONFORME" || trimmed == "SIM" || trimmed == "TRUE" -> "C"
+            trimmed == "PARCIAL" || trimmed == "PARCIALMENTE CONFORME" || trimmed == "P" -> "PARCIAL"
+            trimmed == "NC" || trimmed == "NÃO CONFORME" || trimmed == "NAO CONFORME" || trimmed == "NÃO" || trimmed == "NAO" || trimmed == "FALSE" -> "NC"
             else -> "NA"
         }
     }

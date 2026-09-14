@@ -671,34 +671,49 @@ fun OverallComplianceBanner(uiState: IndicatorsUiState) {
 @Composable
 fun MetricsGrid(uiState: IndicatorsUiState) {
     val colors = AppTheme.colors
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        MetricSquareCard(
-            modifier = Modifier.weight(1f),
-            title = "Itens Conformes",
-            count = uiState.totalConforme,
-            percent = uiState.compliancePercent,
-            color = colors.statusConforme,
-            icon = Icons.Default.CheckCircle
-        )
-        MetricSquareCard(
-            modifier = Modifier.weight(1f),
-            title = "Não Conformes",
-            count = uiState.totalNaoConforme,
-            percent = uiState.nonCompliancePercent,
-            color = colors.statusNaoConforme,
-            icon = Icons.Default.Cancel
-        )
-        MetricSquareCard(
-            modifier = Modifier.weight(1f),
-            title = "Não Aplicáveis",
-            count = uiState.totalNA,
-            percent = uiState.naPercent,
-            color = colors.textSecondary,
-            icon = Icons.Default.RemoveCircleOutline
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            MetricSquareCard(
+                modifier = Modifier.weight(1f),
+                title = "Itens Conformes (C)",
+                count = uiState.totalConforme,
+                percent = uiState.compliancePercent,
+                color = colors.statusConforme,
+                icon = Icons.Default.CheckCircle
+            )
+            MetricSquareCard(
+                modifier = Modifier.weight(1f),
+                title = "Parciais (0.5 pt)",
+                count = uiState.totalParcial,
+                percent = if (uiState.totalEvaluatedItems > 0) (uiState.totalParcial.toFloat() / uiState.totalEvaluatedItems.toFloat() * 100f) else null,
+                color = colors.statusWarning,
+                icon = Icons.Default.Adjust
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            MetricSquareCard(
+                modifier = Modifier.weight(1f),
+                title = "Não Conformes (NC)",
+                count = uiState.totalNaoConforme,
+                percent = uiState.nonCompliancePercent,
+                color = colors.statusNaoConforme,
+                icon = Icons.Default.Cancel
+            )
+            MetricSquareCard(
+                modifier = Modifier.weight(1f),
+                title = "Não Aplicáveis (NA)",
+                count = uiState.totalNA,
+                percent = uiState.naPercent,
+                color = colors.textSecondary,
+                icon = Icons.Default.RemoveCircleOutline
+            )
+        }
     }
 }
 
@@ -744,6 +759,7 @@ fun DistributionBarCard(uiState: IndicatorsUiState) {
     val colors = AppTheme.colors
     val total = uiState.totalEvaluatedItems
     val cFrac = if (total > 0) uiState.totalConforme.toFloat() / total.toFloat() else 0f
+    val pFrac = if (total > 0) uiState.totalParcial.toFloat() / total.toFloat() else 0f
     val ncFrac = if (total > 0) uiState.totalNaoConforme.toFloat() / total.toFloat() else 0f
     val naFrac = if (total > 0) uiState.totalNA.toFloat() / total.toFloat() else 0f
 
@@ -766,6 +782,7 @@ fun DistributionBarCard(uiState: IndicatorsUiState) {
                     .background(colors.surfaceVariant)
             ) {
                 if (cFrac > 0f) Box(modifier = Modifier.weight(cFrac).fillMaxHeight().background(colors.statusConforme))
+                if (pFrac > 0f) Box(modifier = Modifier.weight(pFrac).fillMaxHeight().background(colors.statusWarning))
                 if (ncFrac > 0f) Box(modifier = Modifier.weight(ncFrac).fillMaxHeight().background(colors.statusNaoConforme))
                 if (naFrac > 0f) Box(modifier = Modifier.weight(naFrac).fillMaxHeight().background(colors.textSecondary.copy(alpha = 0.5f)))
             }
@@ -773,9 +790,10 @@ fun DistributionBarCard(uiState: IndicatorsUiState) {
             Spacer(Modifier.height(14.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                LegendItem("Conforme (${uiState.totalConforme})", colors.statusConforme)
-                LegendItem("Não Conforme (${uiState.totalNaoConforme})", colors.statusNaoConforme)
-                LegendItem("Não Aplicável (${uiState.totalNA})", colors.textSecondary)
+                LegendItem("C (${uiState.totalConforme})", colors.statusConforme)
+                LegendItem("Parcial (${uiState.totalParcial})", colors.statusWarning)
+                LegendItem("NC (${uiState.totalNaoConforme})", colors.statusNaoConforme)
+                LegendItem("NA (${uiState.totalNA})", colors.textSecondary)
             }
         }
     }

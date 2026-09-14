@@ -39,5 +39,6 @@ data class ReportEntity(
     val status: String = "DRAFT", // DRAFT, FINALIZED, SENT
     val generalObservations: String? = null,
     val pdfLocalPath: String? = null,
-    val syncStatus: String = "PENDING" // PENDING, SYNCED, FAILED
+    val syncStatus: String = "PENDING", // PENDING, SYNCED, FAILED
+    val attachedFormsJson: String = "" // JSON list of attached forms metadata
 )

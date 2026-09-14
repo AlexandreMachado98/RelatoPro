@@ -36,7 +36,7 @@ object ReportExportUtil {
                 fos.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
                 OutputStreamWriter(fos, StandardCharsets.UTF_8).use { writer ->
                     // Header
-                    writer.append("ID;Numero_Laudo;Titulo;Data;Responsavel;Local;Status;Total_Itens;Conformes_C;NaoConformes_NC;NaoAplicaveis_NA;Conformidade_Pct\n")
+                    writer.append("ID;Numero_Laudo;Titulo;Data;Responsavel;Local;Status;Total_Itens;Conformes_C;Parciais_P;NaoConformes_NC;NaoAplicaveis_NA;Conformidade_Pct\n")
 
                     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                     val answersByReport = answers.groupBy { it.reportId }
@@ -44,20 +44,22 @@ object ReportExportUtil {
                     for (report in reports) {
                         val reportAnswers = answersByReport[report.id] ?: emptyList()
                         var c = 0
+                        var p = 0
                         var nc = 0
                         var na = 0
 
                         for (ans in reportAnswers) {
                             when (ans.answerValue?.trim()?.uppercase()) {
                                 "C", "CONFORME", "TRUE", "SIM" -> c++
+                                "PARCIAL", "PARC", "P" -> p++
                                 "NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO" -> nc++
                                 else -> na++
                             }
                         }
 
-                        val total = c + nc + na
-                        val app = c + nc
-                        val compPct = if (app > 0) String.format(Locale.getDefault(), "%.1f%%", (c.toFloat() / app.toFloat() * 100f)) else "N/A"
+                        val total = c + p + nc + na
+                        val app = c + p + nc
+                        val compPct = if (app > 0) String.format(Locale.getDefault(), "%.1f%%", ((c + 0.5f * p) / app.toFloat() * 100f)) else "N/A"
                         val dateStr = sdf.format(Date(report.date))
                         val cleanTitle = report.title.replace(";", ",")
                         val cleanResp = report.responsible.replace(";", ",")
@@ -72,6 +74,7 @@ object ReportExportUtil {
                         writer.append("${report.status};")
                         writer.append("$total;")
                         writer.append("$c;")
+                        writer.append("$p;")
                         writer.append("$nc;")
                         writer.append("$na;")
                         writer.append("$compPct\n")

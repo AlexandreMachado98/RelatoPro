@@ -77,8 +77,12 @@ object AppModule {
                     )
                 """.trimIndent())
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_corrective_actions_reportId ON corrective_actions(reportId)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_corrective_actions_companyId ON corrective_actions(companyId)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_corrective_actions_status ON corrective_actions(status)")
+            }
+        }
+
+        val migration45 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE reports ADD COLUMN attachedFormsJson TEXT NOT NULL DEFAULT ''")
             }
         }
 
@@ -87,7 +91,7 @@ object AppModule {
             RelatoProDatabase::class.java,
             "relatopro_db",
         )
-        .addMigrations(migration12, migration23, migration34)
+        .addMigrations(migration12, migration23, migration34, migration45)
         .fallbackToDestructiveMigration()
         .build()
     }

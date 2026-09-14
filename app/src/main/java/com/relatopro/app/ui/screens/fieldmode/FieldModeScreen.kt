@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.compose.ui.window.Dialog
 import com.relatopro.app.data.local.entity.CompanyEntity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -102,6 +103,7 @@ fun FieldModeScreen(
     var pdfResultDialog by remember { mutableStateOf<PdfGenerator.PdfGenerationResult?>(null) }
 
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var previewPhotoPath by remember { mutableStateOf<String?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -115,13 +117,19 @@ fun FieldModeScreen(
         }
     )
 
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri ->
-            if (uri != null) {
-                val optFile = ImageOptimizer.optimizeUri(context, uri)
-                if (optFile != null) {
-                    viewModel.savePhoto(activeFieldId, optFile.absolutePath)
+    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                val optimizedPaths = mutableListOf<String>()
+                uris.forEach { uri ->
+                    val optFile = ImageOptimizer.optimizeUri(context, uri)
+                    if (optFile != null) {
+                        optimizedPaths.add(optFile.absolutePath)
+                    }
+                }
+                if (optimizedPaths.isNotEmpty()) {
+                    viewModel.savePhotos(activeFieldId, optimizedPaths)
                 }
             }
         }
@@ -355,6 +363,7 @@ fun FieldModeScreen(
                             },
                             onLaunchCamera = { fieldId -> openPhotoPicker(fieldId) },
                             onDeletePhoto = { photo -> viewModel.deletePhoto(photo) },
+                            onPhotoClick = { path -> previewPhotoPath = path },
                             onMarkAllConforme = { viewModel.markAllConforme() },
                             onAddFormClick = { showAddFormDialog = true },
                             onRemoveAttachedForm = { instanceId -> viewModel.removeAttachedForm(instanceId) }
@@ -362,7 +371,8 @@ fun FieldModeScreen(
                         2 -> PhotosStepContent(
                             photos = photos,
                             onAddPhotoClick = { openPhotoPicker(null) },
-                            onDeletePhoto = { photo -> viewModel.deletePhoto(photo) }
+                            onDeletePhoto = { photo -> viewModel.deletePhoto(photo) },
+                            onPhotoClick = { path -> previewPhotoPath = path }
                         )
                         3 -> ObservationsStepContent(
                             observations = currentReport?.generalObservations ?: "",
@@ -600,7 +610,9 @@ fun FieldModeScreen(
                             .fillMaxWidth()
                             .clickable {
                                 showPhotoSourceDialog = false
-                                galleryLauncher.launch("image/*")
+                                multiplePhotoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
                             },
                         colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
                         shape = RoundedCornerShape(8.dp)
@@ -613,7 +625,7 @@ fun FieldModeScreen(
                             Spacer(Modifier.width(12.dp))
                             Column {
                                 Text("Selecionar da Galeria", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
-                                Text("Escolher foto salva no dispositivo", fontSize = 11.sp, color = colors.textSecondary)
+                                Text("Escolher uma ou várias fotos existentes", fontSize = 11.sp, color = colors.textSecondary)
                             }
                         }
                     }
@@ -628,6 +640,79 @@ fun FieldModeScreen(
             containerColor = colors.surface,
             shape = RoundedCornerShape(16.dp)
         )
+    }
+
+    // FULL SCREEN PHOTO PREVIEW DIALOG
+    if (previewPhotoPath != null) {
+        val path = previewPhotoPath!!
+        val file = File(path)
+        Dialog(onDismissRequest = { previewPhotoPath = null }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .padding(8.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Image, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Visualização da Evidência", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.textPrimary)
+                        }
+                        IconButton(onClick = { previewPhotoPath = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "Fechar", tint = colors.textSecondary)
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    if (file.exists()) {
+                        AsyncImage(
+                            model = file,
+                            contentDescription = "Foto da evidência ampliada",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 380.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.Black)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .background(colors.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Arquivo não encontrado no dispositivo.", color = colors.textSecondary, fontSize = 13.sp)
+                        }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Button(
+                        onClick = { previewPhotoPath = null },
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Fechar Visualização", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1275,6 +1360,7 @@ fun ChecklistStepContent(
     onUpdateAnswer: (fieldId: Long, answerValue: String?, observation: String?) -> Unit,
     onLaunchCamera: (fieldId: Long) -> Unit,
     onDeletePhoto: (PhotoEntity) -> Unit = {},
+    onPhotoClick: (String) -> Unit = {},
     onMarkAllConforme: () -> Unit = {},
     onAddFormClick: () -> Unit = {},
     onRemoveAttachedForm: (String) -> Unit = {}
@@ -1645,6 +1731,7 @@ fun ChecklistStepContent(
                                                 .size(52.dp)
                                                 .clip(RoundedCornerShape(6.dp))
                                                 .border(1.dp, colors.border, RoundedCornerShape(6.dp))
+                                                .clickable { onPhotoClick(p.localPath) }
                                         ) {
                                             if (photoFile.exists()) {
                                                 AsyncImage(
@@ -2105,7 +2192,8 @@ fun ComplianceChip(fullLabel: String, shortLabel: String, color: Color, selected
 fun PhotosStepContent(
     photos: List<PhotoEntity>,
     onAddPhotoClick: () -> Unit,
-    onDeletePhoto: (PhotoEntity) -> Unit = {}
+    onDeletePhoto: (PhotoEntity) -> Unit = {},
+    onPhotoClick: (String) -> Unit = {}
 ) {
     val colors = AppTheme.colors
     Column(modifier = Modifier.fillMaxSize()) {
@@ -2169,7 +2257,12 @@ fun PhotosStepContent(
                     ) {
                         Column {
                             val file = File(photo.localPath)
-                            Box(modifier = Modifier.fillMaxWidth().height(120.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp)
+                                    .clickable { onPhotoClick(photo.localPath) }
+                            ) {
                                 if (file.exists()) {
                                     AsyncImage(
                                         model = file,

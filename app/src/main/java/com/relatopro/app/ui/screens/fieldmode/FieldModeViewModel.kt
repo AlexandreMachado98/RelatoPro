@@ -388,6 +388,27 @@ class FieldModeViewModel @Inject constructor(
         }
     }
 
+    fun savePhotos(templateFieldId: Long?, localPaths: List<String>) {
+        val reportId = _currentReport.value?.id ?: return
+        if (localPaths.isEmpty()) return
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            localPaths.forEachIndexed { index, path ->
+                val photo = PhotoEntity(
+                    reportId = reportId,
+                    templateFieldId = templateFieldId,
+                    localPath = path,
+                    timestamp = now + index,
+                    description = null,
+                    lat = null,
+                    lng = null
+                )
+                reportRepository.savePhoto(photo)
+            }
+            triggerAutoSaveFeedback()
+        }
+    }
+
     fun deletePhoto(photo: PhotoEntity) {
         viewModelScope.launch {
             reportRepository.deletePhoto(photo)

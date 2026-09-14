@@ -16,13 +16,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.relatopro.app.ui.theme.BorderColor
-import com.relatopro.app.ui.theme.SurfaceWhite
+import com.relatopro.app.ui.theme.AppTheme
 
 /**
  * Reusable Shimmer Effect Modifier for Skeleton Loading
  */
 fun Modifier.shimmerEffect(): Modifier = composed {
+    val colors = AppTheme.colors
     val transition = rememberInfiniteTransition(label = "ShimmerTransition")
     val translateAnimation = transition.animateFloat(
         initialValue = 0f,
@@ -34,11 +34,19 @@ fun Modifier.shimmerEffect(): Modifier = composed {
         label = "ShimmerTranslate"
     )
 
-    val shimmerColors = listOf(
-        Color(0xFFE2E8F0).copy(alpha = 0.6f),
-        Color(0xFFF1F5F9),
-        Color(0xFFE2E8F0).copy(alpha = 0.6f)
-    )
+    val shimmerColors = if (colors.isDark) {
+        listOf(
+            colors.surfaceVariant.copy(alpha = 0.4f),
+            colors.surfaceVariant.copy(alpha = 0.8f),
+            colors.surfaceVariant.copy(alpha = 0.4f)
+        )
+    } else {
+        listOf(
+            Color(0xFFE2E8F0).copy(alpha = 0.6f),
+            Color(0xFFF1F5F9),
+            Color(0xFFE2E8F0).copy(alpha = 0.6f)
+        )
+    }
 
     val brush = Brush.linearGradient(
         colors = shimmerColors,
@@ -54,11 +62,12 @@ fun Modifier.shimmerEffect(): Modifier = composed {
  */
 @Composable
 fun SkeletonMetricCard(modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier.height(110.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.card),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
     ) {
         Column(
             modifier = Modifier
@@ -85,11 +94,12 @@ fun SkeletonMetricCard(modifier: Modifier = Modifier) {
  */
 @Composable
 fun SkeletonReportCard(modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier.fillMaxWidth().height(110.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.card),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
     ) {
         Column(
             modifier = Modifier
@@ -122,11 +132,12 @@ fun SkeletonReportCard(modifier: Modifier = Modifier) {
  */
 @Composable
 fun SkeletonChecklistItem(modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier.fillMaxWidth().height(90.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.card),
         shape = RoundedCornerShape(10.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
     ) {
         Column(
             modifier = Modifier

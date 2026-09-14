@@ -26,9 +26,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
-import com.relatopro.app.ui.theme.PrimaryBlue
-import com.relatopro.app.ui.theme.StatusNaoConforme
-import com.relatopro.app.ui.theme.TextSecondary
+import com.relatopro.app.ui.theme.AppTheme
 
 data class Line(
     val start: Offset,
@@ -43,6 +41,7 @@ fun SignaturePad(
     onSignatureCaptured: (Bitmap) -> Unit,
     onClear: () -> Unit,
 ) {
+    val colors = AppTheme.colors
     var lines by remember { mutableStateOf(emptyList<Line>()) }
     var currentPosition by remember { mutableStateOf(Offset.Unspecified) }
     var canvasSize by remember { mutableStateOf(IntSize(600, 240)) }
@@ -78,7 +77,7 @@ fun SignaturePad(
                 .height(150.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.White)
-                .border(1.5.dp, if (lines.isNotEmpty()) PrimaryBlue.copy(alpha = 0.5f) else Color.LightGray, RoundedCornerShape(8.dp))
+                .border(1.5.dp, if (lines.isNotEmpty()) colors.primary else colors.border, RoundedCornerShape(8.dp))
                 .clipToBounds()
                 .onSizeChanged { canvasSize = it },
         ) {
@@ -122,8 +121,9 @@ fun SignaturePad(
                 ) {
                     Text(
                         text = "✍️ Assine aqui",
-                        color = TextSecondary.copy(alpha = 0.6f),
-                        fontSize = 13.sp
+                        color = Color(0xFF64748B),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -144,9 +144,9 @@ fun SignaturePad(
                     },
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Icon(Icons.Default.Clear, contentDescription = null, tint = StatusNaoConforme, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Clear, contentDescription = null, tint = colors.statusNaoConforme, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Limpar", color = StatusNaoConforme, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Limpar", color = colors.statusNaoConforme, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             } else {
                 Spacer(modifier = Modifier.width(1.dp))
@@ -154,7 +154,7 @@ fun SignaturePad(
 
             Text(
                 text = if (lines.isNotEmpty()) "Assinatura capturada automaticamente ✓" else "Toque e arraste para assinar",
-                color = if (lines.isNotEmpty()) Color(0xFF16A34A) else TextSecondary,
+                color = if (lines.isNotEmpty()) colors.statusConforme else colors.textSecondary,
                 fontSize = 11.sp,
                 fontWeight = if (lines.isNotEmpty()) FontWeight.Bold else FontWeight.Normal
             )

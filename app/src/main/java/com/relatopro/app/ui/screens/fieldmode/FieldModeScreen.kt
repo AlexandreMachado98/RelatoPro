@@ -178,7 +178,7 @@ fun FieldModeScreen(
         bottomBar = {
             Surface(
                 shadowElevation = 8.dp,
-                color = SurfaceWhite
+                color = colors.surface
             ) {
                 Row(
                     modifier = Modifier
@@ -192,22 +192,22 @@ fun FieldModeScreen(
                             onClick = { selectedStep-- },
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(48.dp).weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = colors.textPrimary, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Voltar", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Voltar", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
                         }
                     } else {
                         OutlinedButton(
                             onClick = onNavigateBack,
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(48.dp).weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusNaoConforme),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, StatusNaoConforme.copy(alpha = 0.5f))
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.statusNaoConforme),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.statusNaoConforme.copy(alpha = 0.5f))
                         ) {
-                            Text("Cancelar", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Cancelar", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.statusNaoConforme)
                         }
                     }
                     
@@ -217,7 +217,7 @@ fun FieldModeScreen(
                         Button(
                             onClick = { selectedStep++ },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryBlue,
+                                containerColor = colors.primary,
                                 contentColor = Color.White
                             ),
                             shape = RoundedCornerShape(8.dp),
@@ -281,7 +281,7 @@ fun FieldModeScreen(
                 }
             )
             
-            HorizontalDivider(color = BorderColor, thickness = 1.dp)
+            HorizontalDivider(color = colors.border, thickness = 1.dp)
 
             // STEP CONTENT (Smooth Directional Animated Transition)
             AnimatedContent(
@@ -514,11 +514,12 @@ fun DynamicStepper(
     currentStep: Int,
     onStepClick: (Int) -> Unit
 ) {
+    val colors = AppTheme.colors
     val configuration = LocalConfiguration.current
     val isCompact = configuration.screenWidthDp < 380
 
     Surface(
-        color = SurfaceWhite,
+        color = colors.surface,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -536,14 +537,14 @@ fun DynamicStepper(
                     text = "Etapa ${currentStep + 1} de ${steps.size}",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = PrimaryBlue
+                    color = colors.primary
                 )
                 val progressPercent = ((currentStep + 1) * 100) / steps.size
                 Text(
                     text = "$progressPercent% concluído",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextSecondary
+                    color = colors.textSecondary
                 )
             }
             
@@ -556,8 +557,8 @@ fun DynamicStepper(
                     .fillMaxWidth()
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp)),
-                color = PrimaryBlue,
-                trackColor = BorderColor
+                color = colors.primary,
+                trackColor = colors.border
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -575,19 +576,18 @@ fun DynamicStepper(
                     val isCurrent = index == currentStep
                     
                     val circleBg = when {
-                        isPast -> StatusConforme
-                        isCurrent -> PrimaryBlue
-                        else -> SurfaceWhite
+                        isPast -> colors.statusConforme
+                        isCurrent -> colors.primary
+                        else -> colors.surfaceVariant
                     }
                     val circleBorder = when {
-                        isPast -> StatusConforme
-                        isCurrent -> PrimaryBlue
-                        else -> BorderColor
+                        isPast -> colors.statusConforme
+                        isCurrent -> colors.primary
+                        else -> colors.border
                     }
                     val textColor = when {
-                        isCurrent -> TextPrimary
-                        isPast -> TextPrimary
-                        else -> TextSecondary
+                        isCurrent || isPast -> colors.textPrimary
+                        else -> colors.textSecondary
                     }
                     val fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium
 
@@ -615,7 +615,7 @@ fun DynamicStepper(
                             } else {
                                 Text(
                                     text = (index + 1).toString(),
-                                    color = if (isCurrent) Color.White else TextSecondary,
+                                    color = if (isCurrent) Color.White else colors.textSecondary,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -639,7 +639,7 @@ fun DynamicStepper(
                                 modifier = Modifier
                                     .width(if (isCompact) 16.dp else 24.dp)
                                     .height(2.dp)
-                                    .background(if (isPast) StatusConforme else BorderColor)
+                                    .background(if (isPast) colors.statusConforme else colors.border)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
@@ -1111,7 +1111,6 @@ fun EditableField(
         )
     }
 }
-
 @Composable
 fun ReadOnlyInfoCard(
     modifier: Modifier = Modifier,
@@ -1119,21 +1118,22 @@ fun ReadOnlyInfoCard(
     value: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector
 ) {
+    val colors = AppTheme.colors
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(10.dp))
             Column {
-                Text(label, fontSize = 11.sp, color = TextSecondary)
-                Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(label, fontSize = 11.sp, color = colors.textSecondary)
+                Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
             }
         }
     }
@@ -1153,15 +1153,16 @@ fun ChecklistStepContent(
     onDeletePhoto: (PhotoEntity) -> Unit = {},
     onMarkAllConforme: () -> Unit = {}
 ) {
+    val colors = AppTheme.colors
     var selectedFieldId by remember { mutableStateOf<Long?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
 
     if (fields.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.Checklist, contentDescription = null, tint = TextSecondary.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
+                Icon(Icons.Default.Checklist, contentDescription = null, tint = colors.textSecondary.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Nenhum item configurado neste checklist.", color = TextSecondary, fontSize = 14.sp)
+                Text("Nenhum item configurado neste checklist.", color = colors.textSecondary, fontSize = 14.sp)
             }
         }
         return
@@ -1196,27 +1197,27 @@ fun ChecklistStepContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Itens de Verificação", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                    Text("$answeredCount de ${fields.size} respondidos", fontSize = 12.sp, color = TextSecondary)
+                    Text("Itens de Verificação", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                    Text("$answeredCount de ${fields.size} respondidos", fontSize = 12.sp, color = colors.textSecondary)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = onMarkAllConforme,
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusConforme.copy(alpha = 0.12f), contentColor = StatusConforme),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.statusConforme.copy(alpha = 0.15f), contentColor = colors.statusConforme),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
-                        Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.DoneAll, contentDescription = null, tint = colors.statusConforme, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Todos C", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Todos C", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.statusConforme)
                     }
                     Box(
                         modifier = Modifier
-                            .background(PrimaryBlue.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                            .background(colors.primary.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Text("${if(fields.isNotEmpty()) (answeredCount * 100) / fields.size else 0}%", color = PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("${if(fields.isNotEmpty()) (answeredCount * 100) / fields.size else 0}%", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -1241,7 +1242,7 @@ fun ChecklistStepContent(
             item(key = "cat_header_$catName") {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = PrimaryDark.copy(alpha = 0.05f)),
+                    colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Row(
@@ -1255,13 +1256,13 @@ fun ChecklistStepContent(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.Folder, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(15.dp))
+                            Icon(Icons.Default.Folder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(15.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = catName.uppercase(),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
-                                color = PrimaryDark,
+                                color = colors.textPrimary,
                                 maxLines = 2,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 lineHeight = 15.sp,
@@ -1272,7 +1273,7 @@ fun ChecklistStepContent(
                         Text(
                             text = "C: $catC • NC: $catNC • Conf: $catCompPercent",
                             fontSize = 11.sp,
-                            color = PrimaryBlue,
+                            color = colors.primary,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -1289,8 +1290,8 @@ fun ChecklistStepContent(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
@@ -1298,13 +1299,13 @@ fun ChecklistStepContent(
                             Box(
                                 modifier = Modifier
                                     .size(22.dp)
-                                    .background(BackgroundLight, RoundedCornerShape(4.dp)),
+                                    .background(colors.surfaceVariant, RoundedCornerShape(4.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = String.format("%02d", itemIndex + 1),
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary,
+                                    color = colors.textPrimary,
                                     fontSize = 11.sp
                                 )
                             }
@@ -1312,7 +1313,7 @@ fun ChecklistStepContent(
                             Text(
                                 text = field.label,
                                 fontWeight = FontWeight.Medium,
-                                color = TextPrimary,
+                                color = colors.textPrimary,
                                 fontSize = 13.sp,
                                 modifier = Modifier.weight(1f),
                                 lineHeight = 17.sp
@@ -1327,13 +1328,13 @@ fun ChecklistStepContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                ComplianceChip("Conforme", "C", StatusConforme, answerValue?.uppercase() in listOf("C", "CONFORME", "TRUE", "SIM")) {
+                                ComplianceChip("Conforme", "C", colors.statusConforme, answerValue?.uppercase() in listOf("C", "CONFORME", "TRUE", "SIM")) {
                                     onUpdateAnswer(field.id, "C", answer?.observation)
                                 }
-                                ComplianceChip("Não Conforme", "NC", StatusNaoConforme, answerValue?.uppercase() in listOf("NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO")) {
+                                ComplianceChip("Não Conforme", "NC", colors.statusNaoConforme, answerValue?.uppercase() in listOf("NC", "NÃO CONFORME", "NAO CONFORME", "FALSE", "NÃO", "NAO")) {
                                     onUpdateAnswer(field.id, "NC", answer?.observation)
                                 }
-                                ComplianceChip("N/A", "NA", StatusNaoAplicavel, answerValue?.uppercase() in listOf("NA", "N/A", "NÃO APLICÁVEL", "NAO APLICAVEL")) {
+                                ComplianceChip("N/A", "NA", colors.statusNaoAplicavel, answerValue?.uppercase() in listOf("NA", "N/A", "NÃO APLICÁVEL", "NAO APLICAVEL")) {
                                     onUpdateAnswer(field.id, "NA", answer?.observation)
                                 }
                             }
@@ -1347,7 +1348,7 @@ fun ChecklistStepContent(
                                     badge = {
                                         if (itemPhotos.isNotEmpty()) {
                                             Badge(
-                                                containerColor = PrimaryBlue,
+                                                containerColor = colors.primary,
                                                 contentColor = Color.White
                                             ) {
                                                 Text(
@@ -1367,7 +1368,7 @@ fun ChecklistStepContent(
                                         Icon(
                                             Icons.Default.CameraAlt,
                                             contentDescription = "Foto",
-                                            tint = if (itemPhotos.isNotEmpty()) PrimaryBlue else TextSecondary,
+                                            tint = if (itemPhotos.isNotEmpty()) colors.primary else colors.textSecondary,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -1383,7 +1384,7 @@ fun ChecklistStepContent(
                                     Icon(
                                         Icons.Outlined.ChatBubbleOutline,
                                         contentDescription = "Comentário",
-                                        tint = if (answer?.observation.isNullOrBlank()) TextSecondary else PrimaryBlue,
+                                        tint = if (answer?.observation.isNullOrBlank()) colors.textSecondary else colors.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -1395,100 +1396,133 @@ fun ChecklistStepContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(BackgroundLight, RoundedCornerShape(6.dp))
+                                    .background(colors.surfaceVariant, RoundedCornerShape(6.dp))
                                     .padding(8.dp)
                             ) {
                                 Text(
-                                    text = "Obs: ${answer?.observation}",
-                                    fontSize = 12.sp,
-                                    color = TextSecondary,
-                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                    text = "💬 ${answer.observation}",
+                                    fontSize = 11.sp,
+                                    color = colors.textSecondary,
+                                    lineHeight = 15.sp
                                 )
                             }
                         }
 
-                        // Attached Photos Mini-Gallery Box
+                        // Mini Photo Gallery Carousel if item has attached photos
                         if (itemPhotos.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Surface(
-                                color = PrimaryBlue.copy(alpha = 0.04f),
-                                shape = RoundedCornerShape(8.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryBlue.copy(alpha = 0.2f)),
-                                modifier = Modifier.fillMaxWidth()
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(colors.surfaceVariant.copy(alpha = 0.5f))
+                                    .border(1.dp, colors.border.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                    .padding(8.dp)
                             ) {
-                                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.PhotoLibrary,
-                                                contentDescription = null,
-                                                tint = PrimaryBlue,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                            Spacer(Modifier.width(5.dp))
-                                            Text(
-                                                text = "${itemPhotos.size} ${if (itemPhotos.size == 1) "foto anexada" else "fotos anexadas"}",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = PrimaryBlue
-                                            )
-                                        }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "📷 Fotos anexadas (${itemPhotos.size}):",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.textPrimary
+                                    )
+                                    Text(
+                                        text = "Toque em + para mais fotos",
+                                        fontSize = 10.sp,
+                                        color = colors.textSecondary
+                                    )
+                                }
 
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    items(itemPhotos.size) { photoIndex ->
+                                        val p = itemPhotos[photoIndex]
+                                        val photoFile = File(p.localPath)
+                                        Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .clickable { onLaunchCamera(field.id) }
-                                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                .size(52.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .border(1.dp, colors.border, RoundedCornerShape(6.dp))
                                         ) {
-                                            Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(11.dp))
-                                            Spacer(Modifier.width(3.dp))
-                                            Text(
-                                                text = "+ Foto",
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = PrimaryBlue
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(Modifier.height(6.dp))
-
-                                    LazyRow(
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        items(itemPhotos) { photo ->
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(52.dp)
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .border(1.dp, BorderColor, RoundedCornerShape(6.dp))
-                                            ) {
+                                            if (photoFile.exists()) {
                                                 AsyncImage(
-                                                    model = photo.localPath,
-                                                    contentDescription = "Evidência do item",
-                                                    modifier = Modifier.fillMaxSize(),
-                                                    contentScale = ContentScale.Crop
+                                                    model = photoFile,
+                                                    contentDescription = "Foto do item",
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
                                                 )
+                                            } else {
                                                 Box(
                                                     modifier = Modifier
-                                                        .align(Alignment.TopEnd)
-                                                        .size(18.dp)
-                                                        .background(Color.Black.copy(alpha = 0.65f), RoundedCornerShape(bottomStart = 6.dp))
-                                                        .clickable { onDeletePhoto(photo) },
+                                                        .fillMaxSize()
+                                                        .background(colors.surfaceVariant),
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Icon(
-                                                        Icons.Default.Close,
-                                                        contentDescription = "Remover",
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(11.dp)
+                                                        Icons.Default.BrokenImage,
+                                                        contentDescription = null,
+                                                        tint = colors.textSecondary,
+                                                        modifier = Modifier.size(20.dp)
                                                     )
                                                 }
+                                            }
+
+                                            // Delete photo button overlay
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(2.dp)
+                                                    .size(16.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.7f))
+                                                    .clickable { onDeletePhoto(p) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = "Remover Foto",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(10.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Quick Add Photo Button in Carousel
+                                    item {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(52.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .border(
+                                                    androidx.compose.foundation.BorderStroke(1.dp, colors.primary.copy(alpha = 0.5f)),
+                                                    RoundedCornerShape(6.dp)
+                                                )
+                                                .background(colors.primary.copy(alpha = 0.08f))
+                                                .clickable { onLaunchCamera(field.id) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Icon(
+                                                    Icons.Default.AddAPhoto,
+                                                    contentDescription = "Adicionar Foto",
+                                                    tint = colors.primary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Text(
+                                                    "+ Foto",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = colors.primary
+                                                )
                                             }
                                         }
                                     }
@@ -1500,32 +1534,44 @@ fun ChecklistStepContent(
             }
         }
 
-        // Bottom Inspection Summary Card
+        // Summary Card at Bottom of Checklist
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                shape = RoundedCornerShape(12.dp)
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Resultado Geral da Vistoria", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text("Resultado Geral da Vistoria", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
                         if (generalComp != null) {
-                            Text("${String.format(Locale.getDefault(), "%.1f", generalComp)}% Conformidade", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (generalComp >= 80f) StatusConforme else StatusNaoConforme)
+                            Text(
+                                text = String.format(Locale.getDefault(), "%.0f%% Conforme", generalComp),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (generalComp >= 80f) colors.statusConforme else colors.statusNaoConforme
+                            )
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text("Total: ${fields.size} itens • C: $totalC • NC: $totalNC • NA: $totalNA", fontSize = 12.sp, color = TextSecondary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("• Conformes: $totalC", fontSize = 12.sp, color = colors.statusConforme, fontWeight = FontWeight.SemiBold)
+                        Text("• Não Conformes: $totalNC", fontSize = 12.sp, color = colors.statusNaoConforme, fontWeight = FontWeight.SemiBold)
+                        Text("• N/A: $totalNA", fontSize = 12.sp, color = colors.statusNaoAplicavel, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
     }
-    
+
+    // BOTTOM SHEET FOR TECHNICAL OBSERVATIONS
     if (showBottomSheet && selectedFieldId != null) {
         val field = fields.find { it.id == selectedFieldId }
         val currentAnswer = answers[selectedFieldId]
@@ -1558,7 +1604,7 @@ fun ChecklistStepContent(
 
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
-            containerColor = SurfaceWhite
+            containerColor = colors.surface
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
                 Row(
@@ -1566,18 +1612,18 @@ fun ChecklistStepContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Observações do Item", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Observações do Item", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     IconButton(onClick = launchSpeech) {
-                        Icon(Icons.Default.Mic, contentDescription = "Ditar por Voz", tint = PrimaryBlue, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Mic, contentDescription = "Ditar por Voz", tint = colors.primary, modifier = Modifier.size(24.dp))
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(field?.label ?: "", fontSize = 13.sp, color = TextSecondary, lineHeight = 16.sp)
+                Text(field?.label ?: "", fontSize = 13.sp, color = colors.textSecondary, lineHeight = 16.sp)
                 
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Quick Suggestion Chips
-                Text("Sugestões Rápidas de Campo:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+                Text("Sugestões Rápidas de Campo:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.textSecondary)
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -1593,14 +1639,14 @@ fun ChecklistStepContent(
                     suggestions.forEach { chipText ->
                         Box(
                             modifier = Modifier
-                                .background(BackgroundLight, RoundedCornerShape(16.dp))
-                                .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                                .background(colors.surfaceVariant, RoundedCornerShape(16.dp))
+                                .border(1.dp, colors.border, RoundedCornerShape(16.dp))
                                 .clickable {
                                     obsText = if (obsText.isBlank()) chipText else "$obsText. $chipText"
                                 }
                                 .padding(horizontal = 10.dp, vertical = 5.dp)
                         ) {
-                            Text(chipText, fontSize = 11.sp, color = TextPrimary)
+                            Text(chipText, fontSize = 11.sp, color = colors.textPrimary)
                         }
                     }
                 }
@@ -1611,16 +1657,18 @@ fun ChecklistStepContent(
                     value = obsText,
                     onValueChange = { obsText = it },
                     modifier = Modifier.fillMaxWidth().height(120.dp),
-                    placeholder = { Text("Descreva anomalias, motivos ou ações corretivas...", fontSize = 13.sp) },
+                    placeholder = { Text("Descreva anomalias, motivos ou ações corretivas...", fontSize = 13.sp, color = colors.textSecondary) },
                     shape = RoundedCornerShape(8.dp),
                     trailingIcon = {
                         IconButton(onClick = launchSpeech) {
-                            Icon(Icons.Default.Mic, contentDescription = "Ditar", tint = PrimaryBlue)
+                            Icon(Icons.Default.Mic, contentDescription = "Ditar", tint = colors.primary)
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryBlue,
-                        unfocusedBorderColor = BorderColor
+                        focusedBorderColor = colors.primary,
+                        unfocusedBorderColor = colors.border,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
                     )
                 )
                 
@@ -1632,7 +1680,7 @@ fun ChecklistStepContent(
                         showBottomSheet = false
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Salvar Observação", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -1646,8 +1694,9 @@ fun ChecklistStepContent(
 
 @Composable
 fun ComplianceChip(fullLabel: String, shortLabel: String, color: Color, selected: Boolean, onClick: () -> Unit) {
+    val colors = AppTheme.colors
     val animatedBg by androidx.compose.animation.animateColorAsState(
-        targetValue = if (selected) color else SurfaceWhite,
+        targetValue = if (selected) color else colors.surfaceVariant,
         animationSpec = androidx.compose.animation.core.tween(180),
         label = "ChipBg"
     )
@@ -1656,12 +1705,17 @@ fun ComplianceChip(fullLabel: String, shortLabel: String, color: Color, selected
         animationSpec = androidx.compose.animation.core.tween(180),
         label = "ChipContent"
     )
+    val animatedBorder by androidx.compose.animation.animateColorAsState(
+        targetValue = if (selected) color else colors.border,
+        animationSpec = androidx.compose.animation.core.tween(180),
+        label = "ChipBorder"
+    )
 
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(animatedBg)
-            .border(1.dp, color, RoundedCornerShape(8.dp))
+            .border(1.dp, animatedBorder, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
@@ -1683,6 +1737,7 @@ fun PhotosStepContent(
     photos: List<PhotoEntity>,
     onAddPhotoClick: () -> Unit
 ) {
+    val colors = AppTheme.colors
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1690,13 +1745,13 @@ fun PhotosStepContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Evidências Fotográficas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                Text("${photos.size} fotos registradas", fontSize = 12.sp, color = TextSecondary)
+                Text("Evidências Fotográficas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                Text("${photos.size} fotos registradas", fontSize = 12.sp, color = colors.textSecondary)
             }
             Button(
                 onClick = onAddPhotoClick,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryBlue,
+                    containerColor = colors.primary,
                     contentColor = Color.White
                 ),
                 shape = RoundedCornerShape(8.dp),
@@ -1715,18 +1770,18 @@ fun PhotosStepContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(SurfaceWhite, RoundedCornerShape(12.dp))
-                    .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+                    .background(colors.surface, RoundedCornerShape(12.dp))
+                    .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                     .clickable { onAddPhotoClick() }
                     .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(48.dp))
+                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = colors.primary, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Nenhuma evidência capturada ainda", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
+                    Text("Nenhuma evidência capturada ainda", fontWeight = FontWeight.Bold, color = colors.textPrimary, fontSize = 15.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Toque aqui para abrir a câmera e registrar uma foto.", textAlign = TextAlign.Center, color = TextSecondary, fontSize = 13.sp)
+                    Text("Toque aqui para abrir a câmera e registrar uma foto.", textAlign = TextAlign.Center, color = colors.textSecondary, fontSize = 13.sp)
                 }
             }
         } else {
@@ -1739,8 +1794,8 @@ fun PhotosStepContent(
                 items(photos) { photo ->
                     Card(
                         shape = RoundedCornerShape(10.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceWhite)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                        colors = CardDefaults.cardColors(containerColor = colors.surface)
                     ) {
                         Column {
                             val file = File(photo.localPath)
@@ -1758,17 +1813,17 @@ fun PhotosStepContent(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(120.dp)
-                                        .background(BorderColor),
+                                        .background(colors.surfaceVariant),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.BrokenImage, contentDescription = null, tint = TextSecondary)
+                                    Icon(Icons.Default.BrokenImage, contentDescription = null, tint = colors.textSecondary)
                                 }
                             }
                             val dateStr = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(photo.timestamp))
                             Text(
                                 text = dateStr,
                                 fontSize = 11.sp,
-                                color = TextSecondary,
+                                color = colors.textSecondary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                             )
                         }
@@ -1787,6 +1842,7 @@ fun ObservationsStepContent(
     observations: String,
     onObservationsChanged: (String) -> Unit
 ) {
+    val colors = AppTheme.colors
     var obsText by remember(observations) { mutableStateOf(observations) }
 
     val speechLauncher = rememberLauncherForActivityResult(
@@ -1822,18 +1878,18 @@ fun ObservationsStepContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Observações Finais", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                Text("Recomendações técnicas e prazos de adequação.", fontSize = 12.sp, color = TextSecondary)
+                Text("Observações Finais", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                Text("Recomendações técnicas e prazos de adequação.", fontSize = 12.sp, color = colors.textSecondary)
             }
             IconButton(onClick = launchSpeech) {
-                Icon(Icons.Default.Mic, contentDescription = "Ditar Observações", tint = PrimaryBlue, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Mic, contentDescription = "Ditar Observações", tint = colors.primary, modifier = Modifier.size(24.dp))
             }
         }
         
         Spacer(modifier = Modifier.height(10.dp))
 
         // Quick Recommendation Chips
-        Text("Modelos de Parecer Rápido:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+        Text("Modelos de Parecer Rápido:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.textSecondary)
         Spacer(modifier = Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -1848,15 +1904,15 @@ fun ObservationsStepContent(
             conclusions.forEach { chipText ->
                 Box(
                     modifier = Modifier
-                        .background(SurfaceWhite, RoundedCornerShape(16.dp))
-                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                        .background(colors.surfaceVariant, RoundedCornerShape(16.dp))
+                        .border(1.dp, colors.border, RoundedCornerShape(16.dp))
                         .clickable {
                             obsText = if (obsText.isBlank()) chipText else "$obsText\n• $chipText"
                             onObservationsChanged(obsText)
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text(chipText, fontSize = 11.sp, color = TextPrimary)
+                    Text(chipText, fontSize = 11.sp, color = colors.textPrimary)
                 }
             }
         }
@@ -1872,20 +1928,18 @@ fun ObservationsStepContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            placeholder = { Text("Digite suas considerações e conclusões técnicas aqui...", fontSize = 14.sp) },
+            placeholder = { Text("Digite suas considerações e conclusões técnicas aqui...", fontSize = 14.sp, color = colors.textSecondary) },
             shape = RoundedCornerShape(12.dp),
             trailingIcon = {
                 IconButton(onClick = launchSpeech) {
-                    Icon(Icons.Default.Mic, contentDescription = "Ditar", tint = PrimaryBlue)
+                    Icon(Icons.Default.Mic, contentDescription = "Ditar", tint = colors.primary)
                 }
             },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PrimaryBlue,
-                unfocusedBorderColor = BorderColor,
-                focusedContainerColor = SurfaceWhite,
-                unfocusedContainerColor = SurfaceWhite,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary
+                focusedBorderColor = colors.primary,
+                unfocusedBorderColor = colors.border,
+                focusedTextColor = colors.textPrimary,
+                unfocusedTextColor = colors.textPrimary
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -1903,6 +1957,7 @@ fun SignatureStepContent(
     photosCount: Int,
     viewModel: FieldModeViewModel
 ) {
+    val colors = AppTheme.colors
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("relatopro_prefs", Context.MODE_PRIVATE) }
     val profileName = prefs.getString("user_name", "") ?: ""
@@ -1926,25 +1981,25 @@ fun SignatureStepContent(
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
-            Text("Revisão & Assinaturas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+            Text("Revisão & Assinaturas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Confira os dados e colete as assinaturas digitais antes de gerar o laudo.", fontSize = 13.sp, color = TextSecondary)
+            Text("Confira os dados e colete as assinaturas digitais antes de gerar o laudo.", fontSize = 13.sp, color = colors.textSecondary)
         }
 
         // Profile Missing Warnings
         if (profileName.isBlank()) {
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                    colors = CardDefaults.cardColors(containerColor = colors.statusWarning.copy(alpha = 0.15f)),
                     shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.statusWarning.copy(alpha = 0.5f))
                 ) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = colors.statusWarning, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
                         Column {
-                            Text("Complete seus dados", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF92400E))
-                            Text("Para finalizar o relatório, informe seu nome e sua função.", fontSize = 11.sp, color = Color(0xFFB45309))
+                            Text("Complete seus dados", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
+                            Text("Para finalizar o relatório, informe seu nome e sua função.", fontSize = 11.sp, color = colors.textSecondary)
                         }
                     }
                 }
@@ -1952,16 +2007,16 @@ fun SignatureStepContent(
         } else if (profileRole.isBlank()) {
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                    colors = CardDefaults.cardColors(containerColor = colors.statusWarning.copy(alpha = 0.15f)),
                     shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.statusWarning.copy(alpha = 0.5f))
                 ) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = colors.statusWarning, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
                         Column {
-                            Text("Função não informada", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF92400E))
-                            Text("Informe sua função para continuar.", fontSize = 11.sp, color = Color(0xFFB45309))
+                            Text("Função não informada", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
+                            Text("Informe sua função para continuar.", fontSize = 11.sp, color = colors.textSecondary)
                         }
                     }
                 }
@@ -1971,13 +2026,13 @@ fun SignatureStepContent(
         // Resumo do Relatório Card
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Resumo da Vistoria", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PrimaryBlue)
-                    HorizontalDivider(color = BorderColor)
+                    Text("Resumo da Vistoria", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.primary)
+                    HorizontalDivider(color = colors.border)
                     
                     SummaryRow("Título", report?.title ?: "Inspeção Técnica")
                     SummaryRow("Local", report?.location ?: "Local da Inspeção")
@@ -1991,8 +2046,8 @@ fun SignatureStepContent(
         // Assinatura 1: Responsável pelo Relatório
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (inspectorSig != null) StatusConforme else BorderColor),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (inspectorSig != null) colors.statusConforme else colors.border),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -2002,23 +2057,23 @@ fun SignatureStepContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("1. Responsável pelo Relatório", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                            Text("Inspetor / Engenheiro Técnico", fontSize = 12.sp, color = TextSecondary)
+                            Text("1. Responsável pelo Relatório", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.textPrimary)
+                            Text("Inspetor / Engenheiro Técnico", fontSize = 12.sp, color = colors.textSecondary)
                         }
                         if (inspectorSig != null) {
                             Box(
                                 modifier = Modifier
-                                    .background(StatusConforme.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                                    .background(colors.statusConforme.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text("Assinado ✓", color = StatusConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                Text("Assinado ✓", color = colors.statusConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Text("Nome do Responsável", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Nome do Responsável", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = inspectorName,
@@ -2026,39 +2081,39 @@ fun SignatureStepContent(
                             inspectorName = it
                             viewModel.updateReportInfo(report?.title ?: "", report?.location ?: "", it)
                         },
-                        placeholder = { Text("Nome completo do responsável", fontSize = 14.sp) },
+                        placeholder = { Text("Nome completo do responsável", fontSize = 14.sp, color = colors.textSecondary) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryBlue,
-                            unfocusedBorderColor = BorderColor,
-                            focusedContainerColor = SurfaceWhite,
-                            unfocusedContainerColor = SurfaceWhite
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
                         )
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = inspectorRole,
                         onValueChange = { inspectorRole = it },
-                        placeholder = { Text("Digite o cargo ou função", fontSize = 14.sp) },
+                        placeholder = { Text("Digite o cargo ou função", fontSize = 14.sp, color = colors.textSecondary) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryBlue,
-                            unfocusedBorderColor = BorderColor,
-                            focusedContainerColor = SurfaceWhite,
-                            unfocusedContainerColor = SurfaceWhite
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
                         )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Desenhe a assinatura no quadro abaixo:", fontSize = 12.sp, color = TextSecondary)
+                    Text("Desenhe a assinatura no quadro abaixo:", fontSize = 12.sp, color = colors.textSecondary)
                     Spacer(modifier = Modifier.height(6.dp))
 
                     SignaturePad(
@@ -2077,8 +2132,8 @@ fun SignatureStepContent(
         // Assinatura 2: Presente na Operação / Acompanhante
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (operationSig != null) StatusConforme else BorderColor),
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (operationSig != null) colors.statusConforme else colors.border),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -2088,60 +2143,60 @@ fun SignatureStepContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("2. Presente na Operação", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                            Text("Acompanhante / Supervisor no Local", fontSize = 12.sp, color = TextSecondary)
+                            Text("2. Presente na Operação", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.textPrimary)
+                            Text("Acompanhante / Supervisor no Local", fontSize = 12.sp, color = colors.textSecondary)
                         }
                         if (operationSig != null) {
                             Box(
                                 modifier = Modifier
-                                    .background(StatusConforme.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                                    .background(colors.statusConforme.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text("Assinado ✓", color = StatusConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                Text("Assinado ✓", color = colors.statusConforme, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Text("Nome do Acompanhante / Cliente", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Nome do Acompanhante / Cliente", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = operationName,
                         onValueChange = { operationName = it },
-                        placeholder = { Text("Nome do responsável no local", fontSize = 14.sp) },
+                        placeholder = { Text("Nome do responsável no local", fontSize = 14.sp, color = colors.textSecondary) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryBlue,
-                            unfocusedBorderColor = BorderColor,
-                            focusedContainerColor = SurfaceWhite,
-                            unfocusedContainerColor = SurfaceWhite
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
                         )
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Cargo / Função", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = operationRole,
                         onValueChange = { operationRole = it },
-                        placeholder = { Text("Digite o cargo ou função", fontSize = 14.sp) },
+                        placeholder = { Text("Digite o cargo ou função", fontSize = 14.sp, color = colors.textSecondary) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryBlue,
-                            unfocusedBorderColor = BorderColor,
-                            focusedContainerColor = SurfaceWhite,
-                            unfocusedContainerColor = SurfaceWhite
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.border,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
                         )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Desenhe a assinatura no quadro abaixo:", fontSize = 12.sp, color = TextSecondary)
+                    Text("Desenhe a assinatura no quadro abaixo:", fontSize = 12.sp, color = colors.textSecondary)
                     Spacer(modifier = Modifier.height(6.dp))
 
                     SignaturePad(
@@ -2161,12 +2216,13 @@ fun SignatureStepContent(
 
 @Composable
 fun SummaryRow(label: String, value: String) {
+    val colors = AppTheme.colors
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = TextSecondary, fontSize = 13.sp)
-        Text(value, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = colors.textSecondary, fontSize = 13.sp)
+        Text(value, color = colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 }

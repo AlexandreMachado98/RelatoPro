@@ -237,42 +237,47 @@ class TemplateBuilderViewModel @Inject constructor(
         _isSaving.value = true
 
         viewModelScope.launch {
-            if (editingTemplateId > 0L) {
-                val existing = templateRepository.getTemplateById(editingTemplateId)
-                val updatedTemplate = (existing ?: TemplateEntity(
-                    id = editingTemplateId,
-                    name = _templateName.value.trim(),
-                    description = _templateDescription.value.trim(),
-                    category = _templateCategory.value.trim(),
-                    createdAt = System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis(),
-                    userId = currentUserEmail,
-                    isGlobal = false
-                )).copy(
-                    name = _templateName.value.trim(),
-                    description = _templateDescription.value.trim(),
-                    category = _templateCategory.value.trim(),
-                    updatedAt = System.currentTimeMillis(),
-                    userId = currentUserEmail,
-                    isGlobal = false
-                )
-                templateRepository.updateTemplate(updatedTemplate, _fields.value)
-            } else {
-                val newTemplate = TemplateEntity(
-                    name = _templateName.value.trim().ifEmpty { "Novo Checklist" },
-                    description = _templateDescription.value.trim(),
-                    category = _templateCategory.value.trim().ifEmpty { "Geral" },
-                    createdAt = System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis(),
-                    status = "ACTIVE",
-                    visualConfig = "{}",
-                    userId = currentUserEmail,
-                    isGlobal = false
-                )
-                templateRepository.createTemplate(newTemplate, _fields.value)
+            try {
+                if (editingTemplateId > 0L) {
+                    val existing = templateRepository.getTemplateById(editingTemplateId)
+                    val updatedTemplate = (existing ?: TemplateEntity(
+                        id = editingTemplateId,
+                        name = _templateName.value.trim(),
+                        description = _templateDescription.value.trim(),
+                        category = _templateCategory.value.trim(),
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis(),
+                        userId = currentUserEmail,
+                        isGlobal = false
+                    )).copy(
+                        name = _templateName.value.trim(),
+                        description = _templateDescription.value.trim(),
+                        category = _templateCategory.value.trim(),
+                        updatedAt = System.currentTimeMillis(),
+                        userId = currentUserEmail,
+                        isGlobal = false
+                    )
+                    templateRepository.updateTemplate(updatedTemplate, _fields.value)
+                } else {
+                    val newTemplate = TemplateEntity(
+                        name = _templateName.value.trim().ifEmpty { "Novo Checklist" },
+                        description = _templateDescription.value.trim(),
+                        category = _templateCategory.value.trim().ifEmpty { "Geral" },
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis(),
+                        status = "ACTIVE",
+                        visualConfig = "{}",
+                        userId = currentUserEmail,
+                        isGlobal = false
+                    )
+                    templateRepository.createTemplate(newTemplate, _fields.value)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isSaving.value = false
+                onComplete()
             }
-            _isSaving.value = false
-            onComplete()
         }
     }
 }

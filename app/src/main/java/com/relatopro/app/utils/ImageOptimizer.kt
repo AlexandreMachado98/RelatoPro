@@ -91,6 +91,29 @@ object ImageOptimizer {
         }
     }
 
+    /**
+     * Copia e otimiza uma imagem selecionada da galeria via Uri.
+     */
+    fun optimizeUri(context: Context, uri: android.net.Uri): File? {
+        return try {
+            val photosDir = File(context.filesDir, "photos").apply { mkdirs() }
+            val tempFile = File(photosDir, "temp_gallery_${System.currentTimeMillis()}.jpg")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            if (tempFile.exists() && tempFile.length() > 0L) {
+                optimizeImageFile(context, tempFile)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
         val (height: Int, width: Int) = options.outHeight to options.outWidth
         var inSampleSize = 1

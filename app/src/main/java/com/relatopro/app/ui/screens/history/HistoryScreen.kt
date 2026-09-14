@@ -54,26 +54,38 @@ fun HistoryScreen(
     val openPdf = { localPath: String ->
         val file = File(localPath)
         if (file.exists()) {
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/pdf")
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            try {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/pdf")
+                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+                context.startActivity(Intent.createChooser(intent, "Abrir PDF"))
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Nenhum leitor de PDF encontrado.", android.widget.Toast.LENGTH_SHORT).show()
             }
-            context.startActivity(Intent.createChooser(intent, "Abrir PDF"))
+        } else {
+            android.widget.Toast.makeText(context, "Arquivo PDF não encontrado.", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
     val sharePdf = { localPath: String, reportId: Long ->
         val file = File(localPath)
         if (file.exists()) {
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/pdf"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            try {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+                context.startActivity(Intent.createChooser(intent, "Compartilhar Relatório"))
+                viewModel.markAsSent(reportId)
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Erro ao compartilhar arquivo PDF.", android.widget.Toast.LENGTH_SHORT).show()
             }
-            context.startActivity(Intent.createChooser(intent, "Compartilhar Relatório"))
-            viewModel.markAsSent(reportId)
+        } else {
+            android.widget.Toast.makeText(context, "Arquivo PDF não encontrado.", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -101,6 +101,8 @@ fun FieldModeScreen(
     var pdfProgressTotal by remember { mutableIntStateOf(0) }
     var pdfResultDialog by remember { mutableStateOf<PdfGenerator.PdfGenerationResult?>(null) }
 
+    var showPhotoSourceDialog by remember { mutableStateOf(false) }
+
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
@@ -113,15 +115,37 @@ fun FieldModeScreen(
         }
     )
 
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri ->
+            if (uri != null) {
+                val optFile = ImageOptimizer.optimizeUri(context, uri)
+                if (optFile != null) {
+                    viewModel.savePhoto(activeFieldId, optFile.absolutePath)
+                }
+            }
+        }
+    )
+
     val launchCamera = { fieldId: Long? ->
         activeFieldId = fieldId
-        val photosDir = File(context.filesDir, "photos")
-        photosDir.mkdirs()
-        val tempFile = File(photosDir, "photo_${System.currentTimeMillis()}.jpg")
-        tempFile.createNewFile()
-        currentPhotoFile = tempFile
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
-        cameraLauncher.launch(uri)
+        try {
+            val photosDir = File(context.filesDir, "photos")
+            photosDir.mkdirs()
+            val tempFile = File(photosDir, "photo_${System.currentTimeMillis()}.jpg")
+            tempFile.createNewFile()
+            currentPhotoFile = tempFile
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            android.widget.Toast.makeText(context, "Não foi possível abrir a câmera.", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val openPhotoPicker = { fieldId: Long? ->
+        activeFieldId = fieldId
+        showPhotoSourceDialog = true
     }
 
     Scaffold(
@@ -329,7 +353,7 @@ fun FieldModeScreen(
                             onUpdateAnswer = { fieldId, answerValue, obs ->
                                 viewModel.updateAnswer(fieldId, answerValue, obs)
                             },
-                            onLaunchCamera = { fieldId -> launchCamera(fieldId) },
+                            onLaunchCamera = { fieldId -> openPhotoPicker(fieldId) },
                             onDeletePhoto = { photo -> viewModel.deletePhoto(photo) },
                             onMarkAllConforme = { viewModel.markAllConforme() },
                             onAddFormClick = { showAddFormDialog = true },
@@ -337,7 +361,8 @@ fun FieldModeScreen(
                         )
                         2 -> PhotosStepContent(
                             photos = photos,
-                            onAddPhotoClick = { launchCamera(null) }
+                            onAddPhotoClick = { openPhotoPicker(null) },
+                            onDeletePhoto = { photo -> viewModel.deletePhoto(photo) }
                         )
                         3 -> ObservationsStepContent(
                             observations = currentReport?.generalObservations ?: "",
@@ -408,25 +433,37 @@ fun FieldModeScreen(
         val openPdf = {
             val file = result.file
             if (file.exists()) {
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, "application/pdf")
-                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                try {
+                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/pdf")
+                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Abrir PDF"))
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Nenhum leitor de PDF instalado.", android.widget.Toast.LENGTH_SHORT).show()
                 }
-                context.startActivity(Intent.createChooser(intent, "Abrir PDF"))
+            } else {
+                android.widget.Toast.makeText(context, "Arquivo PDF não encontrado.", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
 
         val sharePdf = {
             val file = result.file
             if (file.exists()) {
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "application/pdf"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                try {
+                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/pdf"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Compartilhar Relatório"))
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Erro ao compartilhar arquivo PDF.", android.widget.Toast.LENGTH_SHORT).show()
                 }
-                context.startActivity(Intent.createChooser(intent, "Compartilhar Relatório"))
+            } else {
+                android.widget.Toast.makeText(context, "Arquivo PDF não encontrado.", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -522,6 +559,74 @@ fun FieldModeScreen(
                 viewModel.addTemplateToCurrentReport(selectedTplId, title)
                 showAddFormDialog = false
             }
+        )
+    }
+
+    if (showPhotoSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showPhotoSourceDialog = false },
+            title = {
+                Text("Adicionar Foto", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = colors.textPrimary)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Escolha a origem da foto da evidência:", fontSize = 13.sp, color = colors.textSecondary)
+                    Spacer(Modifier.height(4.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showPhotoSourceDialog = false
+                                launchCamera(activeFieldId)
+                            },
+                        colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = colors.primary, modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text("Tirar Foto com a Câmera", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                                Text("Capturar registro no local da vistoria", fontSize = 11.sp, color = colors.textSecondary)
+                            }
+                        }
+                    }
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showPhotoSourceDialog = false
+                                galleryLauncher.launch("image/*")
+                            },
+                        colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = colors.cyanAccent, modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text("Selecionar da Galeria", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                                Text("Escolher foto salva no dispositivo", fontSize = 11.sp, color = colors.textSecondary)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showPhotoSourceDialog = false }) {
+                    Text("Cancelar", color = colors.textSecondary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 }
@@ -1999,7 +2104,8 @@ fun ComplianceChip(fullLabel: String, shortLabel: String, color: Color, selected
 @Composable
 fun PhotosStepContent(
     photos: List<PhotoEntity>,
-    onAddPhotoClick: () -> Unit
+    onAddPhotoClick: () -> Unit,
+    onDeletePhoto: (PhotoEntity) -> Unit = {}
 ) {
     val colors = AppTheme.colors
     Column(modifier = Modifier.fillMaxSize()) {
@@ -2023,7 +2129,7 @@ fun PhotosStepContent(
             ) {
                 Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Tirar Foto", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Adicionar Foto", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
 
@@ -2045,7 +2151,7 @@ fun PhotosStepContent(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("Nenhuma evidência capturada ainda", fontWeight = FontWeight.Bold, color = colors.textPrimary, fontSize = 15.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Toque aqui para abrir a câmera e registrar uma foto.", textAlign = TextAlign.Center, color = colors.textSecondary, fontSize = 13.sp)
+                    Text("Toque aqui para abrir a câmera ou escolher da galeria.", textAlign = TextAlign.Center, color = colors.textSecondary, fontSize = 13.sp)
                 }
             }
         } else {
@@ -2063,24 +2169,33 @@ fun PhotosStepContent(
                     ) {
                         Column {
                             val file = File(photo.localPath)
-                            if (file.exists()) {
-                                AsyncImage(
-                                    model = file,
-                                    contentDescription = "Evidência",
-                                    contentScale = ContentScale.Crop,
+                            Box(modifier = Modifier.fillMaxWidth().height(120.dp)) {
+                                if (file.exists()) {
+                                    AsyncImage(
+                                        model = file,
+                                        contentDescription = "Evidência",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(colors.surfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.BrokenImage, contentDescription = null, tint = colors.textSecondary)
+                                    }
+                                }
+                                IconButton(
+                                    onClick = { onDeletePhoto(photo) },
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(120.dp)
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(120.dp)
-                                        .background(colors.surfaceVariant),
-                                    contentAlignment = Alignment.Center
+                                        .align(Alignment.TopEnd)
+                                        .padding(4.dp)
+                                        .size(26.dp)
+                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
                                 ) {
-                                    Icon(Icons.Default.BrokenImage, contentDescription = null, tint = colors.textSecondary)
+                                    Icon(Icons.Default.Delete, contentDescription = "Excluir Foto", tint = Color.White, modifier = Modifier.size(14.dp))
                                 }
                             }
                             val dateStr = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(photo.timestamp))

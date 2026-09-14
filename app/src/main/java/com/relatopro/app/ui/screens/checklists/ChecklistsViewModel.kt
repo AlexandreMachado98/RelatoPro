@@ -37,7 +37,7 @@ class ChecklistsViewModel @Inject constructor(
         _searchQuery
     ) { list, tab, query ->
         val filtered = list.filter { t ->
-            val isOfficial = t.isGlobal && t.userId.isBlank() && t.id <= 3L
+            val isOfficial = t.isGlobal && t.userId.isBlank()
             val isUserChecklist = !isOfficial
 
             val matchesTab = when (tab) {
@@ -57,11 +57,7 @@ class ChecklistsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val hasSeeded = prefs.getBoolean("has_seeded_initial_templates", false)
-            if (!hasSeeded) {
-                repository.seedDefaultTemplatesIfEmpty()
-                prefs.edit().putBoolean("has_seeded_initial_templates", true).apply()
-            }
+            repository.seedDefaultTemplatesIfEmpty()
         }
         
         viewModelScope.launch {

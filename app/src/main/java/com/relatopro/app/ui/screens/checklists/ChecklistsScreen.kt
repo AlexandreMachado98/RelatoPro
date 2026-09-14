@@ -239,7 +239,7 @@ fun ChecklistsScreen(
                     items(templates.size) { index ->
                         val template = templates[index]
                         val itemCount = fieldsCountMap[template.id] ?: 0
-                        val isOfficial = template.isGlobal && template.userId.isBlank() && template.id <= 3L
+                        val isOfficial = template.isGlobal && template.userId.isBlank()
                         val isUserCreated = !isOfficial
 
                         AnimatedListItem(index = index) {

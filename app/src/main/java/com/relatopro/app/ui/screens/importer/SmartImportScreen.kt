@@ -50,7 +50,9 @@ fun SmartImportScreen(
     var showEditItemDialog by remember { mutableStateOf<Triple<String, ParsedItem, Boolean>?>(null) } // (sectionId, item, isNew)
     var showAddStatusDialog by remember { mutableStateOf(false) }
     var showAddSectionDialog by remember { mutableStateOf(false) }
+    var showAddCategoryDialog by remember { mutableStateOf<String?>(null) } // sectionId
     var showEditHeaderDialog by remember { mutableStateOf(false) }
+    var showConflictResolveDialog by remember { mutableStateOf<ParsedItem?>(null) }
     var savedSuccessTemplateId by remember { mutableStateOf<Long?>(null) }
 
     // File pickers for different formats
@@ -119,12 +121,15 @@ fun SmartImportScreen(
                             } else {
                                 Icon(Icons.Default.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Salvar Modelo", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Salvar Modelo", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colors.surface,
+                    titleContentColor = colors.textPrimary
+                )
             )
         }
     ) { paddingValues ->
@@ -133,123 +138,82 @@ fun SmartImportScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (checklist == null) {
-                // FILE SELECTION HUB
-                FileSelectionHub(
-                    onSelectFormat = { mimeType ->
-                        universalPickerLauncher.launch(mimeType)
-                    }
-                )
-            } else {
-                // INTERACTIVE PREVIEW & EDITOR
-                ChecklistPreviewEditor(
-                    checklist = checklist!!,
-                    onEditHeader = { showEditHeaderDialog = true },
-                    onAddStatus = { showAddStatusDialog = true },
-                    onRemoveStatus = { statusShortCode ->
-                        val success = viewModel.removeStatus(statusShortCode)
-                        if (!success) {
-                            Toast.makeText(context, "Não foi possível remover o status.", Toast.LENGTH_SHORT).show()
+            when (val state = importState) {
+                is ImportProgressState.Idle -> {
+                    FileSelectionHub(
+                        onSelectFormat = { mimeType ->
+                            universalPickerLauncher.launch(mimeType)
                         }
-                    },
-                    onAddSection = { showAddSectionDialog = true },
-                    onRenameSection = { secId, name -> viewModel.renameSection(secId, name) },
-                    onDeleteSection = { secId -> viewModel.deleteSection(secId) },
-                    onMoveSectionUp = { secId -> viewModel.moveSectionUp(secId) },
-                    onMoveSectionDown = { secId -> viewModel.moveSectionDown(secId) },
-                    onAddItem = { secId ->
-                        val dummyItem = ParsedItem(label = "", sectionName = "")
-                        showEditItemDialog = Triple(secId, dummyItem, true)
-                    },
-                    onEditItem = { secId, item ->
-                        showEditItemDialog = Triple(secId, item, false)
-                    },
-                    onDeleteItem = { secId, itemId -> viewModel.deleteItem(secId, itemId) },
-                    onDuplicateItem = { secId, itemId -> viewModel.duplicateItem(secId, itemId) },
-                    onMoveItemUp = { secId, itemId -> viewModel.moveItemUp(secId, itemId) },
-                    onMoveItemDown = { secId, itemId -> viewModel.moveItemDown(secId, itemId) }
-                )
-            }
+                    )
+                }
 
-            // PROCESSING OVERLAY
-            if (importState is ImportProgressState.Processing) {
-                val proc = importState as ImportProgressState.Processing
-                Dialog(onDismissRequest = {}) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = colors.surface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            CircularProgressIndicator(color = colors.primary, strokeWidth = 3.dp, modifier = Modifier.size(48.dp))
-                            Text(proc.stage, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary, textAlign = TextAlign.Center)
-                            Text(proc.details, fontSize = 12.sp, color = colors.textSecondary, textAlign = TextAlign.Center)
+                is ImportProgressState.Processing -> {
+                    ImportProgressDialog(
+                        stage = state.stage,
+                        percent = state.progressPercent,
+                        details = state.details,
+                        onCancel = { viewModel.cancelImport() }
+                    )
+                }
 
-                            LinearProgressIndicator(
-                                progress = { proc.progressPercent.toFloat() / 100f },
-                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                color = colors.primary,
-                                trackColor = colors.surfaceVariant
-                            )
+                is ImportProgressState.Error -> {
+                    ImportErrorView(
+                        errorMessage = state.message,
+                        onRetry = { viewModel.resetState() }
+                    )
+                }
 
-                            Text("${proc.progressPercent}%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.primary)
-
-                            Spacer(Modifier.height(6.dp))
-
-                            OutlinedButton(
-                                onClick = { viewModel.cancelImport() },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.statusNaoConforme),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.statusNaoConforme.copy(alpha = 0.5f)),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Cancelar Importação", fontSize = 12.sp, color = colors.statusNaoConforme)
-                            }
+                is ImportProgressState.Success -> {
+                    val parsed = checklist ?: state.checklist
+                    ChecklistPreviewEditor(
+                        checklist = parsed,
+                        onEditHeader = { showEditHeaderDialog = true },
+                        onAddStatus = { showAddStatusDialog = true },
+                        onRemoveStatus = { code -> viewModel.removeStatus(code) },
+                        onAddSection = { showAddSectionDialog = true },
+                        onAddCategory = { sectionId -> showAddCategoryDialog = sectionId },
+                        onRenameSection = { secId, name -> viewModel.renameSection(secId, name) },
+                        onDeleteSection = { secId -> viewModel.deleteSection(secId) },
+                        onMoveSectionUp = { secId -> viewModel.moveSectionUp(secId) },
+                        onMoveSectionDown = { secId -> viewModel.moveSectionDown(secId) },
+                        onAddItem = { secId, catId ->
+                            showEditItemDialog = Triple(secId, ParsedItem(label = "", sectionName = ""), true)
+                        },
+                        onEditItem = { secId, catId, item ->
+                            showEditItemDialog = Triple(secId, item, false)
+                        },
+                        onDeleteItem = { secId, catId, itemId ->
+                            viewModel.deleteItem(secId, catId, itemId)
+                        },
+                        onDuplicateItem = { secId, catId, itemId ->
+                            viewModel.duplicateItem(secId, catId, itemId)
+                        },
+                        onMoveItemUp = { secId, itemId ->
+                            viewModel.moveItemUp(secId, itemId)
+                        },
+                        onMoveItemDown = { secId, itemId ->
+                            viewModel.moveItemDown(secId, itemId)
+                        },
+                        onPromoteToSection = { secId, catId, itemId ->
+                            viewModel.promoteToSection(secId, catId, itemId)
+                        },
+                        onResolveConflict = { item ->
+                            showConflictResolveDialog = item
                         }
-                    }
+                    )
                 }
             }
 
-            // ERROR DIALOG
-            if (importState is ImportProgressState.Error) {
-                val err = importState as ImportProgressState.Error
-                AlertDialog(
-                    onDismissRequest = { viewModel.resetState() },
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = colors.statusNaoConforme)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Falha na Importação", fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                        }
-                    },
-                    text = { Text(err.message, color = colors.textSecondary, fontSize = 13.sp) },
-                    confirmButton = {
-                        Button(onClick = { viewModel.resetState() }, colors = ButtonDefaults.buttonColors(containerColor = colors.primary)) {
-                            Text("Tentar Novamente", color = Color.White)
-                        }
-                    },
-                    containerColor = colors.surface
-                )
-            }
-
-            // SUCCESS DIALOG
+            // SUCCESS DIALOG AFTER SAVING
             if (savedSuccessTemplateId != null) {
                 val tplId = savedSuccessTemplateId!!
                 AlertDialog(
-                    onDismissRequest = {
-                        savedSuccessTemplateId = null
-                        onNavigateToTemplates()
+                    onDismissRequest = { savedSuccessTemplateId = null },
+                    icon = {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = colors.statusConforme, modifier = Modifier.size(36.dp))
                     },
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = colors.statusConforme)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Modelo Salvo com Sucesso!", fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                        }
+                        Text("Modelo Salvo com Sucesso!", fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     },
                     text = {
                         Text(
@@ -283,6 +247,55 @@ fun SmartImportScreen(
                 )
             }
 
+            // CONFLICT RESOLUTION DIALOG
+            if (showConflictResolveDialog != null) {
+                val item = showConflictResolveDialog!!
+                val codes = item.preFilledAnswer?.conflictingCodes ?: listOf("C", "NC")
+                AlertDialog(
+                    onDismissRequest = { showConflictResolveDialog = null },
+                    icon = {
+                        Icon(Icons.Default.WarningAmber, contentDescription = null, tint = colors.statusWarning, modifier = Modifier.size(32.dp))
+                    },
+                    title = {
+                        Text("Resolver Conflito de Resposta", fontWeight = FontWeight.Bold, color = colors.textPrimary, fontSize = 15.sp)
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Item: \"${item.label}\"", fontSize = 13.sp, color = colors.textPrimary, fontWeight = FontWeight.Medium)
+                            Text(
+                                "Foram encontradas múltiplas marcações no documento original para este item. Escolha o status correto:",
+                                fontSize = 12.sp,
+                                color = colors.textSecondary
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                codes.forEach { code ->
+                                    Button(
+                                        onClick = {
+                                            viewModel.resolveAnswerConflict(item.id, code)
+                                            showConflictResolveDialog = null
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                                    ) {
+                                        Text(code, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showConflictResolveDialog = null }) {
+                            Text("Cancelar", color = colors.textSecondary)
+                        }
+                    },
+                    containerColor = colors.surface
+                )
+            }
+
             // EDIT ITEM DIALOG
             if (showEditItemDialog != null) {
                 val (secId, item, isNew) = showEditItemDialog!!
@@ -293,9 +306,9 @@ fun SmartImportScreen(
                     onDismiss = { showEditItemDialog = null },
                     onConfirm = { label, type, obs, photo, attach, req ->
                         if (isNew) {
-                            viewModel.addItem(secId, label, type)
+                            viewModel.addItem(secId, null, label, type)
                         } else {
-                            viewModel.updateItem(secId, item.id, label, type, obs, photo, attach, req)
+                            viewModel.updateItem(secId, null, item.id, label, type, obs, photo, attach, req)
                         }
                         showEditItemDialog = null
                     }
@@ -318,7 +331,7 @@ fun SmartImportScreen(
                 var sectionNameInput by remember { mutableStateOf("") }
                 AlertDialog(
                     onDismissRequest = { showAddSectionDialog = false },
-                    title = { Text("Nova Seção", fontWeight = FontWeight.Bold, color = colors.textPrimary) },
+                    title = { Text("Nova Seção Principal", fontWeight = FontWeight.Bold, color = colors.textPrimary) },
                     text = {
                         OutlinedTextField(
                             value = sectionNameInput,
@@ -343,6 +356,44 @@ fun SmartImportScreen(
                     },
                     dismissButton = {
                         TextButton(onClick = { showAddSectionDialog = false }) {
+                            Text("Cancelar", color = colors.textSecondary)
+                        }
+                    },
+                    containerColor = colors.surface
+                )
+            }
+
+            // ADD CATEGORY DIALOG
+            if (showAddCategoryDialog != null) {
+                val secId = showAddCategoryDialog!!
+                var categoryNameInput by remember { mutableStateOf("") }
+                AlertDialog(
+                    onDismissRequest = { showAddCategoryDialog = null },
+                    title = { Text("Nova Categoria / Grupo", fontWeight = FontWeight.Bold, color = colors.textPrimary) },
+                    text = {
+                        OutlinedTextField(
+                            value = categoryNameInput,
+                            onValueChange = { categoryNameInput = it },
+                            placeholder = { Text("Ex: 1.1 Documentos Obrigatórios") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (categoryNameInput.isNotBlank()) {
+                                    viewModel.addCategory(secId, categoryNameInput)
+                                    showAddCategoryDialog = null
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                        ) {
+                            Text("Adicionar", color = Color.White)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showAddCategoryDialog = null }) {
                             Text("Cancelar", color = colors.textSecondary)
                         }
                     },
@@ -440,13 +491,13 @@ private fun FileSelectionHub(
                         }
                         Spacer(Modifier.width(10.dp))
                         Column {
-                            Text("Importação Inteligente", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
-                            Text("Transforme seus arquivos existentes em formulários nativos", fontSize = 12.sp, color = colors.textSecondary)
+                            Text("Importação de Alta Precisão", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
+                            Text("Identificação hierárquica fiel da estrutura do seu documento", fontSize = 12.sp, color = colors.textSecondary)
                         }
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "O sistema interpreta títulos, seções, tabelas e perguntas, permitindo revisar e personalizar as respostas antes de salvar no aplicativo.",
+                        "O sistema analisa títulos, seções numeradas, categorias, tabelas e cabeçalhos de status sem alterar o texto original técnico, permitindo revisar e personalizar as respostas antes de salvar no aplicativo.",
                         fontSize = 12.sp,
                         color = colors.textSecondary,
                         lineHeight = 16.sp
@@ -456,13 +507,13 @@ private fun FileSelectionHub(
         }
 
         item {
-            Text("Selecione o formato do documento:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+            Text("Selecione o formato do seu modelo:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
         }
 
         item {
             FormatCard(
                 title = "Documento PDF",
-                description = "PDFs com texto selecionável, tabelas ou digitalizados (OCR)",
+                description = "Reconhecimento espacial de páginas, seções e tabelas",
                 icon = Icons.Default.PictureAsPdf,
                 iconTint = Color(0xFFEF4444),
                 badge = "PDF / OCR",
@@ -472,31 +523,31 @@ private fun FileSelectionHub(
 
         item {
             FormatCard(
-                title = "Documento Word (.docx / .doc)",
-                description = "Textos, tabelas, parágrafos e listas estruturadas",
+                title = "Documento Word",
+                description = "Estilos de títulos (Headings), tabelas e listas estruturadas",
                 icon = Icons.Default.Description,
                 iconTint = Color(0xFF2563EB),
                 badge = "DOC / DOCX",
-                onClick = { onSelectFormat("application/*") }
+                onClick = { onSelectFormat("*/*") }
             )
         }
 
         item {
             FormatCard(
-                title = "Planilha Excel (.xlsx / .xls)",
-                description = "Planilhas com linhas, colunas, cabeçalhos dinâmicos e abas",
+                title = "Planilha Excel",
+                description = "Detecção de células mescladas, abas, colunas C/NC e itens",
                 icon = Icons.Default.TableChart,
                 iconTint = Color(0xFF10B981),
                 badge = "XLS / XLSX",
-                onClick = { onSelectFormat("application/*") }
+                onClick = { onSelectFormat("*/*") }
             )
         }
 
         item {
             FormatCard(
                 title = "Arquivo CSV / Texto",
-                description = "Separadores automáticos (vírgula, ponto e vírgula, tab)",
-                icon = Icons.Default.ListAlt,
+                description = "Delimitadores automáticos com mapeamento de colunas",
+                icon = Icons.Default.FormatListBulleted,
                 iconTint = Color(0xFFF59E0B),
                 badge = "CSV / TXT",
                 onClick = { onSelectFormat("text/*") }
@@ -506,7 +557,7 @@ private fun FileSelectionHub(
         item {
             FormatCard(
                 title = "Foto de Checklist / Digitalização",
-                description = "Reconhecimento ótico de caracteres (OCR on-device)",
+                description = "Reconhecimento ótico com reconstrução de layout on-device",
                 icon = Icons.Default.CameraEnhance,
                 iconTint = Color(0xFF8B5CF6),
                 badge = "JPG / PNG / WEBP",
@@ -571,16 +622,19 @@ private fun ChecklistPreviewEditor(
     onAddStatus: () -> Unit,
     onRemoveStatus: (String) -> Unit,
     onAddSection: () -> Unit,
+    onAddCategory: (sectionId: String) -> Unit,
     onRenameSection: (sectionId: String, name: String) -> Unit,
     onDeleteSection: (sectionId: String) -> Unit,
     onMoveSectionUp: (sectionId: String) -> Unit,
     onMoveSectionDown: (sectionId: String) -> Unit,
-    onAddItem: (sectionId: String) -> Unit,
-    onEditItem: (sectionId: String, item: ParsedItem) -> Unit,
-    onDeleteItem: (sectionId: String, itemId: String) -> Unit,
-    onDuplicateItem: (sectionId: String, itemId: String) -> Unit,
+    onAddItem: (sectionId: String, categoryId: String?) -> Unit,
+    onEditItem: (sectionId: String, categoryId: String?, item: ParsedItem) -> Unit,
+    onDeleteItem: (sectionId: String, categoryId: String?, itemId: String) -> Unit,
+    onDuplicateItem: (sectionId: String, categoryId: String?, itemId: String) -> Unit,
     onMoveItemUp: (sectionId: String, itemId: String) -> Unit,
-    onMoveItemDown: (sectionId: String, itemId: String) -> Unit
+    onMoveItemDown: (sectionId: String, itemId: String) -> Unit,
+    onPromoteToSection: (sectionId: String, categoryId: String?, itemId: String) -> Unit,
+    onResolveConflict: (item: ParsedItem) -> Unit
 ) {
     val colors = AppTheme.colors
 
@@ -624,29 +678,56 @@ private fun ChecklistPreviewEditor(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("• ${checklist.sections.size} seções", fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
-                        Text("• ${checklist.totalItemsCount} perguntas", fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
+                        Text("• ${checklist.totalItemsCount} itens", fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
                         Text("• Formato: ${checklist.sourceFormat.extensionLabel}", fontSize = 11.sp, color = colors.textSecondary)
+                        
+                        val confidencePercent = (checklist.totalConfidenceScore * 100).toInt()
+                        val confColor = if (confidencePercent >= 90) colors.statusConforme else if (confidencePercent >= 65) colors.statusWarning else colors.statusNaoConforme
+                        Box(
+                            modifier = Modifier.background(confColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("Precisão: $confidencePercent%", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = confColor)
+                        }
                     }
                 }
             }
         }
 
-        // WARNINGS BANNER (IF ANY)
-        if (checklist.warnings.isNotEmpty()) {
+        // VALIDATION ALERTS PANEL ("REVISÕES NECESSÁRIAS")
+        if (checklist.validationAlerts.isNotEmpty()) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = colors.statusWarning.copy(alpha = 0.12f)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.statusWarning.copy(alpha = 0.4f))
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = colors.statusWarning.copy(alpha = 0.10f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.statusWarning.copy(alpha = 0.35f))
                 ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
-                        Icon(Icons.Default.WarningAmber, contentDescription = null, tint = colors.statusWarning, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Avisos da Interpretação:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = colors.textPrimary)
-                            checklist.warnings.forEach { warn ->
-                                Text("• $warn", fontSize = 11.sp, color = colors.textSecondary, lineHeight = 14.sp)
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.WarningAmber, contentDescription = null, tint = colors.statusWarning, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Revisões Recomendadas (${checklist.validationAlerts.size})", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
+                        }
+
+                        checklist.validationAlerts.forEach { alert ->
+                            val iconColor = when (alert.severity) {
+                                AlertSeverity.CRITICAL -> colors.statusNaoConforme
+                                AlertSeverity.WARNING -> colors.statusWarning
+                                AlertSeverity.INFO -> colors.primary
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(6.dp).offset(y = 5.dp).background(iconColor, CircleShape)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(alert.title, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = colors.textPrimary)
+                                    Text(alert.description, fontSize = 10.sp, color = colors.textSecondary, lineHeight = 13.sp)
+                                }
                             }
                         }
                     }
@@ -669,8 +750,8 @@ private fun ChecklistPreviewEditor(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Personalize as Respostas (Status)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
-                            Text("Opções de avaliação aplicadas aos itens de verificação", fontSize = 11.sp, color = colors.textSecondary)
+                            Text("Opções de Avaliação (Status)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colors.textPrimary)
+                            Text("Respostas aplicadas aos itens de verificação", fontSize = 11.sp, color = colors.textSecondary)
                         }
                         IconButton(onClick = onAddStatus, modifier = Modifier.size(28.dp)) {
                             Icon(Icons.Default.AddCircle, contentDescription = "Adicionar Status", tint = colors.primary)
@@ -722,7 +803,7 @@ private fun ChecklistPreviewEditor(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Estrutura de Seções e Perguntas", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.textPrimary)
+                Text("Estrutura Hierárquica do Checklist", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = colors.textPrimary)
                 OutlinedButton(
                     onClick = onAddSection,
                     shape = RoundedCornerShape(8.dp),
@@ -746,12 +827,15 @@ private fun ChecklistPreviewEditor(
                     onMoveUp = { onMoveSectionUp(section.id) },
                     onMoveDown = { onMoveSectionDown(section.id) },
                     onDelete = { onDeleteSection(section.id) },
-                    onAddItem = { onAddItem(section.id) },
-                    onEditItem = { item -> onEditItem(section.id, item) },
-                    onDeleteItem = { itemId -> onDeleteItem(section.id, itemId) },
-                    onDuplicateItem = { itemId -> onDuplicateItem(section.id, itemId) },
+                    onAddCategory = { onAddCategory(section.id) },
+                    onAddItem = { catId -> onAddItem(section.id, catId) },
+                    onEditItem = { catId, item -> onEditItem(section.id, catId, item) },
+                    onDeleteItem = { catId, itemId -> onDeleteItem(section.id, catId, itemId) },
+                    onDuplicateItem = { catId, itemId -> onDuplicateItem(section.id, catId, itemId) },
                     onMoveItemUp = { itemId -> onMoveItemUp(section.id, itemId) },
-                    onMoveItemDown = { itemId -> onMoveItemDown(section.id, itemId) }
+                    onMoveItemDown = { itemId -> onMoveItemDown(section.id, itemId) },
+                    onPromoteToSection = { catId, itemId -> onPromoteToSection(section.id, catId, itemId) },
+                    onResolveConflict = onResolveConflict
                 )
             }
         }
@@ -770,12 +854,15 @@ private fun SectionCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDelete: () -> Unit,
-    onAddItem: () -> Unit,
-    onEditItem: (ParsedItem) -> Unit,
-    onDeleteItem: (itemId: String) -> Unit,
-    onDuplicateItem: (itemId: String) -> Unit,
+    onAddCategory: () -> Unit,
+    onAddItem: (categoryId: String?) -> Unit,
+    onEditItem: (categoryId: String?, ParsedItem) -> Unit,
+    onDeleteItem: (categoryId: String?, itemId: String) -> Unit,
+    onDuplicateItem: (categoryId: String?, itemId: String) -> Unit,
     onMoveItemUp: (itemId: String) -> Unit,
-    onMoveItemDown: (itemId: String) -> Unit
+    onMoveItemDown: (itemId: String) -> Unit,
+    onPromoteToSection: (categoryId: String?, itemId: String) -> Unit,
+    onResolveConflict: (item: ParsedItem) -> Unit
 ) {
     val colors = AppTheme.colors
 
@@ -824,15 +911,8 @@ private fun SectionCard(
 
             HorizontalDivider(color = colors.border.copy(alpha = 0.5f))
 
-            // Items List
-            if (section.items.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Nenhum item nesta seção. Toque abaixo para adicionar.", fontSize = 11.sp, color = colors.textSecondary)
-                }
-            } else {
+            // Direct items under section
+            if (section.items.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     section.items.forEachIndexed { iIdx, item ->
                         ItemRow(
@@ -840,27 +920,79 @@ private fun SectionCard(
                             index = iIdx,
                             isFirst = iIdx == 0,
                             isLast = iIdx == section.items.lastIndex,
-                            onEdit = { onEditItem(item) },
-                            onDelete = { onDeleteItem(item.id) },
-                            onDuplicate = { onDuplicateItem(item.id) },
+                            onEdit = { onEditItem(null, item) },
+                            onDelete = { onDeleteItem(null, item.id) },
+                            onDuplicate = { onDuplicateItem(null, item.id) },
                             onMoveUp = { onMoveItemUp(item.id) },
-                            onMoveDown = { onMoveItemDown(item.id) }
+                            onMoveDown = { onMoveItemDown(item.id) },
+                            onPromoteToSection = { onPromoteToSection(null, item.id) },
+                            onResolveConflict = { onResolveConflict(item) }
                         )
                     }
                 }
             }
 
-            // Add Item button
-            Button(
-                onClick = onAddItem,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.surfaceVariant, contentColor = colors.primary),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth().height(36.dp),
-                contentPadding = PaddingValues(0.dp)
+            // Subcategories under section
+            section.categories.forEach { category ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant.copy(alpha = 0.3f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border.copy(alpha = 0.4f))
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.SubdirectoryArrowRight, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(category.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = colors.textPrimary)
+                        }
+
+                        category.items.forEachIndexed { cIdx, item ->
+                            ItemRow(
+                                item = item,
+                                index = cIdx,
+                                isFirst = cIdx == 0,
+                                isLast = cIdx == category.items.lastIndex,
+                                onEdit = { onEditItem(category.id, item) },
+                                onDelete = { onDeleteItem(category.id, item.id) },
+                                onDuplicate = { onDuplicateItem(category.id, item.id) },
+                                onMoveUp = { onMoveItemUp(item.id) },
+                                onMoveDown = { onMoveItemDown(item.id) },
+                                onPromoteToSection = { onPromoteToSection(category.id, item.id) },
+                                onResolveConflict = { onResolveConflict(item) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("+ Adicionar Pergunta nesta Seção", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+                OutlinedButton(
+                    onClick = onAddCategory,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f).height(34.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("+ Subcategoria", fontSize = 11.sp)
+                }
+
+                Button(
+                    onClick = { onAddItem(null) },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.surfaceVariant, contentColor = colors.primary),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f).height(34.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = colors.primary, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("+ Pergunta", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+                }
             }
         }
     }
@@ -876,7 +1008,9 @@ private fun ItemRow(
     onDelete: () -> Unit,
     onDuplicate: () -> Unit,
     onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    onMoveDown: () -> Unit,
+    onPromoteToSection: () -> Unit,
+    onResolveConflict: () -> Unit
 ) {
     val colors = AppTheme.colors
 
@@ -921,6 +1055,9 @@ private fun ItemRow(
                             Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Descer", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
                         }
                     }
+                    IconButton(onClick = onPromoteToSection, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.DriveFileMove, contentDescription = "Promover a Seção", tint = colors.primary, modifier = Modifier.size(14.dp))
+                    }
                     IconButton(onClick = onDuplicate, modifier = Modifier.size(24.dp)) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "Duplicar", tint = colors.textSecondary, modifier = Modifier.size(14.dp))
                     }
@@ -936,13 +1073,36 @@ private fun ItemRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Status choices preview
-                Text(
-                    text = "[ ${item.allowedStatuses.joinToString(" ")} ]",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.primary
-                )
+                // Confidence badge
+                val confColor = when (item.confidenceRating) {
+                    ConfidenceRating.HIGH -> colors.statusConforme
+                    ConfidenceRating.MEDIUM -> colors.statusWarning
+                    ConfidenceRating.LOW -> colors.statusNaoConforme
+                }
+                Box(
+                    modifier = Modifier.background(confColor.copy(alpha = 0.12f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)
+                ) {
+                    Text(item.confidenceRating.label, fontSize = 9.sp, color = confColor, fontWeight = FontWeight.Bold)
+                }
+
+                // Pre-filled answer badge (if any)
+                if (item.preFilledAnswer != null) {
+                    if (item.preFilledAnswer.hasConflict) {
+                        Box(
+                            modifier = Modifier.clickable(onClick = onResolveConflict)
+                                .background(colors.statusNaoConforme.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 1.dp)
+                        ) {
+                            Text("⚠ Conflito: ${item.preFilledAnswer.conflictingCodes.joinToString("/")}", fontSize = 9.sp, color = colors.statusNaoConforme, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier.background(colors.statusConforme.copy(alpha = 0.15f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 1.dp)
+                        ) {
+                            Text("✓ Resposta: ${item.preFilledAnswer.statusShortCode}", fontSize = 9.sp, color = colors.statusConforme, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
 
                 if (item.allowPhoto) {
                     Box(modifier = Modifier.background(colors.primary.copy(alpha = 0.1f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
@@ -951,14 +1111,8 @@ private fun ItemRow(
                 }
 
                 if (item.allowObservation) {
-                    Box(modifier = Modifier.background(colors.cyanAccent.copy(alpha = 0.1f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                        Text("💬 Obs", fontSize = 9.sp, color = colors.cyanAccent, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                if (item.isRequired) {
-                    Box(modifier = Modifier.background(colors.statusWarning.copy(alpha = 0.1f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                        Text("Obrigatório", fontSize = 9.sp, color = colors.statusWarning, fontWeight = FontWeight.Bold)
+                    Box(modifier = Modifier.background(colors.surfaceVariant, RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                        Text("📝 Obs", fontSize = 9.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -967,105 +1121,211 @@ private fun ItemRow(
 }
 
 // =======================================================
-// DIALOGS: EDIT ITEM, ADD STATUS
+// PROGRESS & MODALS
 // =======================================================
+@Composable
+private fun ImportProgressDialog(
+    stage: String,
+    percent: Int,
+    details: String,
+    onCancel: () -> Unit
+) {
+    val colors = AppTheme.colors
+
+    Dialog(onDismissRequest = {}) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.surface),
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CircularProgressIndicator(
+                    progress = { percent / 100f },
+                    color = colors.primary,
+                    strokeWidth = 4.dp,
+                    modifier = Modifier.size(56.dp)
+                )
+
+                Text(stage, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary, textAlign = TextAlign.Center)
+
+                if (details.isNotBlank()) {
+                    Text(details, fontSize = 12.sp, color = colors.textSecondary, textAlign = TextAlign.Center)
+                }
+
+                LinearProgressIndicator(
+                    progress = { percent / 100f },
+                    color = colors.primary,
+                    trackColor = colors.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
+                )
+
+                Text("$percent%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+
+                OutlinedButton(
+                    onClick = onCancel,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text("Cancelar", color = colors.textSecondary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportErrorView(
+    errorMessage: String,
+    onRetry: () -> Unit
+) {
+    val colors = AppTheme.colors
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier.size(64.dp).background(colors.statusNaoConforme.copy(alpha = 0.15f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = colors.statusNaoConforme, modifier = Modifier.size(36.dp))
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Text("Erro ao Importar Checklist", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(errorMessage, fontSize = 13.sp, color = colors.textSecondary, textAlign = TextAlign.Center, lineHeight = 18.sp)
+
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = onRetry,
+            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Tentar Novamente", color = Color.White, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
 @Composable
 private fun EditItemModal(
     item: ParsedItem,
     availableStatuses: List<CustomStatusConfig>,
     isNew: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (label: String, type: String, allowObs: Boolean, allowPhoto: Boolean, allowAttach: Boolean, isReq: Boolean) -> Unit
+    onConfirm: (label: String, type: String, allowObs: Boolean, allowPhoto: Boolean, allowAttach: Boolean, isRequired: Boolean) -> Unit
 ) {
     val colors = AppTheme.colors
+
     var labelInput by remember { mutableStateOf(item.label) }
-    var typeSelection by remember { mutableStateOf(item.type) }
+    var selectedType by remember { mutableStateOf(item.type) }
     var allowObs by remember { mutableStateOf(item.allowObservation) }
     var allowPhoto by remember { mutableStateOf(item.allowPhoto) }
     var allowAttach by remember { mutableStateOf(item.allowAttachment) }
-    var isReq by remember { mutableStateOf(item.isRequired) }
+    var isRequired by remember { mutableStateOf(item.isRequired) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = colors.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(if (isNew) "Adicionar Pergunta" else "Editar Pergunta", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(26.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Fechar", tint = colors.textSecondary)
-                    }
-                }
+                Text(
+                    text = if (isNew) "Adicionar Item de Inspeção" else "Editar Pergunta",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = colors.textPrimary
+                )
 
                 OutlinedTextField(
                     value = labelInput,
                     onValueChange = { labelInput = it },
-                    label = { Text("Texto da Pergunta / Item") },
-                    placeholder = { Text("Ex: Extintor está desobstruído e sinalizado?") },
+                    label = { Text("Texto da Pergunta / Requisito") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                     shape = RoundedCornerShape(8.dp)
                 )
 
-                // Type selector
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Tipo de Resposta:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(
-                            "C_NC_NA" to "Status (C/NC/P/NA)",
-                            "TEXT" to "Texto",
-                            "NUMBER" to "Número",
-                            "PHOTO" to "Apenas Foto"
-                        ).forEach { (typeVal, typeLabel) ->
-                            val selected = typeSelection == typeVal
+                    Text("Tipo de Campo:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("C_NC_NA" to "Conformidade (C/NC)", "TEXT" to "Texto", "NUMBER" to "Número").forEach { (typeKey, typeLabel) ->
                             FilterChip(
-                                selected = selected,
-                                onClick = { typeSelection = typeVal },
-                                label = { Text(typeLabel, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) }
+                                selected = selectedType == typeKey,
+                                onClick = { selectedType = typeKey },
+                                label = { Text(typeLabel, fontSize = 11.sp) }
                             )
                         }
                     }
                 }
 
-                // Toggles
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { allowPhoto = !allowPhoto }) {
-                        Checkbox(checked = allowPhoto, onCheckedChange = { allowPhoto = it })
-                        Text("Permitir anexar fotos da evidência", fontSize = 12.sp, color = colors.textPrimary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Permitir Observação", fontSize = 13.sp, color = colors.textPrimary)
+                        Switch(checked = allowObs, onCheckedChange = { allowObs = it })
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { allowObs = !allowObs }) {
-                        Checkbox(checked = allowObs, onCheckedChange = { allowObs = it })
-                        Text("Permitir observação técnica", fontSize = 12.sp, color = colors.textPrimary)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Permitir Foto", fontSize = 13.sp, color = colors.textPrimary)
+                        Switch(checked = allowPhoto, onCheckedChange = { allowPhoto = it })
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { isReq = !isReq }) {
-                        Checkbox(checked = isReq, onCheckedChange = { isReq = it })
-                        Text("Item de resposta obrigatória", fontSize = 12.sp, color = colors.textPrimary)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Item Obrigatório", fontSize = 13.sp, color = colors.textPrimary)
+                        Switch(checked = isRequired, onCheckedChange = { isRequired = it })
                     }
                 }
 
-                Spacer(Modifier.height(6.dp))
-
-                Button(
-                    onClick = {
-                        if (labelInput.isNotBlank()) {
-                            onConfirm(labelInput.trim(), typeSelection, allowObs, allowPhoto, allowAttach, isReq)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(42.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                    shape = RoundedCornerShape(8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Salvar Item", color = Color.White, fontWeight = FontWeight.Bold)
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancelar", color = colors.textSecondary)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            if (labelInput.isNotBlank()) {
+                                onConfirm(labelInput.trim(), selectedType, allowObs, allowPhoto, allowAttach, isRequired)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Confirmar", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -1075,30 +1335,34 @@ private fun EditItemModal(
 @Composable
 private fun AddStatusModal(
     onDismiss: () -> Unit,
-    onConfirm: (name: String, shortCode: String, desc: String, colorHex: String, score: Float?) -> Unit
+    onConfirm: (name: String, shortCode: String, desc: String, colorHex: String, scoreMultiplier: Float?) -> Unit
 ) {
     val colors = AppTheme.colors
+
     var nameInput by remember { mutableStateOf("") }
     var codeInput by remember { mutableStateOf("") }
     var descInput by remember { mutableStateOf("") }
-    var selectedColor by remember { mutableStateOf("#8B5CF6") }
+    var selectedColor by remember { mutableStateOf("#3B82F6") }
+    var selectedScore by remember { mutableStateOf<Float?>(1.0f) }
 
-    val colorOptions = listOf("#10B981", "#F59E0B", "#EF4444", "#3B82F6", "#8B5CF6", "#EC4899", "#6B7280")
+    val presetColors = listOf("#10B981", "#F59E0B", "#EF4444", "#3B82F6", "#8B5CF6", "#6B7280", "#EC4899", "#14B8A6")
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = colors.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Adicionar Status Customizado", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Adicionar Opção de Resposta", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
 
                 OutlinedTextField(
                     value = nameInput,
                     onValueChange = { nameInput = it },
-                    label = { Text("Nome do Status (ex: Regular, Pendente)") },
+                    label = { Text("Nome do Status (Ex: Atende com Ressalva)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 )
@@ -1106,7 +1370,7 @@ private fun AddStatusModal(
                 OutlinedTextField(
                     value = codeInput,
                     onValueChange = { codeInput = it.uppercase() },
-                    label = { Text("Sigla Curta (ex: REG, PND, OK)") },
+                    label = { Text("Sigla / Código Curto (Ex: RES)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 )
@@ -1114,50 +1378,62 @@ private fun AddStatusModal(
                 OutlinedTextField(
                     value = descInput,
                     onValueChange = { descInput = it },
-                    label = { Text("Descrição / Comportamento") },
+                    label = { Text("Descrição / Critério (Opcional)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 )
 
                 Text("Cor do Status:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    colorOptions.forEach { hex ->
-                        val col = parseHexColor(hex, Color.Gray)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    presetColors.forEach { hex ->
+                        val color = parseHexColor(hex, colors.primary)
                         Box(
                             modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(col)
-                                .border(if (selectedColor == hex) 3.dp else 0.dp, Color.White, CircleShape)
+                                .size(28.dp)
+                                .background(color, CircleShape)
+                                .border(
+                                    width = if (selectedColor == hex) 3.dp else 1.dp,
+                                    color = if (selectedColor == hex) colors.textPrimary else Color.Transparent,
+                                    shape = CircleShape
+                                )
                                 .clickable { selectedColor = hex }
                         )
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
-
-                Button(
-                    onClick = {
-                        if (nameInput.isNotBlank() && codeInput.isNotBlank()) {
-                            onConfirm(nameInput.trim(), codeInput.trim(), descInput.trim(), selectedColor, 1.0f)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(42.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                    shape = RoundedCornerShape(8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Adicionar Status", color = Color.White, fontWeight = FontWeight.Bold)
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancelar", color = colors.textSecondary)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            if (nameInput.isNotBlank() && codeInput.isNotBlank()) {
+                                onConfirm(nameInput.trim(), codeInput.trim(), descInput.trim(), selectedColor, selectedScore)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Adicionar", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
     }
 }
 
-private fun parseHexColor(hex: String, defaultColor: Color): Color {
+private fun parseHexColor(hex: String, fallback: Color): Color {
     return try {
-        val clean = hex.removePrefix("#")
-        Color(android.graphics.Color.parseColor("#$clean"))
+        Color(android.graphics.Color.parseColor(hex))
     } catch (e: Exception) {
-        defaultColor
+        fallback
     }
 }

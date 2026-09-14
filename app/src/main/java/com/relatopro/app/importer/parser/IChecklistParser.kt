@@ -3,6 +3,11 @@ package com.relatopro.app.importer.parser
 import android.content.Context
 import android.net.Uri
 import com.relatopro.app.importer.model.ParsedChecklist
+import com.relatopro.app.importer.model.RichCell
+import com.relatopro.app.importer.model.RichDocumentContent
+import com.relatopro.app.importer.model.RichParagraph
+import com.relatopro.app.importer.model.RichRow
+import com.relatopro.app.importer.model.RichTable
 
 data class RawCell(
     val text: String,

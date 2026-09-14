@@ -3,13 +3,13 @@ package com.relatopro.app.importer.parser
 import android.content.Context
 import android.net.Uri
 import com.relatopro.app.importer.analyzer.ChecklistStructureAnalyzer
-import com.relatopro.app.importer.model.ImportFormat
-import com.relatopro.app.importer.model.ParsedChecklist
+import com.relatopro.app.importer.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
+import java.util.UUID
 
 class CsvChecklistParser : IChecklistParser {
 
@@ -44,26 +44,44 @@ class CsvChecklistParser : IChecklistParser {
         val headers = parsedRows.firstOrNull()?.map { it.trim() } ?: emptyList()
         val dataRows = if (parsedRows.size > 1) parsedRows.subList(1, parsedRows.size) else parsedRows
 
-        val tableRows = dataRows.map { rowValues ->
-            RawRow(cells = rowValues.mapIndexed { idx, v -> RawCell(text = v.trim(), columnIndex = idx) })
+        val richRows = dataRows.mapIndexed { rowIdx, rowValues ->
+            val nonBlank = rowValues.filter { it.isNotBlank() }
+            val isSectionBreak = nonBlank.size == 1 && nonBlank[0].length in 3..90
+            val richCells = rowValues.mapIndexed { colIdx, v ->
+                val trimmed = v.trim()
+                val isUpper = trimmed.all { it.isUpperCase() || it.isWhitespace() || it.isDigit() || it in ".-_/:()" }
+                RichCell(
+                    text = trimmed,
+                    columnIndex = colIdx,
+                    rowIndex = rowIdx,
+                    style = ElementStyle(isBold = isUpper || isSectionBreak, isAllUppercase = isUpper)
+                )
+            }
+            RichRow(
+                rowIndex = rowIdx,
+                cells = richCells,
+                isSectionBreakRow = isSectionBreak
+            )
         }
 
-        val table = RawTable(
+        val table = RichTable(
+            id = UUID.randomUUID().toString(),
             title = "Checklist CSV",
             headers = headers,
-            rows = tableRows
+            rows = richRows,
+            location = SourceLocation(sheetName = "CSV")
         )
 
-        onProgress("Estruturando checklist...", 85, "Organizando itens...")
+        onProgress("Estruturando hierarquia...", 85, "Organizando seções e itens...")
 
-        val rawDoc = RawDocumentContent(
+        val richDoc = RichDocumentContent(
             suggestedTitle = fileName.substringBeforeLast("."),
             tables = listOf(table),
             rawTextLines = rawLines,
             ocrUsed = false
         )
 
-        val parsed = ChecklistStructureAnalyzer.analyze(rawDoc, ImportFormat.CSV, fileName)
+        val parsed = ChecklistStructureAnalyzer.analyzeRich(richDoc, ImportFormat.CSV, fileName)
         onProgress("Concluído!", 100, "CSV estruturado com sucesso.")
         parsed
     }

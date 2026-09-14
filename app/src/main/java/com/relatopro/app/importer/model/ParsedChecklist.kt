@@ -61,6 +61,9 @@ data class CustomStatusConfig(
 data class ParsedItem(
     val id: String = UUID.randomUUID().toString(),
     val sectionName: String = "Geral",
+    val categoryName: String? = null,
+    val subCategoryName: String? = null,
+    val hierarchyPath: String = sectionName,
     val numberPrefix: String? = null,
     val label: String,
     val type: String = "C_NC_NA", // C_NC_NA, TEXT, NUMBER, CHECKBOX, PHOTO, SIGNATURE
@@ -72,13 +75,28 @@ data class ParsedItem(
     val requireObservationOnNC: Boolean = true,
     val requirePhotoOnNC: Boolean = false,
     val maxPhotos: Int = 5,
-    val warning: String? = null // Aviso ou alerta se houve ambiguidade na leitura
+    val warning: String? = null, // Aviso ou alerta se houve ambiguidade na leitura
+    val preFilledAnswer: ExtractedAnswer? = null,
+    val confidenceRating: ConfidenceRating = ConfidenceRating.HIGH,
+    val confidenceScore: Float = 0.95f,
+    val classificationReason: String = "Item de verificação identificado com sucesso",
+    val sourceLocation: SourceLocation = SourceLocation(),
+    val isHeaderOrNoise: Boolean = false
+)
+
+data class ParsedCategory(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val level: Int = 2, // 2 = Categoria, 3 = Subcategoria
+    val orderIndex: Int = 0,
+    val items: List<ParsedItem> = emptyList()
 )
 
 data class ParsedSection(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
     val orderIndex: Int = 0,
+    val categories: List<ParsedCategory> = emptyList(),
     val items: List<ParsedItem> = emptyList()
 )
 
@@ -92,10 +110,18 @@ data class ParsedChecklist(
     val sourceFormat: ImportFormat = ImportFormat.UNKNOWN,
     val fileName: String = "",
     val warnings: List<String> = emptyList(),
+    val validationAlerts: List<ImportValidationAlert> = emptyList(),
     val totalConfidenceScore: Float = 1.0f
 ) {
     val totalItemsCount: Int
-        get() = sections.sumOf { it.items.size }
+        get() = sections.sumOf { section ->
+            section.items.size + section.categories.sumOf { it.items.size }
+        }
+
+    val allItemsFlattened: List<ParsedItem>
+        get() = sections.flatMap { section ->
+            section.items + section.categories.flatMap { it.items }
+        }
 }
 
 sealed class ImportProgressState {

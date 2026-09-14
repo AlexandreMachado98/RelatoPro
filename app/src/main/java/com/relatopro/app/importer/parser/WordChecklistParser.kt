@@ -4,14 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.util.Xml
 import com.relatopro.app.importer.analyzer.ChecklistStructureAnalyzer
-import com.relatopro.app.importer.model.ImportFormat
-import com.relatopro.app.importer.model.ParsedChecklist
+import com.relatopro.app.importer.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import java.io.ByteArrayInputStream
-import java.io.InputStream
-import java.nio.charset.StandardCharsets
+import java.util.UUID
 import java.util.zip.ZipInputStream
 
 class WordChecklistParser : IChecklistParser {
@@ -25,23 +23,23 @@ class WordChecklistParser : IChecklistParser {
         onProgress("Lendo documento Word...", 15, "Abrindo arquivo $fileName...")
 
         val isDocx = fileName.endsWith(".docx", ignoreCase = true)
-        val rawDoc = if (isDocx) {
-            parseDocx(context, uri, onProgress)
+        val richDoc = if (isDocx) {
+            parseDocxRich(context, uri, onProgress)
         } else {
-            parseDocBinary(context, uri, onProgress)
+            parseDocBinaryRich(context, uri, onProgress)
         }
 
-        onProgress("Estruturando checklist...", 85, "Organizando seções, tabelas e itens...")
-        val parsed = ChecklistStructureAnalyzer.analyze(rawDoc, ImportFormat.WORD, fileName)
+        onProgress("Estruturando hierarquia...", 85, "Analisando seções, categorias e itens...")
+        val parsed = ChecklistStructureAnalyzer.analyzeRich(richDoc, ImportFormat.WORD, fileName)
         onProgress("Concluído!", 100, "Checklist pronto para revisão.")
         parsed
     }
 
-    private fun parseDocx(
+    private fun parseDocxRich(
         context: Context,
         uri: Uri,
         onProgress: (stage: String, percent: Int, detail: String) -> Unit
-    ): RawDocumentContent {
+    ): RichDocumentContent {
         var documentXmlBytes: ByteArray? = null
         context.contentResolver.openInputStream(uri)?.use { stream ->
             ZipInputStream(stream).use { zis ->
@@ -60,11 +58,12 @@ class WordChecklistParser : IChecklistParser {
             throw IllegalStateException("Arquivo .docx inválido ou sem conteúdo document.xml.")
         }
 
-        onProgress("Interpretando elementos Word...", 45, "Lendo parágrafos e tabelas...")
+        onProgress("Interpretando estilos e tabelas...", 45, "Lendo parágrafos, estilos e tabelas...")
 
-        val paragraphs = mutableListOf<RawParagraph>()
-        val tables = mutableListOf<RawTable>()
+        val paragraphs = mutableListOf<RichParagraph>()
+        val tables = mutableListOf<RichTable>()
         val rawLines = mutableListOf<String>()
+        val alerts = mutableListOf<ImportValidationAlert>()
         var suggestedTitle = ""
 
         val parser = Xml.newPullParser()
@@ -72,11 +71,19 @@ class WordChecklistParser : IChecklistParser {
 
         var eventType = parser.eventType
         var inTable = false
-        var currentTableRows = mutableListOf<RawRow>()
-        var currentCells = mutableListOf<RawCell>()
+        var currentTableRows = mutableListOf<RichRow>()
+        var currentCells = mutableListOf<RichCell>()
         var currentText = StringBuilder()
+        
+        // Formatting flags
+        var isBold = false
+        var isItalic = false
         var isHeading = false
+        var headingLevel = 0
         var isListItem = false
+        var fontSizePt: Float? = null
+        var colSpan = 1
+        var isTableHeaderRow = false
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
             val tagName = if (parser.name != null) parser.name.substringAfter(":") else ""
@@ -90,28 +97,71 @@ class WordChecklistParser : IChecklistParser {
                         }
                         "tr" -> {
                             currentCells = mutableListOf()
+                            isTableHeaderRow = false
+                        }
+                        "tblHeader" -> {
+                            isTableHeaderRow = true
                         }
                         "tc" -> {
                             currentText = StringBuilder()
+                            colSpan = 1
+                        }
+                        "gridSpan" -> {
+                            val spanVal = parser.getAttributeValue(null, "val")?.toIntOrNull()
+                            if (spanVal != null && spanVal > 1) {
+                                colSpan = spanVal
+                            }
                         }
                         "p" -> {
                             if (!inTable) {
                                 currentText = StringBuilder()
                                 isHeading = false
+                                headingLevel = 0
                                 isListItem = false
+                                isBold = false
+                                isItalic = false
+                                fontSizePt = null
                             }
                         }
                         "pStyle" -> {
                             val styleVal = parser.getAttributeValue(null, "val") ?: ""
-                            if (styleVal.contains("Heading", ignoreCase = true) || styleVal.contains("Titulo", ignoreCase = true) || styleVal.contains("Title", ignoreCase = true)) {
-                                isHeading = true
+                            when {
+                                styleVal.contains("Heading1", ignoreCase = true) || styleVal.contains("Titulo1", ignoreCase = true) -> {
+                                    isHeading = true
+                                    headingLevel = 1
+                                }
+                                styleVal.contains("Heading2", ignoreCase = true) || styleVal.contains("Titulo2", ignoreCase = true) -> {
+                                    isHeading = true
+                                    headingLevel = 2
+                                }
+                                styleVal.contains("Heading3", ignoreCase = true) || styleVal.contains("Titulo3", ignoreCase = true) -> {
+                                    isHeading = true
+                                    headingLevel = 3
+                                }
+                                styleVal.contains("Heading", ignoreCase = true) || styleVal.contains("Titulo", ignoreCase = true) || styleVal.contains("Title", ignoreCase = true) -> {
+                                    isHeading = true
+                                    headingLevel = 1
+                                }
                             }
                         }
                         "numPr" -> {
                             isListItem = true
                         }
+                        "b" -> {
+                            val valAttr = parser.getAttributeValue(null, "val")
+                            isBold = (valAttr == null || valAttr == "1" || valAttr.equals("true", ignoreCase = true))
+                        }
+                        "i" -> {
+                            val valAttr = parser.getAttributeValue(null, "val")
+                            isItalic = (valAttr == null || valAttr == "1" || valAttr.equals("true", ignoreCase = true))
+                        }
+                        "sz" -> {
+                            val szVal = parser.getAttributeValue(null, "val")?.toFloatOrNull()
+                            if (szVal != null) {
+                                fontSizePt = szVal / 2.0f // Word sz is in half-points
+                            }
+                        }
                         "t" -> {
-                            // Text node
                             val text = parser.nextText()
                             currentText.append(text)
                         }
@@ -121,12 +171,32 @@ class WordChecklistParser : IChecklistParser {
                     when (tagName) {
                         "tc" -> {
                             val cellText = currentText.toString().trim()
-                            currentCells.add(RawCell(text = cellText, columnIndex = currentCells.size))
+                            val cellStyle = ElementStyle(
+                                isBold = isBold,
+                                isItalic = isItalic,
+                                fontSizePt = fontSizePt,
+                                isMergedCell = colSpan > 1
+                            )
+                            currentCells.add(
+                                RichCell(
+                                    text = cellText,
+                                    columnIndex = currentCells.size,
+                                    rowIndex = currentTableRows.size,
+                                    style = cellStyle,
+                                    colSpan = colSpan
+                                )
+                            )
                             currentText = StringBuilder()
                         }
                         "tr" -> {
                             if (currentCells.isNotEmpty()) {
-                                currentTableRows.add(RawRow(cells = currentCells.toList()))
+                                currentTableRows.add(
+                                    RichRow(
+                                        rowIndex = currentTableRows.size,
+                                        cells = currentCells.toList(),
+                                        isHeaderRow = isTableHeaderRow
+                                    )
+                                )
                             }
                         }
                         "tbl" -> {
@@ -135,7 +205,8 @@ class WordChecklistParser : IChecklistParser {
                                 val firstRow = currentTableRows.firstOrNull()?.cells?.map { it.text } ?: emptyList()
                                 val dataRows = if (currentTableRows.size > 1) currentTableRows.subList(1, currentTableRows.size) else currentTableRows
                                 tables.add(
-                                    RawTable(
+                                    RichTable(
+                                        id = UUID.randomUUID().toString(),
                                         title = "",
                                         headers = firstRow,
                                         rows = dataRows
@@ -148,14 +219,27 @@ class WordChecklistParser : IChecklistParser {
                                 val pText = currentText.toString().trim()
                                 if (pText.isNotBlank()) {
                                     rawLines.add(pText)
-                                    if (suggestedTitle.isBlank() && (isHeading || pText.length in 4..90)) {
+                                    val isUpper = pText.all { it.isUpperCase() || it.isWhitespace() || it.isDigit() || it in ".-_/:()" }
+                                    if (suggestedTitle.isBlank() && (isHeading || pText.length in 5..90)) {
                                         suggestedTitle = pText
                                     }
+
+                                    val pStyle = ElementStyle(
+                                        isBold = isBold || isHeading,
+                                        isItalic = isItalic,
+                                        isAllUppercase = isUpper,
+                                        fontSizePt = fontSizePt,
+                                        isHeadingStyle = isHeading,
+                                        headingLevel = headingLevel
+                                    )
+
                                     paragraphs.add(
-                                        RawParagraph(
+                                        RichParagraph(
                                             text = pText,
-                                            isHeading = isHeading,
-                                            isListItem = isListItem
+                                            style = pStyle,
+                                            isListItem = isListItem,
+                                            listNumber = extractLeadingNumber(pText),
+                                            location = SourceLocation(rawText = pText)
                                         )
                                     )
                                 }
@@ -168,43 +252,57 @@ class WordChecklistParser : IChecklistParser {
             eventType = parser.next()
         }
 
-        return RawDocumentContent(
+        return RichDocumentContent(
             suggestedTitle = suggestedTitle,
             paragraphs = paragraphs,
             tables = tables,
             rawTextLines = rawLines,
+            alerts = alerts,
             ocrUsed = false
         )
     }
 
-    private fun parseDocBinary(
+    private fun parseDocBinaryRich(
         context: Context,
         uri: Uri,
         onProgress: (stage: String, percent: Int, detail: String) -> Unit
-    ): RawDocumentContent {
+    ): RichDocumentContent {
         onProgress("Lendo arquivo .doc binário...", 40, "Extraindo textos...")
         val rawBytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             ?: throw IllegalStateException("Não foi possível ler o arquivo .doc.")
 
-        // Extract readable UTF-8 and ASCII string runs from binary doc
         val textContent = extractReadableStrings(rawBytes)
         val lines = textContent.lines().map { it.trim() }.filter { it.length > 2 }
 
         val paragraphs = lines.map { line ->
-            RawParagraph(
+            val isUpper = line.length in 4..90 && line.all { it.isUpperCase() || it.isWhitespace() || it.isDigit() || it in ".-_/:()" }
+            RichParagraph(
                 text = line,
-                isHeading = line.length < 80 && line.all { it.isUpperCase() || it.isWhitespace() || it.isDigit() || it in ".-_/:()" }
+                style = ElementStyle(
+                    isBold = isUpper,
+                    isAllUppercase = isUpper,
+                    isHeadingStyle = isUpper
+                ),
+                isListItem = line.matches(Regex("""^(?:[0-9]{1,3}(?:\.[0-9]{1,3})*|[a-z]\))\s*.+""")),
+                listNumber = extractLeadingNumber(line),
+                location = SourceLocation(rawText = line)
             )
         }
 
         val suggestedTitle = lines.firstOrNull { it.length in 5..80 } ?: ""
 
-        return RawDocumentContent(
+        return RichDocumentContent(
             suggestedTitle = suggestedTitle,
             paragraphs = paragraphs,
             rawTextLines = lines,
-            ocrUsed = false,
-            warnings = listOf("Arquivo no formato legado .doc importado por fluxo de compatibilidade.")
+            alerts = listOf(
+                ImportValidationAlert(
+                    title = "Formato Legado .DOC",
+                    description = "Arquivo .doc importado via extração de texto binário.",
+                    severity = AlertSeverity.INFO
+                )
+            ),
+            ocrUsed = false
         )
     }
 
@@ -229,5 +327,10 @@ class WordChecklistParser : IChecklistParser {
             sb.append(currentRun.toString().trim())
         }
         return sb.toString()
+    }
+
+    private fun extractLeadingNumber(text: String): String? {
+        val match = Regex("""^([0-9]{1,3}(?:\.[0-9]{1,3})*|[a-z]\))\s*""").find(text.trim())
+        return match?.groupValues?.getOrNull(1)
     }
 }

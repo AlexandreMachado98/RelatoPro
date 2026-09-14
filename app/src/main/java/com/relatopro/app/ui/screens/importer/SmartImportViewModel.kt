@@ -119,7 +119,7 @@ class SmartImportViewModel @Inject constructor(
         if (cleanCode.isBlank() || name.isBlank()) return
 
         if (current.availableStatuses.any { it.shortCode.equals(cleanCode, ignoreCase = true) }) {
-            return // Já existe status com esta sigla
+            return
         }
 
         val newStatus = CustomStatusConfig(
@@ -138,16 +138,20 @@ class SmartImportViewModel @Inject constructor(
 
     fun removeStatus(statusShortCode: String): Boolean {
         val current = _parsedChecklist.value ?: return false
-        val statusToRemove = current.availableStatuses.find { it.shortCode.equals(statusShortCode, ignoreCase = true) } ?: return false
 
-        // Remove from available statuses
         val updatedStatuses = current.availableStatuses.filterNot { it.shortCode.equals(statusShortCode, ignoreCase = true) }
 
-        // Remove from allowedStatuses in items
         val updatedSections = current.sections.map { section ->
             section.copy(
                 items = section.items.map { item ->
                     item.copy(allowedStatuses = item.allowedStatuses.filterNot { it.equals(statusShortCode, ignoreCase = true) })
+                },
+                categories = section.categories.map { category ->
+                    category.copy(
+                        items = category.items.map { item ->
+                            item.copy(allowedStatuses = item.allowedStatuses.filterNot { it.equals(statusShortCode, ignoreCase = true) })
+                        }
+                    )
                 }
             )
         }
@@ -171,7 +175,8 @@ class SmartImportViewModel @Inject constructor(
             id = UUID.randomUUID().toString(),
             name = cleanName,
             orderIndex = current.sections.size,
-            items = emptyList()
+            items = emptyList(),
+            categories = emptyList()
         )
 
         _parsedChecklist.value = current.copy(sections = current.sections + newSection)
@@ -220,17 +225,70 @@ class SmartImportViewModel @Inject constructor(
     }
 
     // ==========================================
+    // CATEGORY MANAGEMENT
+    // ==========================================
+    fun addCategory(sectionId: String, categoryName: String) {
+        val current = _parsedChecklist.value ?: return
+        val cleanName = categoryName.trim()
+        if (cleanName.isBlank()) return
+
+        val updated = current.sections.map { sec ->
+            if (sec.id == sectionId) {
+                val newCat = ParsedCategory(
+                    id = UUID.randomUUID().toString(),
+                    name = cleanName,
+                    orderIndex = sec.categories.size,
+                    items = emptyList()
+                )
+                sec.copy(categories = sec.categories + newCat)
+            } else sec
+        }
+        _parsedChecklist.value = current.copy(sections = updated)
+    }
+
+    fun renameCategory(sectionId: String, categoryId: String, newName: String) {
+        val current = _parsedChecklist.value ?: return
+        val cleanName = newName.trim()
+        if (cleanName.isBlank()) return
+
+        val updated = current.sections.map { sec ->
+            if (sec.id == sectionId) {
+                sec.copy(
+                    categories = sec.categories.map { cat ->
+                        if (cat.id == categoryId) cat.copy(name = cleanName) else cat
+                    }
+                )
+            } else sec
+        }
+        _parsedChecklist.value = current.copy(sections = updated)
+    }
+
+    fun deleteCategory(sectionId: String, categoryId: String) {
+        val current = _parsedChecklist.value ?: return
+        val updated = current.sections.map { sec ->
+            if (sec.id == sectionId) {
+                sec.copy(categories = sec.categories.filterNot { it.id == categoryId })
+            } else sec
+        }
+        _parsedChecklist.value = current.copy(sections = updated)
+    }
+
+    // ==========================================
     // ITEM MANAGEMENT
     // ==========================================
-    fun addItem(sectionId: String, label: String, type: String = "C_NC_NA") {
+    fun addItem(sectionId: String, categoryId: String? = null, label: String, type: String = "C_NC_NA") {
         val current = _parsedChecklist.value ?: return
         val cleanLabel = label.trim()
         if (cleanLabel.isBlank()) return
 
         val targetSec = current.sections.find { it.id == sectionId } ?: return
+        val targetCat = targetSec.categories.find { it.id == categoryId }
+
         val newItem = ParsedItem(
             id = UUID.randomUUID().toString(),
             sectionName = targetSec.name,
+            categoryName = targetCat?.name,
+            hierarchyPath = if (targetCat != null) "${targetSec.name} > ${targetCat.name}" else targetSec.name,
             label = cleanLabel,
             type = type,
             allowedStatuses = current.availableStatuses.map { it.shortCode },
@@ -242,7 +300,15 @@ class SmartImportViewModel @Inject constructor(
 
         val updatedSections = current.sections.map { sec ->
             if (sec.id == sectionId) {
-                sec.copy(items = sec.items + newItem)
+                if (categoryId != null) {
+                    sec.copy(
+                        categories = sec.categories.map { cat ->
+                            if (cat.id == categoryId) cat.copy(items = cat.items + newItem) else cat
+                        }
+                    )
+                } else {
+                    sec.copy(items = sec.items + newItem)
+                }
             } else sec
         }
         _parsedChecklist.value = current.copy(sections = updatedSections)
@@ -250,6 +316,7 @@ class SmartImportViewModel @Inject constructor(
 
     fun updateItem(
         sectionId: String,
+        categoryId: String? = null,
         itemId: String,
         label: String,
         type: String,
@@ -264,47 +331,99 @@ class SmartImportViewModel @Inject constructor(
 
         val updatedSections = current.sections.map { sec ->
             if (sec.id == sectionId) {
-                sec.copy(
-                    items = sec.items.map { item ->
-                        if (item.id == itemId) {
-                            item.copy(
-                                label = cleanLabel,
-                                type = type,
-                                allowObservation = allowObservation,
-                                allowPhoto = allowPhoto,
-                                allowAttachment = allowAttachment,
-                                isRequired = isRequired
-                            )
-                        } else item
-                    }
-                )
+                if (categoryId != null) {
+                    sec.copy(
+                        categories = sec.categories.map { cat ->
+                            if (cat.id == categoryId) {
+                                cat.copy(
+                                    items = cat.items.map { item ->
+                                        if (item.id == itemId) {
+                                            item.copy(
+                                                label = cleanLabel,
+                                                type = type,
+                                                allowObservation = allowObservation,
+                                                allowPhoto = allowPhoto,
+                                                allowAttachment = allowAttachment,
+                                                isRequired = isRequired
+                                            )
+                                        } else item
+                                    }
+                                )
+                            } else cat
+                        }
+                    )
+                } else {
+                    sec.copy(
+                        items = sec.items.map { item ->
+                            if (item.id == itemId) {
+                                item.copy(
+                                    label = cleanLabel,
+                                    type = type,
+                                    allowObservation = allowObservation,
+                                    allowPhoto = allowPhoto,
+                                    allowAttachment = allowAttachment,
+                                    isRequired = isRequired
+                                )
+                            } else item
+                        }
+                    )
+                }
             } else sec
         }
         _parsedChecklist.value = current.copy(sections = updatedSections)
     }
 
-    fun deleteItem(sectionId: String, itemId: String) {
+    fun deleteItem(sectionId: String, categoryId: String? = null, itemId: String) {
         val current = _parsedChecklist.value ?: return
         val updatedSections = current.sections.map { sec ->
             if (sec.id == sectionId) {
-                sec.copy(items = sec.items.filterNot { it.id == itemId })
+                if (categoryId != null) {
+                    sec.copy(
+                        categories = sec.categories.map { cat ->
+                            if (cat.id == categoryId) {
+                                cat.copy(items = cat.items.filterNot { it.id == itemId })
+                            } else cat
+                        }
+                    )
+                } else {
+                    sec.copy(items = sec.items.filterNot { it.id == itemId })
+                }
             } else sec
         }
         _parsedChecklist.value = current.copy(sections = updatedSections)
     }
 
-    fun duplicateItem(sectionId: String, itemId: String) {
+    fun duplicateItem(sectionId: String, categoryId: String? = null, itemId: String) {
         val current = _parsedChecklist.value ?: return
         val targetSec = current.sections.find { it.id == sectionId } ?: return
-        val targetItem = targetSec.items.find { it.id == itemId } ?: return
-        val copy = targetItem.copy(id = UUID.randomUUID().toString(), label = "${targetItem.label} (Cópia)")
 
         val updatedSections = current.sections.map { sec ->
             if (sec.id == sectionId) {
-                val idx = sec.items.indexOfFirst { it.id == itemId }
-                val newItems = sec.items.toMutableList()
-                newItems.add(idx + 1, copy)
-                sec.copy(items = newItems)
+                if (categoryId != null) {
+                    sec.copy(
+                        categories = sec.categories.map { cat ->
+                            if (cat.id == categoryId) {
+                                val idx = cat.items.indexOfFirst { it.id == itemId }
+                                if (idx != -1) {
+                                    val original = cat.items[idx]
+                                    val copy = original.copy(id = UUID.randomUUID().toString(), label = "${original.label} (Cópia)")
+                                    val newItems = cat.items.toMutableList()
+                                    newItems.add(idx + 1, copy)
+                                    cat.copy(items = newItems)
+                                } else cat
+                            } else cat
+                        }
+                    )
+                } else {
+                    val idx = sec.items.indexOfFirst { it.id == itemId }
+                    if (idx != -1) {
+                        val original = sec.items[idx]
+                        val copy = original.copy(id = UUID.randomUUID().toString(), label = "${original.label} (Cópia)")
+                        val newItems = sec.items.toMutableList()
+                        newItems.add(idx + 1, copy)
+                        sec.copy(items = newItems)
+                    } else sec
+                }
             } else sec
         }
         _parsedChecklist.value = current.copy(sections = updatedSections)
@@ -320,7 +439,18 @@ class SmartImportViewModel @Inject constructor(
                     val item = list.removeAt(idx)
                     list.add(idx - 1, item)
                     sec.copy(items = list)
-                } else sec
+                } else {
+                    val updatedCats = sec.categories.map { cat ->
+                        val catList = cat.items.toMutableList()
+                        val cIdx = catList.indexOfFirst { it.id == itemId }
+                        if (cIdx > 0) {
+                            val item = catList.removeAt(cIdx)
+                            catList.add(cIdx - 1, item)
+                            cat.copy(items = catList)
+                        } else cat
+                    }
+                    sec.copy(categories = updatedCats)
+                }
             } else sec
         }
         _parsedChecklist.value = current.copy(sections = updatedSections)
@@ -336,10 +466,98 @@ class SmartImportViewModel @Inject constructor(
                     val item = list.removeAt(idx)
                     list.add(idx + 1, item)
                     sec.copy(items = list)
-                } else sec
+                } else {
+                    val updatedCats = sec.categories.map { cat ->
+                        val catList = cat.items.toMutableList()
+                        val cIdx = catList.indexOfFirst { it.id == itemId }
+                        if (cIdx in 0 until catList.lastIndex) {
+                            val item = catList.removeAt(cIdx)
+                            catList.add(cIdx + 1, item)
+                            cat.copy(items = catList)
+                        } else cat
+                    }
+                    sec.copy(categories = updatedCats)
+                }
             } else sec
         }
         _parsedChecklist.value = current.copy(sections = updatedSections)
+    }
+
+    fun promoteToSection(sectionId: String, categoryId: String? = null, itemId: String) {
+        val current = _parsedChecklist.value ?: return
+        val targetSec = current.sections.find { it.id == sectionId } ?: return
+
+        val itemToPromote = if (categoryId != null) {
+            targetSec.categories.find { it.id == categoryId }?.items?.find { it.id == itemId }
+        } else {
+            targetSec.items.find { it.id == itemId }
+        } ?: return
+
+        // Create new section with the item's label
+        val newSection = ParsedSection(
+            id = UUID.randomUUID().toString(),
+            name = itemToPromote.label,
+            orderIndex = current.sections.size,
+            items = emptyList(),
+            categories = emptyList()
+        )
+
+        // Remove from previous location
+        val updatedSections = current.sections.map { sec ->
+            if (sec.id == sectionId) {
+                if (categoryId != null) {
+                    sec.copy(
+                        categories = sec.categories.map { cat ->
+                            if (cat.id == categoryId) {
+                                cat.copy(items = cat.items.filterNot { it.id == itemId })
+                            } else cat
+                        }
+                    )
+                } else {
+                    sec.copy(items = sec.items.filterNot { it.id == itemId })
+                }
+            } else sec
+        } + newSection
+
+        _parsedChecklist.value = current.copy(sections = updatedSections)
+    }
+
+    fun resolveAnswerConflict(itemId: String, chosenStatus: String) {
+        val current = _parsedChecklist.value ?: return
+        val updatedSections = current.sections.map { sec ->
+            sec.copy(
+                items = sec.items.map { item ->
+                    if (item.id == itemId) {
+                        val updatedAnswer = item.preFilledAnswer?.copy(
+                            statusShortCode = chosenStatus,
+                            hasConflict = false
+                        )
+                        item.copy(preFilledAnswer = updatedAnswer)
+                    } else item
+                },
+                categories = sec.categories.map { cat ->
+                    cat.copy(
+                        items = cat.items.map { item ->
+                            if (item.id == itemId) {
+                                val updatedAnswer = item.preFilledAnswer?.copy(
+                                    statusShortCode = chosenStatus,
+                                    hasConflict = false
+                                )
+                                item.copy(preFilledAnswer = updatedAnswer)
+                            } else item
+                        }
+                    )
+                }
+            )
+        }
+
+        // Also resolve in validationAlerts
+        val updatedAlerts = current.validationAlerts.filterNot { it.elementLabel != null && it.description.contains(itemId) }
+
+        _parsedChecklist.value = current.copy(
+            sections = updatedSections,
+            validationAlerts = updatedAlerts
+        )
     }
 
     // ==========================================
@@ -386,6 +604,7 @@ class SmartImportViewModel @Inject constructor(
                     put("customStatuses", statusesArray)
                     put("importedFrom", checklist.sourceFormat.name)
                     put("originalFileName", checklist.fileName)
+                    put("totalConfidenceScore", checklist.totalConfidenceScore.toDouble())
                 }.toString()
 
                 val now = System.currentTimeMillis()
@@ -401,10 +620,12 @@ class SmartImportViewModel @Inject constructor(
                     isGlobal = false
                 )
 
-                // Build TemplateFieldEntities with order index
+                // Build TemplateFieldEntities with order index and hierarchical categories
                 val templateFields = mutableListOf<TemplateFieldEntity>()
                 var globalIndex = 0
+
                 checklist.sections.forEach { section ->
+                    // Direct items under section
                     section.items.forEach { item ->
                         val extraConfigJson = JSONObject().apply {
                             put("allowedStatuses", JSONArray(item.allowedStatuses))
@@ -412,6 +633,12 @@ class SmartImportViewModel @Inject constructor(
                             put("allowPhoto", item.allowPhoto)
                             put("allowAttachment", item.allowAttachment)
                             put("numberPrefix", item.numberPrefix ?: "")
+                            put("hierarchyPath", item.hierarchyPath)
+                            if (item.preFilledAnswer != null) {
+                                put("preFilledStatus", item.preFilledAnswer.statusShortCode)
+                            }
+                            put("confidenceScore", item.confidenceScore.toDouble())
+                            put("classificationReason", item.classificationReason)
                         }.toString()
 
                         templateFields.add(
@@ -428,6 +655,41 @@ class SmartImportViewModel @Inject constructor(
                                 extraConfig = extraConfigJson
                             )
                         )
+                    }
+
+                    // Items under subcategories
+                    section.categories.forEach { category ->
+                        val combinedCategoryName = "${section.name.trim()} > ${category.name.trim()}"
+                        category.items.forEach { item ->
+                            val extraConfigJson = JSONObject().apply {
+                                put("allowedStatuses", JSONArray(item.allowedStatuses))
+                                put("allowObservation", item.allowObservation)
+                                put("allowPhoto", item.allowPhoto)
+                                put("allowAttachment", item.allowAttachment)
+                                put("numberPrefix", item.numberPrefix ?: "")
+                                put("hierarchyPath", combinedCategoryName)
+                                if (item.preFilledAnswer != null) {
+                                    put("preFilledStatus", item.preFilledAnswer.statusShortCode)
+                                }
+                                put("confidenceScore", item.confidenceScore.toDouble())
+                                put("classificationReason", item.classificationReason)
+                            }.toString()
+
+                            templateFields.add(
+                                TemplateFieldEntity(
+                                    templateId = 0L,
+                                    category = combinedCategoryName,
+                                    label = item.label.trim(),
+                                    type = item.type,
+                                    orderIndex = globalIndex++,
+                                    isRequired = item.isRequired,
+                                    requireObservationOnNC = item.requireObservationOnNC,
+                                    requirePhotoOnNC = item.requirePhotoOnNC,
+                                    maxPhotos = item.maxPhotos,
+                                    extraConfig = extraConfigJson
+                                )
+                            )
+                        }
                     }
                 }
 

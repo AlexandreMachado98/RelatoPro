@@ -123,7 +123,23 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.popBackStack() },
                                     onNavigateToCreate = { navController.navigate("template_builder?templateId=0") },
                                     onNavigateToEdit = { templateId -> navController.navigate("template_builder?templateId=$templateId") },
-                                    onNavigateToStartReport = { templateId -> navController.navigate("field_mode/$templateId") }
+                                    onNavigateToStartReport = { templateId -> navController.navigate("field_mode/$templateId") },
+                                    onNavigateToSmartImport = { navController.navigate("smart_import") }
+                                )
+                            }
+                            composable("smart_import") {
+                                val viewModel = hiltViewModel<com.relatopro.app.ui.screens.importer.SmartImportViewModel>()
+                                com.relatopro.app.ui.screens.importer.SmartImportScreen(
+                                    viewModel = viewModel,
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onStartReportWithTemplate = { templateId ->
+                                        navController.navigate("field_mode/$templateId")
+                                    },
+                                    onNavigateToTemplates = {
+                                        navController.navigate("checklists") {
+                                            popUpTo("checklists") { inclusive = true }
+                                        }
+                                    }
                                 )
                             }
                             composable("companies") {

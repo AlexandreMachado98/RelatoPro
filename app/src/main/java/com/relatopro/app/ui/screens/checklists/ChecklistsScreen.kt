@@ -35,7 +35,8 @@ fun ChecklistsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCreate: () -> Unit,
     onNavigateToEdit: (Long) -> Unit,
-    onNavigateToStartReport: (Long) -> Unit
+    onNavigateToStartReport: (Long) -> Unit,
+    onNavigateToSmartImport: () -> Unit = {}
 ) {
     val colors = AppTheme.colors
     val templates by viewModel.templates.collectAsState()
@@ -45,6 +46,7 @@ fun ChecklistsScreen(
     val scope = rememberCoroutineScope()
 
     var templateToDelete by remember { mutableStateOf<TemplateEntity?>(null) }
+    var showImportChoiceMenu by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var templateToShare by remember { mutableStateOf<TemplateEntity?>(null) }
     var templateFieldsForShare by remember { mutableStateOf<List<TemplateFieldEntity>>(emptyList()) }
@@ -78,20 +80,19 @@ fun ChecklistsScreen(
                     }
                 },
                 actions = {
-                    OutlinedButton(
-                        onClick = { showImportDialog = true },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = colors.surfaceVariant,
-                            contentColor = colors.primary
+                    Button(
+                        onClick = { showImportChoiceMenu = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primary,
+                            contentColor = Color.White
                         ),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                         shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.height(34.dp).padding(end = 8.dp)
                     ) {
-                        Icon(Icons.Default.Download, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Importar", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Icon(Icons.Default.Download, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Importar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
@@ -279,6 +280,93 @@ fun ChecklistsScreen(
                 templateToShare = null
                 templateFieldsForShare = emptyList()
             }
+        )
+    }
+
+    // Import Choice Dialog
+    if (showImportChoiceMenu) {
+        AlertDialog(
+            onDismissRequest = { showImportChoiceMenu = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Download, contentDescription = null, tint = colors.primary)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Importar Checklist", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = colors.textPrimary)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Escolha como deseja importar seu checklist:", fontSize = 13.sp, color = colors.textSecondary)
+
+                    // Option 1: Smart Import (PDF, Word, Excel, CSV, Image/OCR)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showImportChoiceMenu = false
+                                onNavigateToSmartImport()
+                            },
+                        colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(38.dp).background(colors.primary.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Importação Inteligente (IA/OCR)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
+                                Text("PDF, Word (.docx), Excel (.xlsx), CSV ou Foto", fontSize = 11.sp, color = colors.textSecondary)
+                            }
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = colors.textSecondary)
+                        }
+                    }
+
+                    // Option 2: QR Code / Backup .relatopro
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showImportChoiceMenu = false
+                                showImportDialog = true
+                            },
+                        colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(38.dp).background(colors.cyanAccent.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = colors.cyanAccent, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Escanear QR Code ou Pacote", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = colors.textPrimary)
+                                Text("Importar de outro aparelho ou arquivo .relatopro", fontSize = 11.sp, color = colors.textSecondary)
+                            }
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = colors.textSecondary)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showImportChoiceMenu = false }) {
+                    Text("Cancelar", color = colors.textSecondary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 

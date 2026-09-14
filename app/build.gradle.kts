@@ -91,6 +91,7 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("com.google.mlkit:text-recognition:16.0.0")
 
     // CameraX (Live QR Code Scanner & Camera Preview)
     implementation("androidx.camera:camera-camera2:1.3.1")
